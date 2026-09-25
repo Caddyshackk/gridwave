@@ -1260,7 +1260,20 @@
           { key:'script', label:'Shootout Script', value:(p.teamPPG||0) + (p.oppPAPG||0) }
         ];
       },
-      formStat(p){ return `${Math.round(p.hitRate*100)}% TD`; }
+      formStat(p){ return `${Math.round(p.hitRate*100)}% TD`; },
+      // Named, single-number reads on the same signals the component bars blend together —
+      // pulled out on request so "target share" etc. shows as its own line, not just buried
+      // inside a composite percentile.
+      advancedStats(p){
+        return [
+          ['Red Zone TD Rate', (p.tdRate*100).toFixed(1)+'%'],
+          ['Opportunities / Game', (p.opportunity/Math.max(1,p.games)).toFixed(1)],
+          ['Team PPG', (p.teamPPG||0).toFixed(1)],
+          ['Opponent PA/Game', (p.oppPAPG||0).toFixed(1)]
+        ];
+      },
+      primaryStatLabel: 'TDs',
+      primaryStat(w){ return w.rec_td + w.rush_td; }
     },
     passyards: {
       label: 'PASS YARDS', positions: ['QB'],
@@ -1272,7 +1285,17 @@
           { key:'env', label:'Environment', value:p.teamPPG||0 }
         ];
       },
-      formStat(p){ return `${(p.pass_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; }
+      formStat(p){ return `${(p.pass_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; },
+      advancedStats(p){
+        return [
+          ['Air Yards / Game', (p.pass_air_yards/Math.max(1,p.games)).toFixed(1)],
+          ['Script Lean', ((p.scriptLean||0)*100).toFixed(1)+'% ' + ((p.scriptLean||0)>=0?'pass-heavy':'rush-heavy')],
+          ['Opp Pass Yds Allowed/Gm', (p.oppPassAllowedPG||0).toFixed(1)],
+          ['Team PPG', (p.teamPPG||0).toFixed(1)]
+        ];
+      },
+      primaryStatLabel: 'Pass Yds',
+      primaryStat(w){ return w.pass_yards; }
     },
     passtds: {
       label: 'PASS TDS', positions: ['QB'],
@@ -1284,7 +1307,17 @@
           { key:'script', label:'Script Lean', value:(p.scriptLean||0)*100 }
         ];
       },
-      formStat(p){ return `${(p.pass_td/Math.max(1,p.games)).toFixed(2)} TD/GM`; }
+      formStat(p){ return `${(p.pass_td/Math.max(1,p.games)).toFixed(2)} TD/GM`; },
+      advancedStats(p){
+        return [
+          ['Pass TD Rate', p.attempts>0 ? ((p.pass_td/p.attempts)*100).toFixed(1)+'%' : '—'],
+          ['Air Yards / Game', (p.pass_air_yards/Math.max(1,p.games)).toFixed(1)],
+          ['Opp Pass Yds Allowed/Gm', (p.oppPassAllowedPG||0).toFixed(1)],
+          ['Script Lean', ((p.scriptLean||0)*100).toFixed(1)+'% ' + ((p.scriptLean||0)>=0?'pass-heavy':'rush-heavy')]
+        ];
+      },
+      primaryStatLabel: 'Pass TDs',
+      primaryStat(w){ return w.pass_td; }
     },
     rushyards: {
       label: 'RUSH YARDS', positions: ['RB','QB'],
@@ -1296,7 +1329,17 @@
           { key:'ground', label:'Ground Form', value:p.rush_yards/Math.max(1,p.games) }
         ];
       },
-      formStat(p){ return `${(p.rush_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; }
+      formStat(p){ return `${(p.rush_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; },
+      advancedStats(p){
+        return [
+          ['Carry Share', ((p.carryShare||0)*100).toFixed(1)+'%'],
+          ['Opp Rush Yds Allowed/Gm', (p.oppRushAllowedPG||0).toFixed(1)],
+          ['Script Lean', (-(p.scriptLean||0)*100).toFixed(1)+'% ' + ((p.scriptLean||0)<=0?'rush-heavy':'pass-heavy')],
+          ['Yards / Carry', p.carries>0 ? (p.rush_yards/p.carries).toFixed(1) : '—']
+        ];
+      },
+      primaryStatLabel: 'Rush Yds',
+      primaryStat(w){ return w.rush_yards; }
     },
     receptions: {
       label: 'RECEPTIONS', positions: ['WR','TE','RB'],
@@ -1308,7 +1351,17 @@
           { key:'script', label:'Script Lean', value:(p.scriptLean||0)*100 }
         ];
       },
-      formStat(p){ return `${(p.receptions/Math.max(1,p.games)).toFixed(1)} REC/GM`; }
+      formStat(p){ return `${(p.receptions/Math.max(1,p.games)).toFixed(1)} REC/GM`; },
+      advancedStats(p){
+        return [
+          ['Target Share', ((p.targetShare||0)*100).toFixed(1)+'%'],
+          ['Catch Rate', p.targets>0 ? ((p.receptions/p.targets)*100).toFixed(1)+'%' : '—'],
+          ['Opp Rec Yds Allowed/Gm', (p.oppRecAllowedPG||0).toFixed(1)],
+          ['Script Lean', ((p.scriptLean||0)*100).toFixed(1)+'% ' + ((p.scriptLean||0)>=0?'pass-heavy':'rush-heavy')]
+        ];
+      },
+      primaryStatLabel: 'Receptions',
+      primaryStat(w){ return w.receptions; }
     }
   };
 
@@ -1364,6 +1417,7 @@
       const oppStat = sched && window.gwTeamPPG ? window.gwTeamPPG[sched.opponent] : null;
       p.teamPPG = teamStat || 0;
       p.oppPAPG = window.gwDefenseRank && sched && window.gwDefenseRank[sched.opponent] ? window.gwDefenseRank[sched.opponent].paPerGame : 0;
+      p.category = category; // so the detail panel knows which advancedStats/primaryStat to use
 
       // trend, off full season history, independent of the scope toggle — drives BREAKOUT/DUE/OVERPERFORMING
       const lastWk = raw.weeks[raw.weeks.length-1];
@@ -1557,6 +1611,64 @@
       </div>
     `).join('');
 
+    // Named single-number reads (target share, script lean, etc.) — same underlying signals as
+    // the component bars above, just surfaced individually since a blended percentile hides them.
+    const catDef = CATEGORIES[p.category];
+    const advancedHtml = catDef && catDef.advancedStats ? `
+      <div class="panel-title" style="margin:16px 0 4px;"><h2 style="font-size:.7rem;">ADVANCED STATS</h2><div class="rule"></div></div>
+      <div class="edge-stat-list">
+        ${catDef.advancedStats(p).map(([k,v])=>`<div class="row"><span>${k}</span><span>${v}</span></div>`).join('')}
+      </div>
+    ` : '';
+
+    // Research chart + game log — built from the same per-week nflverse rows already in memory,
+    // no extra fetch. Bars are colored against the player's own season average, not a real
+    // sportsbook line — GRIDWAVE has no per-player prop-line data source yet (only game-level
+    // spread/total/moneyline via the Odds API), so this is deliberately labeled as such rather
+    // than implied to be a market line.
+    const raw = (typeof rawPlayers !== 'undefined' && rawPlayers) ? rawPlayers[p.id] : null;
+    let researchHtml = '', gameLogHtml = '';
+    if(raw && catDef && catDef.primaryStat){
+      const weeks = raw.weeks;
+      const values = weeks.map(w=> catDef.primaryStat(w));
+      const avg = values.length ? values.reduce((s,v)=>s+v,0)/values.length : 0;
+      const maxVal = Math.max(...values, 1);
+      const hitCount = values.filter(v=> v>=avg).length;
+
+      const bars = weeks.map((w,i)=>{
+        const v = values[i];
+        const hit = v >= avg;
+        const heightPct = Math.max(4, (v/maxVal)*100);
+        return `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:26px;">
+            <div style="font-size:.6rem;color:${hit?'var(--win)':'var(--loss)'};">${v.toFixed(Number.isInteger(v)?0:1)}</div>
+            <div style="width:100%;height:70px;display:flex;align-items:flex-end;">
+              <div style="width:100%;background:${hit?'var(--win)':'var(--loss)'};height:${heightPct}%;border-radius:2px 2px 0 0;opacity:.85;"></div>
+            </div>
+            <div style="font-size:.58rem;color:var(--text-dim);white-space:nowrap;">WK${w.week}</div>
+          </div>
+        `;
+      }).join('');
+
+      researchHtml = `
+        <div class="panel-title" style="margin:16px 0 4px;"><h2 style="font-size:.7rem;">RESEARCH</h2><div class="rule"></div><span class="tag">${catDef.primaryStatLabel} · ${hitCount}/${values.length} at or above own avg</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-end;padding:8px 4px 0;overflow-x:auto;">${bars}</div>
+        <div style="font-size:.62rem;color:var(--text-dim);margin-top:6px;">Green/red is against this player's own season average (${avg.toFixed(1)}), not a sportsbook line — GRIDWAVE doesn't have a per-player prop-line data source yet.</div>
+      `;
+
+      const logRows = weeks.slice().reverse().map(w=>{
+        const v = catDef.primaryStat(w);
+        return `<tr><td>WK ${w.week}</td><td>${w.opponent_team ? '@' + w.opponent_team : '—'}</td><td class="num">${v.toFixed(Number.isInteger(v)?0:1)}</td></tr>`;
+      }).join('');
+      gameLogHtml = `
+        <div class="panel-title" style="margin:16px 0 4px;"><h2 style="font-size:.7rem;">GAME LOG</h2><div class="rule"></div><span class="tag">week + opponent only — no W/L or final score wired up yet</span></div>
+        <table class="zone-table">
+          <thead><tr><th>WEEK</th><th>OPP</th><th style="text-align:right">${catDef.primaryStatLabel.toUpperCase()}</th></tr></thead>
+          <tbody>${logRows}</tbody>
+        </table>
+      `;
+    }
+
     const cheatCodeHtml = p.tdDebt === undefined ? `
       <div class="key-box" style="font-size:.72rem;margin-top:14px;">
         NFL Cheat Code needs the full play-by-play file — hit LOAD again once it's finished loading
@@ -1595,6 +1707,10 @@
 
           <div class="panel-title" style="margin:14px 0 4px;"><h2 style="font-size:.7rem;">COMPONENT SCORES</h2><div class="rule"></div></div>
           <div class="split-bars">${componentBars}</div>
+
+          ${advancedHtml}
+          ${researchHtml}
+          ${gameLogHtml}
 
           ${cheatCodeHtml}
 
