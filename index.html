@@ -1200,7 +1200,10 @@
   // small "form" readout shown under the score badge (mirrors their per-category hit-rate/production line).
   const CATEGORIES = {
     anytd: {
-      label: 'ANY TD', positions: ['QB','RB','WR','TE'],
+      // QB deliberately excluded — Any TD Scorer boards are about a player physically getting
+      // into the end zone (rushing/receiving). A QB throwing TD passes isn't "scoring" for this
+      // market, and mixing QBs into RB/WR/TE opportunity scales distorts the percentile ranking.
+      label: 'ANY TD', positions: ['RB','WR','TE'],
       components(p, scope){
         return [
           { key:'volume', label:'Volume', value:p.opportunity },
@@ -1292,7 +1295,8 @@
       p.tds = p.rec_td + p.rush_td + p.pass_td;
       const totalOpp = p.attempts + p.carries + p.targets;
       p.tdRate = totalOpp>0 ? p.tds/totalOpp : 0;
-      p.hitRate = p.games>0 ? weeksInScope.filter(w=> (w.rec_td+w.rush_td+w.pass_td)>0).length / p.games : 0;
+      // Any TD hit-rate is rush/rec TDs only — a QB throwing a TD pass never counts as "scoring"
+      p.hitRate = p.games>0 ? weeksInScope.filter(w=> (w.rec_td+w.rush_td)>0).length / p.games : 0;
 
       const tTot = teamTotals[p.team];
       p.carryShare = tTot && tTot.carries>0 ? p.carries/tTot.carries : 0;
