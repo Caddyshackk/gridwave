@@ -688,7 +688,7 @@
   window.gwTeamPPG = {};       // team_abbr -> points scored per game (used as a scoring-environment proxy)
 
   const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
-  const ESPN_STANDINGS  = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings';
+  const ESPN_STANDINGS  = 'https://site.web.api.espn.com/apis/v2/sports/football/nfl/standings?region=us&lang=en&contentorigin=espn&type=0&level=3&sort=winpercent%3Adesc%2Cplayoffseed%3Aasc';
 
   fetch(ESPN_SCOREBOARD).then(r=>r.json()).then(data=>{
     const week = data?.week?.number;
