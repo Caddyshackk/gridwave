@@ -304,7 +304,10 @@
     padding:9px 12px;
     border-bottom:1px solid rgba(124,92,255,.12);
     font-size:.83rem;
+    cursor:pointer;
+    transition:background-color .15s var(--ease-snappy);
   }
+  .player-row:hover{background:rgba(124,92,255,.08);}
   .player-row .name{color:var(--text-hi);font-weight:700;}
   .player-row .meta{color:var(--text-dim);font-size:.72rem;}
   .trend-badge{font-family:'Orbitron',sans-serif;font-size:.7rem;padding:.2em .6em;border:1px solid;}
@@ -568,6 +571,7 @@
       <button class="action" id="player-search-btn">SEARCH</button>
     </div>
     <div id="player-results"></div>
+    <div id="player-detail"></div>
 
     <div class="panel-title"><h2>TRENDING ADDS</h2><div class="rule"></div><span class="tag">last 24h · fantasy waivers</span></div>
     <div id="trend-add"><div class="loading">Loading trends…</div></div>
@@ -849,7 +853,51 @@
     left.innerHTML = `<div class="name">${p.name}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'}</div>`;
     row.appendChild(left);
     if(badge) row.appendChild(el('span','trend-badge ' + badge.cls, badge.text));
+    row.addEventListener('click', ()=> renderPlayerDetail(p));
     container.appendChild(row);
+  }
+
+  // Loose match against nflverse's naming so "Patrick Mahomes" (Sleeper) lines up with
+  // "Patrick Mahomes II" (nflverse) etc. — good enough for a name-only crosswalk.
+  function normalizeName(n){ return (n||'').toLowerCase().replace(/[.'']/g,'').replace(/\s+(jr|sr|ii|iii|iv)$/,'').trim(); }
+
+  // Free-tier detail panel. If Vault's premium player data is already loaded this session
+  // (rawPlayers), real season stats show up here automatically via a name match — no separate
+  // premium call needed. If Vault hasn't been loaded yet, it degrades to bio info only.
+  function renderPlayerDetail(p){
+    const container = $('#player-detail');
+    let statsHtml;
+
+    const pool = (typeof rawPlayers !== 'undefined' && rawPlayers) ? Object.values(rawPlayers) : null;
+    const match = pool ? pool.find(raw=> raw.pos===p.pos && normalizeName(raw.name)===normalizeName(p.name)) : null;
+
+    if(match){
+      const agg = sumWeeks(match.weeks);
+      const rows = [['Games', agg.games]];
+      if(p.pos==='QB'){
+        rows.push(['Attempts', agg.attempts], ['Pass yards', Math.round(agg.pass_yards)], ['Pass TDs', agg.pass_td]);
+        if(agg.carries){ rows.push(['Rush yards', Math.round(agg.rush_yards)], ['Rush TDs', agg.rush_td]); }
+      } else {
+        rows.push(['Targets', agg.targets], ['Receptions', agg.receptions], ['Rec yards', Math.round(agg.rec_yards)], ['Rec TDs', agg.rec_td]);
+        if(agg.carries){ rows.push(['Carries', agg.carries], ['Rush yards', Math.round(agg.rush_yards)], ['Rush TDs', agg.rush_td]); }
+      }
+      statsHtml = `
+        <div class="panel-title" style="margin:14px 0 4px;"><h2 style="font-size:.7rem;">SEASON STATS</h2><div class="rule"></div></div>
+        <div class="edge-stat-list">${rows.map(([k,v])=>`<div class="row"><span>${k}</span><span>${v}</span></div>`).join('')}</div>
+      `;
+    } else if(pool){
+      statsHtml = `<div class="key-box" style="font-size:.75rem;margin-top:14px;">No stats on file for this player yet this season (rookie, hasn't played, or a name-matching gap between the two databases).</div>`;
+    } else {
+      statsHtml = `<div class="key-box" style="font-size:.75rem;margin-top:14px;">Unlock and hit LOAD in the VAULT tab first — once that data's loaded this session, full season stats for any player show up here automatically.</div>`;
+    }
+
+    container.innerHTML = `
+      <div class="edge-detail-card">
+        <h3>${p.name}</h3>
+        <div class="sub">${p.team || 'FA'} · ${p.pos || '—'}${p.status ? ' · ' + p.status : ''}</div>
+        ${statsHtml}
+      </div>
+    `;
   }
 
   $('#player-search-btn').addEventListener('click', doSearch);
