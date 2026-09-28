@@ -6,7 +6,7 @@
 <title>GRIDWAVE — Football Analytics</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg-void:#08090b;
@@ -18,20 +18,23 @@
     --purple:#7c5cff;
     --amber:#fcee0a;
     --text-hi:#eef1f5;
-    --text-mid:#9aa3ad;
-    --text-dim:#5b636c;
+    --text-mid:#aeb7c1;
+    --text-dim:#7d8791;
     --win:#3dff9a;
     --loss:#ff2358;
     --ease-snappy: cubic-bezier(.16,1,.3,1);
+    --font-display:'Chakra Petch','Rajdhani',sans-serif;   /* headings, numbers, badges */
+    --font-body:'JetBrains Mono','Consolas',monospace;     /* body / data text */
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg-void);color:var(--text-hi);}
   body{
-    font-family:'Share Tech Mono',monospace;
+    font-family:var(--font-body);
     min-height:100vh;
     overflow-x:hidden;
   }
-  h1,h2,h3,.display{font-family:'Orbitron',sans-serif;}
+  h1,h2,h3,.display{font-family:var(--font-display);letter-spacing:.04em;}
+  body{font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;}
   a{color:var(--cyan);}
 
   /* ---------- HERO ---------- */
@@ -121,7 +124,7 @@
     transition:background-color .2s var(--ease-snappy);
   }
   nav.tabs button{
-    font-family:'Orbitron',sans-serif;
+    font-family:var(--font-display);
     font-size:.78rem;
     letter-spacing:.08em;
     background:transparent;
@@ -150,13 +153,13 @@
     border:1px solid var(--grid-line);
   }
   .license-label{
-    font-family:'Orbitron',sans-serif;
+    font-family:var(--font-display);
     font-size:.68rem;
     letter-spacing:.08em;
     color:var(--amber);
   }
   .license-bar input{flex:1;min-width:160px;}
-  .license-status{font-size:.72rem;font-family:'Orbitron',sans-serif;}
+  .license-status{font-size:.72rem;font-family:var(--font-display);}
   .license-status.ok{color:var(--win);}
   .license-status.bad{color:var(--loss);}
   .license-bar a{font-size:.72rem;color:var(--purple);white-space:nowrap;}
@@ -205,13 +208,13 @@
   .game-card .status.live{color:var(--pink);}
   .game-card .row{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;padding:3px 0;}
   .game-card .row .abbr{color:var(--text-hi);font-weight:700;}
-  .game-card .row .score{font-family:'Orbitron',sans-serif;color:var(--cyan);}
+  .game-card .row .score{font-family:var(--font-display);color:var(--cyan);}
 
   /* ---------- TABLE ---------- */
   table{width:100%;border-collapse:collapse;font-size:.82rem;}
   th{
     text-align:left;
-    font-family:'Orbitron',sans-serif;
+    font-family:var(--font-display);
     font-size:.65rem;
     letter-spacing:.06em;
     color:var(--text-dim);
@@ -221,14 +224,14 @@
   td{padding:8px 10px;border-bottom:1px solid rgba(124,92,255,.1);color:var(--text-mid);}
   tr.division-head td{
     color:var(--purple);
-    font-family:'Orbitron',sans-serif;
+    font-family:var(--font-display);
     font-size:.68rem;
     letter-spacing:.08em;
     background:rgba(124,92,255,.08);
     padding-top:14px;
   }
   td.team-cell{color:var(--text-hi);font-weight:700;}
-  td.num{font-family:'Orbitron',sans-serif;color:var(--cyan);text-align:right;}
+  td.num{font-family:var(--font-display);color:var(--cyan);text-align:right;}
   td.num.neg{color:var(--loss);}
   td.num.pos{color:var(--win);}
 
@@ -245,7 +248,7 @@
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
   }
   .stat-chip .team{font-size:.72rem;color:var(--text-hi);font-weight:700;margin-bottom:6px;}
-  .stat-chip .figure{font-family:'Orbitron',sans-serif;font-size:1.3rem;color:var(--cyan);}
+  .stat-chip .figure{font-family:var(--font-display);font-size:1.3rem;color:var(--cyan);}
   .stat-chip .label{font-size:.62rem;color:var(--text-dim);letter-spacing:.05em;}
 
   /* ---------- PLAYERS ---------- */
@@ -254,7 +257,7 @@
     background:var(--bg-panel);
     border:1px solid var(--grid-line);
     color:var(--text-hi);
-    font-family:'Share Tech Mono',monospace;
+    font-family:var(--font-body);
     padding:.7em .9em;
     font-size:.85rem;
     flex:1;
@@ -262,7 +265,7 @@
   }
   input[type=text]:focus, input[type=password]:focus{outline:1px solid var(--cyan);}
   button.action{
-    font-family:'Orbitron',sans-serif;
+    font-family:var(--font-display);
     font-size:.72rem;
     letter-spacing:.06em;
     background:transparent;
@@ -310,7 +313,7 @@
   .player-row:hover{background:rgba(124,92,255,.08);}
   .player-row .name{color:var(--text-hi);font-weight:700;}
   .player-row .meta{color:var(--text-dim);font-size:.72rem;}
-  .trend-badge{font-family:'Orbitron',sans-serif;font-size:.7rem;padding:.2em .6em;border:1px solid;}
+  .trend-badge{font-family:var(--font-display);font-size:.7rem;padding:.2em .6em;border:1px solid;}
   .trend-badge.add{color:var(--win);border-color:var(--win);}
   .trend-badge.drop{color:var(--loss);border-color:var(--loss);}
 
@@ -332,9 +335,9 @@
     margin-bottom:10px;
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
   }
-  .odds-card .matchup{font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--text-hi);margin-bottom:8px;}
+  .odds-card .matchup{font-family:var(--font-display);font-size:.85rem;color:var(--text-hi);margin-bottom:8px;}
   .odds-line{display:flex;justify-content:space-between;font-size:.8rem;padding:3px 0;color:var(--text-mid);}
-  .odds-line span:last-child{color:var(--amber);font-family:'Orbitron',sans-serif;}
+  .odds-line span:last-child{color:var(--amber);font-family:var(--font-display);}
 
   /* ---------- EDGE ---------- */
   .edge-row{
@@ -347,14 +350,14 @@
     cursor:pointer;
   }
   .edge-row:hover{background:rgba(124,92,255,.08);}
-  .edge-row .rank{font-family:'Orbitron',sans-serif;color:var(--text-dim);font-size:.8rem;}
+  .edge-row .rank{font-family:var(--font-display);color:var(--text-dim);font-size:.8rem;}
   .edge-row .who .name{color:var(--text-hi);font-weight:700;font-size:.85rem;}
   .edge-row .who .meta{color:var(--text-dim);font-size:.7rem;}
-  .edge-row .badge{font-family:'Orbitron',sans-serif;font-size:.65rem;padding:.2em .55em;border:1px solid;white-space:nowrap;}
+  .edge-row .badge{font-family:var(--font-display);font-size:.65rem;padding:.2em .55em;border:1px solid;white-space:nowrap;}
   .edge-row .badge.surging{color:var(--win);border-color:var(--win);}
   .edge-row .badge.cooling{color:var(--loss);border-color:var(--loss);}
   .edge-row .badge.steady{color:var(--text-dim);border-color:var(--text-dim);}
-  .edge-row .score{font-family:'Orbitron',sans-serif;font-size:1.1rem;color:var(--cyan);text-align:right;min-width:2.5em;}
+  .edge-row .score{font-family:var(--font-display);font-size:1.1rem;color:var(--cyan);text-align:right;min-width:2.5em;}
 
   .edge-detail-card{
     margin-top:18px;
@@ -375,7 +378,7 @@
   .edge-detail-card h3{margin:0 0 4px;font-size:1.1rem;}
   .edge-detail-card .sub{color:var(--text-dim);font-size:.75rem;margin-bottom:14px;}
   .edge-stat-list .row{display:flex;justify-content:space-between;font-size:.78rem;padding:4px 0;border-bottom:1px solid rgba(124,92,255,.1);color:var(--text-mid);}
-  .edge-stat-list .row span:last-child{color:var(--amber);font-family:'Orbitron',sans-serif;}
+  .edge-stat-list .row span:last-child{color:var(--amber);font-family:var(--font-display);}
 
   /* ---------- VAULT (sub-tabs, flags, splits) ---------- */
   .vault-subtab{opacity:.55;transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy);}
@@ -402,11 +405,11 @@
   .game-vault-head{
     display:flex;justify-content:space-between;align-items:baseline;
     padding:8px 4px;border-bottom:1px solid var(--grid-line);margin-bottom:6px;
-    font-family:'Orbitron',sans-serif;font-size:.78rem;color:var(--text-hi);
+    font-family:var(--font-display);font-size:.78rem;color:var(--text-hi);
   }
   .game-vault-head .ctx{font-size:.65rem;color:var(--text-dim);}
 
-  .flag-badge{font-family:'Orbitron',sans-serif;font-size:.6rem;padding:.18em .5em;border:1px solid;white-space:nowrap;display:inline-block;margin:1px 0;}
+  .flag-badge{font-family:var(--font-display);font-size:.6rem;padding:.18em .5em;border:1px solid;white-space:nowrap;display:inline-block;margin:1px 0;}
   .flag-badge.due{color:var(--amber);border-color:var(--amber);}
   .flag-badge.over{color:var(--loss);border-color:var(--loss);}
   .flag-badge.breakout{color:var(--win);border-color:var(--win);}
@@ -415,13 +418,13 @@
 
   .cheat-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 10px;}
   .cheat-box{background:var(--bg-panel-2);border:1px solid var(--grid-line);padding:10px 12px;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);}
-  .cheat-box .lbl{font-family:'Orbitron',sans-serif;font-size:.6rem;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
-  .cheat-box .val{font-family:'Orbitron',sans-serif;font-size:1.3rem;color:var(--text-hi);}
+  .cheat-box .lbl{font-family:var(--font-display);font-size:.6rem;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
+  .cheat-box .val{font-family:var(--font-display);font-size:1.3rem;color:var(--text-hi);}
   .cheat-explain{font-size:.7rem;color:var(--text-dim);line-height:1.5;margin-bottom:10px;}
   .zone-table{margin-bottom:6px;}
 
   .split-bars{display:flex;flex-direction:column;gap:10px;margin:10px 0 16px;}
-  .split-bar-row .lbl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--text-dim);margin-bottom:3px;font-family:'Orbitron',sans-serif;}
+  .split-bar-row .lbl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--text-dim);margin-bottom:3px;font-family:var(--font-display);}
   .split-bar-track{height:6px;background:rgba(124,92,255,.15);position:relative;}
   .split-bar-fill{height:100%;}
   .split-bar-fill.baseline{background:var(--pink);}
@@ -446,8 +449,8 @@
     clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
   }
   .parlay-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-  .parlay-card .head .tag2{font-family:'Orbitron',sans-serif;font-size:.65rem;color:var(--text-dim);border:1px solid var(--grid-line);padding:.15em .5em;}
-  .parlay-card .head .score{font-family:'Orbitron',sans-serif;color:var(--win);font-size:1rem;}
+  .parlay-card .head .tag2{font-family:var(--font-display);font-size:.65rem;color:var(--text-dim);border:1px solid var(--grid-line);padding:.15em .5em;}
+  .parlay-card .head .score{font-family:var(--font-display);color:var(--win);font-size:1rem;}
   .parlay-leg{font-size:.78rem;color:var(--text-hi);padding:2px 0;}
   .parlay-leg .sub{color:var(--text-dim);font-size:.68rem;}
   .parlay-reason{font-size:.68rem;color:var(--amber);margin-top:6px;}
@@ -536,14 +539,14 @@
       <button class="action vault-subtab" data-subtab="parlays">PARLAYS</button>
     </div>
     <div class="search-row">
-      <select id="edge-category" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:'Share Tech Mono',monospace;padding:.7em .9em;">
+      <select id="edge-category" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
         <option value="anytd">ANY TD</option>
         <option value="passyards">PASS YARDS</option>
         <option value="passtds">PASS TDS</option>
         <option value="rushyards">RUSH YARDS</option>
         <option value="receptions">RECEPTIONS</option>
       </select>
-      <select id="edge-scope" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:'Share Tech Mono',monospace;padding:.7em .9em;">
+      <select id="edge-scope" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
         <option value="season">SEASON</option>
         <option value="last3">LAST 3 GAMES</option>
       </select>
