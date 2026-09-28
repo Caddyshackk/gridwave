@@ -391,6 +391,11 @@
   .inline-detail .edge-detail-card{ max-width:none; margin-top:6px; }
   .edge-row.row-open, .player-row.row-open{ background:rgba(124,92,255,.10); }
   .flag-badge{ cursor:pointer; }
+  .flag-badge.inj-out{ color:var(--loss); border-color:var(--loss); background:rgba(255,35,88,.10); }
+  .flag-badge.inj-q{ color:var(--amber); border-color:var(--amber); }
+  .inj-toggle{ display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:.68rem; letter-spacing:.06em; color:var(--text-mid); cursor:pointer; user-select:none; }
+  .inj-toggle input{ accent-color:var(--cyan); }
+  .inj-asof{ font-size:.66rem; color:var(--text-dim); }
 
   /* Grid-rows reveal — animates height without needing height:auto, which can't be transitioned */
   .gw-reveal{
@@ -551,6 +556,8 @@
         <option value="last3">LAST 3 GAMES</option>
       </select>
       <button class="action" id="edge-load-btn">LOAD</button>
+      <label class="inj-toggle"><input type="checkbox" id="hide-injured" checked> HIDE OUT / IR / DOUBTFUL</label>
+      <span id="injury-asof" class="inj-asof"></span>
     </div>
 
     <div id="vault-gamevault" class="vault-panel">
@@ -844,10 +851,11 @@
   const SLEEPER_PLAYERS  = 'https://api.sleeper.app/v1/players/nfl';
   const SLEEPER_TREND_ADD  = 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=15';
   const SLEEPER_TREND_DROP = 'https://api.sleeper.app/v1/players/nfl/trending/drop?lookback_hours=24&limit=15';
-  const CACHE_KEY = 'gridwave_sleeper_players_v1';
+  const CACHE_KEY = 'gridwave_sleeper_players_v2'; // v2: now carries injury fields
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let playersMap = null;
+  let injuriesAsOf = null; // when the player database (and its injury statuses) was last pulled
   let playersLoadingPromise = null;
 
   function loadPlayers(){
@@ -859,6 +867,7 @@
         const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
         if(cached && (Date.now() - cached.at) < CACHE_TTL_MS){
           playersMap = cached.data;
+          injuriesAsOf = cached.at;
           return playersMap;
         }
       }catch(e){ /* ignore bad cache */ }
@@ -870,8 +879,10 @@
         const p = raw[id];
         if(!p || !p.full_name) return;
         trimmed[id] = { name: p.full_name, team: p.team, pos: p.position, status: p.status };
+        if(p.injury_status){ trimmed[id].inj = p.injury_status; if(p.injury_body_part) trimmed[id].part = p.injury_body_part; }
       });
       playersMap = trimmed;
+      injuriesAsOf = Date.now();
       try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data: trimmed })); }
       catch(e){ /* storage full or unavailable, fine to skip caching */ }
       return playersMap;
@@ -883,7 +894,7 @@
   function renderPlayerRow(container, p, badge){
     const row = el('div','player-row');
     const left = el('div');
-    left.innerHTML = `<div class="name">${p.name}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'}</div>`;
+    left.innerHTML = `<div class="name">${p.name} ${injBadge(p.inj)}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'}</div>`;
     row.appendChild(left);
     if(badge) row.appendChild(el('span','trend-badge ' + badge.cls, badge.text));
     row.addEventListener('click', ()=> toggleInline(row, box=> renderPlayerDetail(p, box)));
@@ -893,6 +904,36 @@
   // Loose match against nflverse's naming so "Patrick Mahomes" (Sleeper) lines up with
   // "Patrick Mahomes II" (nflverse) etc. — good enough for a name-only crosswalk.
   function normalizeName(n){ return (n||'').toLowerCase().replace(/[.'']/g,'').replace(/\s+(jr|sr|ii|iii|iv)$/,'').trim(); }
+
+  // ---- Injuries (from Sleeper's player database: injury_status) ----
+  // Statuses that mean "don't expect him on the field" — hidden from the boards by default.
+  const OUT_STATUSES = ['Out','IR','PUP','Doubtful','Sus','DNR','COV','NA'];
+  let injuryIndex = null;
+  function buildInjuryIndex(){
+    if(!playersMap) return;
+    injuryIndex = {};
+    Object.values(playersMap).forEach(sp=>{
+      if(!sp.inj) return;
+      const k = normalizeName(sp.name) + '|' + sp.pos;
+      (injuryIndex[k] = injuryIndex[k] || []).push(sp);
+    });
+    const el2 = $('#injury-asof');
+    if(el2 && injuriesAsOf){
+      el2.textContent = 'injuries as of ' + new Date(injuriesAsOf).toLocaleString('en-US',{ month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+    }
+  }
+  function injuryFor(name, pos, team){
+    if(!injuryIndex) return null;
+    const arr = injuryIndex[normalizeName(name) + '|' + pos];
+    if(!arr) return null;
+    return arr.find(x=> x.team === team) || (arr.length === 1 ? arr[0] : null);
+  }
+  function isOut(p){ return !!p.injStatus && OUT_STATUSES.includes(p.injStatus); }
+  function injBadge(status){
+    if(!status) return '';
+    const out = OUT_STATUSES.includes(status);
+    return `<span class="flag-badge ${out ? 'inj-out' : 'inj-q'}">${status.toUpperCase()}</span>`;
+  }
 
   // Free-tier detail panel. If Vault's premium player data is already loaded this session
   // (rawPlayers), real season stats show up here automatically via a name match — no separate
@@ -926,8 +967,8 @@
 
     container.innerHTML = `
       <div class="edge-detail-card">
-        <h3>${p.name}</h3>
-        <div class="sub">${p.team || 'FA'} · ${p.pos || '—'}${p.status ? ' · ' + p.status : ''}</div>
+        <h3>${p.name} ${injBadge(p.inj)}</h3>
+        <div class="sub">${p.team || 'FA'} · ${p.pos || '—'}${p.status ? ' · ' + p.status : ''}${p.inj ? ' · ' + p.inj + (p.part ? ' (' + p.part + ')' : '') : ''}</div>
         ${statsHtml}
       </div>
     `;
@@ -1451,6 +1492,9 @@
       p.teamPPG = teamStat || 0;
       p.oppPAPG = window.gwDefenseRank && sched && window.gwDefenseRank[sched.opponent] ? window.gwDefenseRank[sched.opponent].paPerGame : 0;
       p.category = category; // so the detail panel knows which advancedStats/primaryStat to use
+      const injSp = injuryFor(p.name, p.pos, p.team);
+      p.injStatus = injSp ? injSp.inj : null;
+      p.injPart = injSp ? (injSp.part || null) : null;
 
       // trend, off full season history, independent of the scope toggle — drives BREAKOUT/DUE/OVERPERFORMING
       const lastWk = raw.weeks[raw.weeks.length-1];
@@ -1538,12 +1582,21 @@
   });
 
   /* ---- RANKINGS ---- */
+  // Boards respect the HIDE INJURED toggle; scoring itself always runs on the full pool so
+  // percentiles stay stable when the toggle flips.
+  function visibleList(){
+    if(!edgeFlat) return edgeFlat;
+    const t = $('#hide-injured');
+    return (t && t.checked) ? edgeFlat.filter(p=> !isOut(p)) : edgeFlat;
+  }
+
   function renderEdgeRankings(){
     const container = $('#edge-results');
     if(!edgeFlat){ return; }
+    const list = visibleList();
     container.innerHTML = '';
-    if(!edgeFlat.length){ container.appendChild(el('div','empty','No qualifying players yet this season.')); return; }
-    edgeFlat.slice(0,25).forEach((p,i)=>{
+    if(!list.length){ container.appendChild(el('div','empty','No qualifying players yet this season.')); return; }
+    list.slice(0,25).forEach((p,i)=>{
       const row = el('div','edge-row');
       const trendCls = p.trend > 1.5 ? 'surging' : (p.trend < -1.5 ? 'cooling' : 'steady');
       const trendText = p.trend > 1.5 ? 'SURGING' : (p.trend < -1.5 ? 'COOLING' : 'STEADY');
@@ -1551,7 +1604,7 @@
       row.innerHTML = `
         <div class="rank">#${i+1}</div>
         <div class="who"><div class="name">${p.name}</div><div class="meta">${p.team} · ${p.pos} · ${p.games} gm</div><div class="reason-line">${p.reason}</div></div>
-        <div>${flagPart}${cheatCodeBadge(p)}</div>
+        <div>${injBadge(p.injStatus)}${flagPart}${cheatCodeBadge(p)}</div>
         <div><div class="score">${p.score}</div><div class="form-stat">${p.formStat}</div></div>
       `;
       row.addEventListener('click', (e)=>{
@@ -1570,7 +1623,8 @@
   function renderGameVault(){
     const container = $('#gamevault-results');
     container.innerHTML = '';
-    if(!edgeFlat || !edgeFlat.length){ container.appendChild(el('div','empty','No scored players yet.')); return; }
+    const list = visibleList();
+    if(!list || !list.length){ container.appendChild(el('div','empty','No scored players yet.')); return; }
     const events = window.gwWeekEvents || [];
     if(!events.length){ container.appendChild(el('div','empty','No games on the board this week.')); return; }
 
@@ -1578,7 +1632,7 @@
       const comp = ev.competitions?.[0];
       const [home, away] = comp.competitors.sort((a,b)=> a.homeAway==='home' ? 1 : -1).reverse();
       const homeAbbr = home.team?.abbreviation, awayAbbr = away.team?.abbreviation;
-      const inGame = edgeFlat.filter(p=> p.team===homeAbbr || p.team===awayAbbr);
+      const inGame = list.filter(p=> p.team===homeAbbr || p.team===awayAbbr);
       if(!inGame.length) return;
 
       // In Matchups mode (early season) the real product re-normalizes each game's top score to 100.
@@ -1595,7 +1649,7 @@
         row.innerHTML = `
           <div class="rank">#${i+1}</div>
           <div class="who"><div class="name">${p.name}</div><div class="meta">${p.team} · ${p.pos}</div><div class="reason-line">${p.reason}</div></div>
-          <div>${badge}${cheatCodeBadge(p)}</div>
+          <div>${injBadge(p.injStatus)}${badge}${cheatCodeBadge(p)}</div>
           <div><div class="score">${displayScore(p)}</div><div class="form-stat">${p.formStat}</div></div>
         `;
         row.addEventListener('click', (e)=>{
@@ -1749,8 +1803,8 @@
     container.innerHTML = `
       <div class="edge-detail-card">
         <div>
-          <h3>${p.name} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
-          <div class="sub">${p.team} · ${p.pos} · VAULT score ${p.score}/100 · ${p.formStat}</div>
+          <h3>${p.name} ${injBadge(p.injStatus)} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
+          <div class="sub">${p.team} · ${p.pos} · VAULT score ${p.score}/100 · ${p.formStat}${p.injStatus ? ' · ' + p.injStatus + (p.injPart ? ' (' + p.injPart + ')' : '') : ''}</div>
           <div class="reason-line">${p.reason}</div>
 
           <div class="panel-title" style="margin:14px 0 4px;"><h2 style="font-size:.7rem;">COMPONENT SCORES</h2><div class="rule"></div></div>
@@ -1819,9 +1873,10 @@
   function renderParlays(){
     const container = $('#parlay-results');
     container.innerHTML = '';
-    if(!edgeFlat || !edgeFlat.length){ container.appendChild(el('div','empty','Load the Vault first.')); return; }
+    const list = visibleList();
+    if(!list || !list.length){ container.appendChild(el('div','empty','Load the Vault first.')); return; }
 
-    const candidates = edgeFlat.filter(p=> p.score >= 55 && p.opponent).slice(0, 14);
+    const candidates = list.filter(p=> p.score >= 55 && p.opponent).slice(0, 14);
     if(candidates.length < 2){ container.appendChild(el('div','empty','Not enough qualifying players yet.')); return; }
 
     const combos = [];
@@ -1896,6 +1951,7 @@
     clearDetails();
     try{
       if(!rawPlayers) rawPlayers = await loadRawPlayers();
+      try{ await loadPlayers(); buildInjuryIndex(); }catch(e){ /* injuries just won't show */ }
       rebuildScores();
       refreshCurrentSubtab();
       gwFeedback(btn, true);
@@ -1921,6 +1977,12 @@
         showError(results, 'Could not load the Vault (' + err.message + ').');
       }
     }
+  });
+
+  $('#hide-injured').addEventListener('change', ()=>{
+    if(!edgeFlat) return;
+    clearDetails();
+    refreshCurrentSubtab();
   });
 
   $('#edge-scope').addEventListener('change', ()=>{
