@@ -383,6 +383,12 @@
 
   .game-vault-group{margin-bottom:26px;}
 
+  /* Inline expand-under-row detail panels (Vault rows + Players rows) */
+  .inline-detail{ padding:0 0 10px; }
+  .inline-detail .edge-detail-card{ max-width:none; margin-top:6px; }
+  .edge-row.row-open, .player-row.row-open{ background:rgba(124,92,255,.10); }
+  .flag-badge{ cursor:pointer; }
+
   /* Grid-rows reveal — animates height without needing height:auto, which can't be transitioned */
   .gw-reveal{
     display:grid;
@@ -614,6 +620,30 @@
     btn.classList.add(ok ? 'gw-pulse-ok' : 'gw-shake');
     setTimeout(()=> btn.classList.remove('gw-shake','gw-pulse-ok'), 600);
   };
+
+  // Inline detail panels: open right under the clicked row (click again to collapse) instead of
+  // rendering into one box at the bottom of the page where it's off-screen on a long list.
+  let currentDetailPlayer = null; // who's open, so it can refresh once play-by-play finishes loading
+  let currentDetailTarget = null;
+  function clearDetails(){
+    document.querySelectorAll('.inline-detail').forEach(d=> d.remove());
+    document.querySelectorAll('.row-open').forEach(r=> r.classList.remove('row-open'));
+    const legacy = $('#edge-detail'); if(legacy) legacy.innerHTML = '';
+    currentDetailPlayer = null; currentDetailTarget = null;
+  }
+  function toggleInline(row, render){
+    const next = row.nextElementSibling;
+    const wasOpen = next && next.classList.contains('inline-detail');
+    clearDetails();
+    if(wasOpen) return null;
+    const box = document.createElement('div');
+    box.className = 'inline-detail';
+    row.after(box);
+    row.classList.add('row-open');
+    render(box);
+    box.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    return box;
+  }
 
   /* ---------------- tabs ---------------- */
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
@@ -853,7 +883,7 @@
     left.innerHTML = `<div class="name">${p.name}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'}</div>`;
     row.appendChild(left);
     if(badge) row.appendChild(el('span','trend-badge ' + badge.cls, badge.text));
-    row.addEventListener('click', ()=> renderPlayerDetail(p));
+    row.addEventListener('click', ()=> toggleInline(row, box=> renderPlayerDetail(p, box)));
     container.appendChild(row);
   }
 
@@ -864,8 +894,8 @@
   // Free-tier detail panel. If Vault's premium player data is already loaded this session
   // (rawPlayers), real season stats show up here automatically via a name match — no separate
   // premium call needed. If Vault hasn't been loaded yet, it degrades to bio info only.
-  function renderPlayerDetail(p){
-    const container = $('#player-detail');
+  function renderPlayerDetail(p, container){
+    container = container || $('#player-detail');
     let statsHtml;
 
     const pool = (typeof rawPlayers !== 'undefined' && rawPlayers) ? Object.values(rawPlayers) : null;
@@ -1500,7 +1530,7 @@
       btn.classList.add('active');
       document.querySelectorAll('.vault-panel').forEach(p=> p.style.display='none');
       $('#vault-' + btn.dataset.subtab).style.display = '';
-      $('#edge-detail').innerHTML = '';
+      clearDetails();
     });
   });
 
@@ -1521,7 +1551,14 @@
         <div>${flagPart}${cheatCodeBadge(p)}</div>
         <div><div class="score">${p.score}</div><div class="form-stat">${p.formStat}</div></div>
       `;
-      row.addEventListener('click', ()=> renderEdgeDetail(p));
+      row.addEventListener('click', (e)=>{
+        const box = toggleInline(row, b=> renderEdgeDetail(p, b));
+        // Clicking the CHEAT CODE badge opens the panel and jumps straight to that section
+        if(box && e.target.closest('.flag-badge.cheat')){
+          const a = box.querySelector('.cheat-anchor');
+          if(a) a.scrollIntoView({ behavior:'smooth', block:'start' });
+        }
+      });
       container.appendChild(row);
     });
   }
@@ -1558,7 +1595,14 @@
           <div>${badge}${cheatCodeBadge(p)}</div>
           <div><div class="score">${displayScore(p)}</div><div class="form-stat">${p.formStat}</div></div>
         `;
-        row.addEventListener('click', ()=> renderEdgeDetail(p));
+        row.addEventListener('click', (e)=>{
+        const box = toggleInline(row, b=> renderEdgeDetail(p, b));
+        // Clicking the CHEAT CODE badge opens the panel and jumps straight to that section
+        if(box && e.target.closest('.flag-badge.cheat')){
+          const a = box.querySelector('.cheat-anchor');
+          if(a) a.scrollIntoView({ behavior:'smooth', block:'start' });
+        }
+      });
         return row;
       };
 
@@ -1587,9 +1631,10 @@
   }
 
   /* ---- PLAYER VAULT DETAIL ---- */
-  function renderEdgeDetail(p){
+  function renderEdgeDetail(p, container){
     currentDetailPlayer = p;
-    const container = $('#edge-detail');
+    container = container || $('#edge-detail');
+    currentDetailTarget = container;
 
     const statRows = [];
     if(p.pos==='QB'){
@@ -1675,7 +1720,7 @@
         (it's a bigger download than the rest of the Vault, so it can lag a moment behind).
       </div>
     ` : `
-      <div class="panel-title" style="margin:16px 0 4px;"><h2 style="font-size:.7rem;">NFL CHEAT CODE</h2><div class="rule"></div></div>
+      <div class="panel-title cheat-anchor" style="margin:16px 0 4px;"><h2 style="font-size:.7rem;">NFL CHEAT CODE</h2><div class="rule"></div></div>
       <div class="cheat-boxes">
         <div class="cheat-box"><div class="lbl">EXPECTED TDS</div><div class="val">${p.xTD.toFixed(1)}</div></div>
         <div class="cheat-box"><div class="lbl">SCORED</div><div class="val">${p.tdScored}</div></div>
@@ -1720,18 +1765,18 @@
             ${statRows.map(([k,v])=>`<div class="row"><span>${k}</span><span>${v}</span></div>`).join('')}
           </div>
 
-          <div id="vault-weather" style="margin-top:12px;font-size:.72rem;color:var(--text-dim);">Checking weather…</div>
-          <div id="vault-lines" style="margin-top:10px;font-size:.72rem;color:var(--text-dim);"></div>
+          <div class="vault-weather" style="margin-top:12px;font-size:.72rem;color:var(--text-dim);">Checking weather…</div>
+          <div class="vault-lines" style="margin-top:10px;font-size:.72rem;color:var(--text-dim);"></div>
         </div>
       </div>
     `;
 
-    loadWeatherFor(p);
-    loadLineHistoryFor(p);
+    loadWeatherFor(p, container);
+    loadLineHistoryFor(p, container);
   }
 
-  async function loadWeatherFor(p){
-    const target = $('#vault-weather');
+  async function loadWeatherFor(p, root){
+    const target = (root || document).querySelector('.vault-weather');
     if(!target) return;
     const homeAbbr = p.gameHome ? p.team : p.opponent;
     const stadium = homeAbbr ? STADIUMS[homeAbbr] : null;
@@ -1747,8 +1792,8 @@
     }catch(e){ target.textContent = ''; }
   }
 
-  async function loadLineHistoryFor(p){
-    const target = $('#vault-lines');
+  async function loadLineHistoryFor(p, root){
+    const target = (root || document).querySelector('.vault-lines');
     if(!target || !p.opponent) return;
     const homeAbbr = p.gameHome ? p.team : p.opponent;
     const awayAbbr = p.gameHome ? p.opponent : p.team;
@@ -1839,15 +1884,13 @@
       : 'premium · weekly scoring engine';
   }
 
-  let currentDetailPlayer = null; // tracks who's open, so we can refresh it once PBP finishes loading
 
   $('#edge-load-btn').addEventListener('click', async ()=>{
     const btn = $('#edge-load-btn');
     const results = $('#gamevault-results');
     results.innerHTML = '';
     results.appendChild(el('div','loading','Fetching + scoring the season\'s data…'));
-    $('#edge-detail').innerHTML = '';
-    currentDetailPlayer = null;
+    clearDetails();
     try{
       if(!rawPlayers) rawPlayers = await loadRawPlayers();
       rebuildScores();
@@ -1861,9 +1904,9 @@
           pbpRows = rows;
           rebuildScores();
           refreshCurrentSubtab();
-          if(currentDetailPlayer){
+          if(currentDetailPlayer && currentDetailTarget && currentDetailTarget.isConnected){
             const refreshed = edgeFlat.find(p=> p.id === currentDetailPlayer.id);
-            if(refreshed) renderEdgeDetail(refreshed);
+            if(refreshed) renderEdgeDetail(refreshed, currentDetailTarget);
           }
         }).catch(()=>{ /* Cheat Code just won't be available this session — everything else still works */ });
       }
@@ -1881,14 +1924,14 @@
     if(!rawPlayers) return;
     rebuildScores();
     refreshCurrentSubtab();
-    $('#edge-detail').innerHTML = '';
+    clearDetails();
   });
 
   $('#edge-category').addEventListener('change', ()=>{
     if(!rawPlayers) return;
     rebuildScores();
     refreshCurrentSubtab();
-    $('#edge-detail').innerHTML = '';
+    clearDetails();
   });
 
 })();
