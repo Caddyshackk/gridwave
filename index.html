@@ -550,6 +550,7 @@
         <option value="passtds">PASS TDS</option>
         <option value="rushyards">RUSH YARDS</option>
         <option value="receptions">RECEPTIONS</option>
+        <option value="recyards">REC YARDS</option>
       </select>
       <select id="edge-scope" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
         <option value="season">SEASON</option>
@@ -1436,6 +1437,31 @@
       },
       primaryStatLabel: 'Receptions',
       primaryStat(w){ return w.receptions; }
+    },
+    recyards: {
+      // Deliberately a separate category from RECEPTIONS, not a duplicate — a player can clear
+      // the catches line and miss the yards line (or the reverse), same as any real prop board
+      // splits volume props from yardage props.
+      label: 'REC YARDS', positions: ['WR','TE','RB'],
+      components(p){
+        return [
+          { key:'targetdesign', label:'Target Design', value:p.targetShare||0 },
+          { key:'ypt', label:'Yards / Target', value:p.targets>0 ? p.rec_yards/p.targets : 0 },
+          { key:'covleak', label:'Coverage Leak', value:p.oppRecAllowedPG||0 },
+          { key:'script', label:'Script Lean', value:(p.scriptLean||0)*100 }
+        ];
+      },
+      formStat(p){ return `${(p.rec_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; },
+      advancedStats(p){
+        return [
+          ['Target Share', ((p.targetShare||0)*100).toFixed(1)+'%'],
+          ['Yards / Target', p.targets>0 ? (p.rec_yards/p.targets).toFixed(1) : '—'],
+          ['Yards / Reception', p.receptions>0 ? (p.rec_yards/p.receptions).toFixed(1) : '—'],
+          ['Opp Rec Yds Allowed/Gm', (p.oppRecAllowedPG||0).toFixed(1)]
+        ];
+      },
+      primaryStatLabel: 'Rec Yds',
+      primaryStat(w){ return w.rec_yards; }
     }
   };
 
