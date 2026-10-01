@@ -1518,22 +1518,26 @@
       p.teamPPG = teamStat || 0;
       p.oppPAPG = window.gwDefenseRank && sched && window.gwDefenseRank[sched.opponent] ? window.gwDefenseRank[sched.opponent].paPerGame : 0;
       p.category = category; // so the detail panel knows which advancedStats/primaryStat to use
+      p.seasonGames = raw.weeks.length; // needed in the percentile pass below, where `raw` isn't in scope
       const injSp = injuryFor(p.name, p.pos, p.team);
       p.injStatus = injSp ? injSp.inj : null;
       p.injPart = injSp ? (injSp.part || null) : null;
 
-      // trend, off full season history, independent of the scope toggle — drives BREAKOUT/DUE/OVERPERFORMING
-      const lastWk = raw.weeks[raw.weeks.length-1];
-      const lastEpa = (lastWk.rec_epa||0)+(lastWk.rush_epa||0)+(lastWk.pass_epa||0);
-      const priorWeeks = raw.weeks.slice(0,-1);
-      const priorAvgEpa = priorWeeks.length ? priorWeeks.reduce((s,w)=> s+(w.rec_epa+w.rush_epa+w.pass_epa),0)/priorWeeks.length : lastEpa;
-      p.trend = lastWk ? (lastEpa - priorAvgEpa) : 0;
-      const lastOpp = p.pos==='QB' ? lastWk.attempts : (p.pos==='RB' ? lastWk.carries+lastWk.targets*0.5 : lastWk.targets);
-      const priorAvgOpp = priorWeeks.length
-        ? priorWeeks.reduce((s,w)=> s + (p.pos==='QB'?w.attempts:(p.pos==='RB'?w.carries+w.targets*0.5:w.targets)), 0)/priorWeeks.length
-        : lastOpp;
-      p.oppTrend = lastWk ? (lastOpp - priorAvgOpp) : 0;
-      const fullOpp = raw.weeks.reduce((s,w)=> s + (p.pos==='QB'?w.attempts:(p.pos==='RB'?w.carries+w.targets*0.5:w.targets)), 0);
+      // Trend compares the last 2 games (not just 1) against everything before them — a single
+      // fluke game used to be able to flip BREAKOUT on its own, which is exactly the kind of
+      // noise this is meant to filter, not produce. Off full season history, independent of scope.
+      const oppOf = w => p.pos==='QB' ? w.attempts : (p.pos==='RB' ? w.carries + w.targets*0.5 : w.targets);
+      const epaOf = w => (w.rec_epa||0)+(w.rush_epa||0)+(w.pass_epa||0);
+      const recentN = Math.min(2, raw.weeks.length);
+      const recentWeeks = raw.weeks.slice(-recentN);
+      const priorWeeks = raw.weeks.slice(0, -recentN);
+      const recentAvgEpa = recentWeeks.reduce((s,w)=> s+epaOf(w), 0) / recentWeeks.length;
+      const priorAvgEpa = priorWeeks.length ? priorWeeks.reduce((s,w)=> s+epaOf(w), 0)/priorWeeks.length : recentAvgEpa;
+      p.trend = recentAvgEpa - priorAvgEpa;
+      const recentAvgOpp = recentWeeks.reduce((s,w)=> s+oppOf(w), 0) / recentWeeks.length;
+      const priorAvgOpp = priorWeeks.length ? priorWeeks.reduce((s,w)=> s+oppOf(w), 0)/priorWeeks.length : recentAvgOpp;
+      p.oppTrend = recentAvgOpp - priorAvgOpp;
+      const fullOpp = raw.weeks.reduce((s,w)=> s + oppOf(w), 0);
       const fullTds = raw.weeks.reduce((s,w)=> s + w.rec_td+w.rush_td+w.pass_td, 0);
       p.fullTdRate = fullOpp>0 ? fullTds/fullOpp : 0;
 
@@ -1576,10 +1580,19 @@
       const pRedZoneShare = percentileRank(redZoneShareVals, redZoneShareVals[idx]);
       if(pRedZoneShare >= 80 && p.opportunity > 0) p.cheatCodeCount++;
 
+      // Flags need real sample size to mean anything — TD scoring especially is high-variance
+      // game to game, so under 4 games played, a flag is more likely noise than signal. The
+      // tdDebt threshold also scales down as the season goes: a ±1.0 debt swing after 2 games
+      // is nothing, the same swing after 10 games is real, so it shouldn't take an equally easy
+      // bar to trigger at both points.
+      const seasonGames = p.seasonGames;
+      const tdDebtThreshold = Math.max(1.0, 2.5 - seasonGames*0.15);
       p.flag = null;
-      if(p.oppTrend > 0 && p.trend > 1.0 && p.pFullOpp < 75){ p.flag = 'breakout'; }
-      else if(p.tdDebt !== undefined ? p.tdDebt > 1.0 : (p.pFullOpp >= 65 && p.pTdRate <= 35)){ p.flag = 'due'; }
-      else if(p.tdDebt !== undefined ? p.tdDebt < -1.0 : (p.pTdRate >= 80 && p.pFullOpp <= 50)){ p.flag = 'over'; }
+      if(seasonGames >= 4){
+        if(p.oppTrend > 0 && p.trend > 1.0 && p.pFullOpp < 75){ p.flag = 'breakout'; }
+        else if(p.tdDebt !== undefined ? p.tdDebt > tdDebtThreshold : (p.pFullOpp >= 65 && p.pTdRate <= 35)){ p.flag = 'due'; }
+        else if(p.tdDebt !== undefined ? p.tdDebt < -tdDebtThreshold : (p.pTdRate >= 80 && p.pFullOpp <= 50)){ p.flag = 'over'; }
+      }
     });
 
     list.sort((a,b)=> b.score-a.score);
