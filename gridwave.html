@@ -1,0 +1,1729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GRIDWAVE — Football Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void:#08090b;
+    --bg-panel:#111318;
+    --bg-panel-2:#16191f;
+    --grid-line:rgba(252,238,10,.14);
+    --pink:#ff2358;
+    --cyan:#00f0ff;
+    --purple:#7c5cff;
+    --amber:#fcee0a;
+    --text-hi:#eef1f5;
+    --text-mid:#9aa3ad;
+    --text-dim:#5b636c;
+    --win:#3dff9a;
+    --loss:#ff2358;
+    --ease-snappy: cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg-void);color:var(--text-hi);}
+  body{
+    font-family:'Share Tech Mono',monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'Orbitron',sans-serif;}
+  a{color:var(--cyan);}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    height:280px;
+    overflow:hidden;
+    border-bottom:2px solid var(--purple);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(rgba(0,240,255,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,.06) 1px, transparent 1px),
+      linear-gradient(180deg, #0d0f13 0%, #08090b 100%);
+    background-size:38px 38px, 38px 38px, auto;
+  }
+  .hero::before{
+    content:'';
+    position:absolute;
+    left:0; right:0; top:-2px;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+    box-shadow:0 0 14px var(--cyan), 0 0 28px var(--cyan);
+    opacity:.75;
+    animation: gw-scan 4.5s linear infinite;
+  }
+  @keyframes gw-scan{ 0%{top:-2px;} 100%{top:100%;} }
+  @keyframes fadein{ to{opacity:1;} }
+  .hero::after{
+    content:'';
+    position:absolute;
+    left:0; right:0; bottom:0; height:6px;
+    background:repeating-linear-gradient(135deg, var(--amber) 0 14px, #08090b 14px 28px);
+    opacity:.9;
+  }
+  .hero-title{
+    position:relative;
+    z-index:2;
+    text-align:center;
+    padding-bottom:26px;
+  }
+  .hero-title h1{
+    font-size:clamp(2.2rem,6vw,3.6rem);
+    font-weight:900;
+    letter-spacing:.06em;
+    margin:0;
+    color:var(--text-hi);
+    text-shadow:2px 0 var(--pink), -2px 0 var(--cyan);
+    animation: gw-glitch 6s steps(1) infinite;
+  }
+  @keyframes gw-glitch{
+    0%,93%,100%{ text-shadow:2px 0 var(--pink), -2px 0 var(--cyan); transform:translate(0,0); }
+    94%{ text-shadow:-3px 0 var(--pink), 3px 0 var(--cyan); transform:translate(-1px,0); }
+    95%{ text-shadow:3px 0 var(--pink), -3px 0 var(--cyan); transform:translate(1px,0); clip-path:inset(20% 0 30% 0); }
+    96%{ text-shadow:2px 0 var(--pink), -2px 0 var(--cyan); transform:translate(0,0); }
+  }
+  .hero-sub{
+    margin:.5em 0 0;
+    color:var(--text-mid);
+    font-size:.95rem;
+    letter-spacing:.04em;
+  }
+  .hero-meta{
+    margin-top:.9em;
+    font-size:.8rem;
+    color:var(--cyan);
+    display:flex;
+    gap:1.4em;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+
+  /* ---------- NAV ---------- */
+  nav.tabs{
+    position:sticky; top:0; z-index:20;
+    display:flex;
+    justify-content:center;
+    gap:2px;
+    background:rgba(8,9,11,.82);
+    backdrop-filter:blur(14px) saturate(160%) contrast(115%) brightness(92%);
+    -webkit-backdrop-filter:blur(14px) saturate(160%) contrast(115%) brightness(92%);
+    border-bottom:1px solid var(--grid-line);
+    padding:10px 12px;
+    flex-wrap:wrap;
+    transition:background-color .2s var(--ease-snappy);
+  }
+  nav.tabs button{
+    font-family:'Orbitron',sans-serif;
+    font-size:.78rem;
+    letter-spacing:.08em;
+    background:transparent;
+    border:1px solid transparent;
+    color:var(--text-mid);
+    padding:.65em 1.3em;
+    cursor:pointer;
+    transition:color .18s var(--ease-snappy), border-color .18s var(--ease-snappy), text-shadow .18s var(--ease-snappy);
+  }
+  nav.tabs button:hover{color:var(--text-hi);}
+  nav.tabs button.active{
+    color:var(--cyan);
+    border-color:var(--cyan);
+    text-shadow:0 0 10px rgba(0,240,255,.6);
+  }
+
+  .license-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    max-width:1120px;
+    margin:18px auto 0;
+    padding:12px 18px;
+    background:var(--bg-panel-2);
+    border:1px solid var(--grid-line);
+  }
+  .license-label{
+    font-family:'Orbitron',sans-serif;
+    font-size:.68rem;
+    letter-spacing:.08em;
+    color:var(--amber);
+  }
+  .license-bar input{flex:1;min-width:160px;}
+  .license-status{font-size:.72rem;font-family:'Orbitron',sans-serif;}
+  .license-status.ok{color:var(--win);}
+  .license-status.bad{color:var(--loss);}
+  .license-bar a{font-size:.72rem;color:var(--purple);white-space:nowrap;}
+
+  main{max-width:1120px;margin:0 auto;padding:28px 18px 80px;}
+  section.view{display:none;}
+  section.view.active{display:block;animation:fadein .35s ease-out;}
+
+  .panel-title{
+    display:flex;
+    align-items:baseline;
+    gap:.6em;
+    margin:2.2em 0 .9em;
+  }
+  .panel-title h2{
+    font-size:1rem;
+    letter-spacing:.08em;
+    color:var(--text-hi);
+    margin:0;
+  }
+  .panel-title .rule{flex:1;height:1px;background:linear-gradient(90deg,var(--grid-line),transparent);}
+  .panel-title .tag{font-size:.7rem;color:var(--text-dim);}
+
+  /* ---------- TICKER ---------- */
+  .ticker{
+    display:flex;
+    gap:12px;
+    overflow-x:auto;
+    padding-bottom:10px;
+    scrollbar-width:thin;
+  }
+  .game-card{
+    flex:0 0 210px;
+    background:var(--bg-panel);
+    border:1px solid var(--grid-line);
+    padding:12px 14px;
+    position:relative;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  }
+  .game-card .status{
+    font-size:.65rem;
+    color:var(--amber);
+    letter-spacing:.08em;
+    margin-bottom:8px;
+  }
+  .game-card .status.live{color:var(--pink);}
+  .game-card .row{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;padding:3px 0;}
+  .game-card .row .abbr{color:var(--text-hi);font-weight:700;}
+  .game-card .row .score{font-family:'Orbitron',sans-serif;color:var(--cyan);}
+
+  /* ---------- TABLE ---------- */
+  table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  th{
+    text-align:left;
+    font-family:'Orbitron',sans-serif;
+    font-size:.65rem;
+    letter-spacing:.06em;
+    color:var(--text-dim);
+    padding:8px 10px;
+    border-bottom:1px solid var(--grid-line);
+  }
+  td{padding:8px 10px;border-bottom:1px solid rgba(124,92,255,.1);color:var(--text-mid);}
+  tr.division-head td{
+    color:var(--purple);
+    font-family:'Orbitron',sans-serif;
+    font-size:.68rem;
+    letter-spacing:.08em;
+    background:rgba(124,92,255,.08);
+    padding-top:14px;
+  }
+  td.team-cell{color:var(--text-hi);font-weight:700;}
+  td.num{font-family:'Orbitron',sans-serif;color:var(--cyan);text-align:right;}
+  td.num.neg{color:var(--loss);}
+  td.num.pos{color:var(--win);}
+
+  /* ---------- STAT GRID ---------- */
+  .stat-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:10px;
+  }
+  .stat-chip{
+    background:var(--bg-panel);
+    border:1px solid var(--grid-line);
+    padding:12px;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .stat-chip .team{font-size:.72rem;color:var(--text-hi);font-weight:700;margin-bottom:6px;}
+  .stat-chip .figure{font-family:'Orbitron',sans-serif;font-size:1.3rem;color:var(--cyan);}
+  .stat-chip .label{font-size:.62rem;color:var(--text-dim);letter-spacing:.05em;}
+
+  /* ---------- PLAYERS ---------- */
+  .search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  input[type=text], input[type=password]{
+    background:var(--bg-panel);
+    border:1px solid var(--grid-line);
+    color:var(--text-hi);
+    font-family:'Share Tech Mono',monospace;
+    padding:.7em .9em;
+    font-size:.85rem;
+    flex:1;
+    min-width:180px;
+  }
+  input[type=text]:focus, input[type=password]:focus{outline:1px solid var(--cyan);}
+  button.action{
+    font-family:'Orbitron',sans-serif;
+    font-size:.72rem;
+    letter-spacing:.06em;
+    background:transparent;
+    border:1px solid var(--cyan);
+    color:var(--cyan);
+    padding:.7em 1.3em;
+    cursor:pointer;
+    clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+    transition:background-color .18s var(--ease-snappy), border-color .18s var(--ease-snappy), color .18s var(--ease-snappy), transform .18s var(--ease-snappy);
+  }
+  button.action:hover{background:rgba(0,240,255,.12);}
+
+  /* ---- action feedback: shake on error, glow-pulse on success ---- */
+  @keyframes gw-shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-3px);}
+    40%,60%{transform:translateX(3px);}
+  }
+  button.action.gw-shake{
+    animation:gw-shake .45s var(--ease-snappy);
+    border-color:var(--loss) !important;
+    color:var(--loss) !important;
+  }
+  @keyframes gw-pulse-ok{
+    0%{box-shadow:0 0 0 0 rgba(57,255,157,.55);}
+    100%{box-shadow:0 0 0 9px rgba(57,255,157,0);}
+  }
+  button.action.gw-pulse-ok{
+    animation:gw-pulse-ok .55s var(--ease-snappy);
+    border-color:var(--win) !important;
+    color:var(--win) !important;
+  }
+
+  .player-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:9px 12px;
+    border-bottom:1px solid rgba(124,92,255,.12);
+    font-size:.83rem;
+  }
+  .player-row .name{color:var(--text-hi);font-weight:700;}
+  .player-row .meta{color:var(--text-dim);font-size:.72rem;}
+  .trend-badge{font-family:'Orbitron',sans-serif;font-size:.7rem;padding:.2em .6em;border:1px solid;}
+  .trend-badge.add{color:var(--win);border-color:var(--win);}
+  .trend-badge.drop{color:var(--loss);border-color:var(--loss);}
+
+  /* ---------- MARKETS ---------- */
+  .key-box{
+    background:var(--bg-panel);
+    border:1px dashed var(--grid-line);
+    padding:16px;
+    margin-bottom:20px;
+    font-size:.82rem;
+    color:var(--text-mid);
+    line-height:1.6;
+  }
+  .key-box code{color:var(--amber);}
+  .odds-card{
+    background:var(--bg-panel);
+    border:1px solid var(--grid-line);
+    padding:14px 16px;
+    margin-bottom:10px;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .odds-card .matchup{font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--text-hi);margin-bottom:8px;}
+  .odds-line{display:flex;justify-content:space-between;font-size:.8rem;padding:3px 0;color:var(--text-mid);}
+  .odds-line span:last-child{color:var(--amber);font-family:'Orbitron',sans-serif;}
+
+  /* ---------- EDGE ---------- */
+  .edge-row{
+    display:grid;
+    grid-template-columns:2.2em 1fr auto auto;
+    gap:12px;
+    align-items:center;
+    padding:10px 12px;
+    border-bottom:1px solid rgba(124,92,255,.12);
+    cursor:pointer;
+  }
+  .edge-row:hover{background:rgba(124,92,255,.08);}
+  .edge-row .rank{font-family:'Orbitron',sans-serif;color:var(--text-dim);font-size:.8rem;}
+  .edge-row .who .name{color:var(--text-hi);font-weight:700;font-size:.85rem;}
+  .edge-row .who .meta{color:var(--text-dim);font-size:.7rem;}
+  .edge-row .badge{font-family:'Orbitron',sans-serif;font-size:.65rem;padding:.2em .55em;border:1px solid;white-space:nowrap;}
+  .edge-row .badge.surging{color:var(--win);border-color:var(--win);}
+  .edge-row .badge.cooling{color:var(--loss);border-color:var(--loss);}
+  .edge-row .badge.steady{color:var(--text-dim);border-color:var(--text-dim);}
+  .edge-row .score{font-family:'Orbitron',sans-serif;font-size:1.1rem;color:var(--cyan);text-align:right;min-width:2.5em;}
+
+  .edge-detail-card{
+    margin-top:18px;
+    background:var(--bg-panel);
+    border:1px solid var(--grid-line);
+    padding:20px;
+    max-width:520px;
+    clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    animation:gw-card-in .28s var(--ease-snappy);
+  }
+  @keyframes gw-card-in{
+    from{ opacity:0; transform:translateY(6px) scale(.98); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .edge-detail-card{ animation:none; }
+  }
+  .edge-detail-card h3{margin:0 0 4px;font-size:1.1rem;}
+  .edge-detail-card .sub{color:var(--text-dim);font-size:.75rem;margin-bottom:14px;}
+  .edge-stat-list .row{display:flex;justify-content:space-between;font-size:.78rem;padding:4px 0;border-bottom:1px solid rgba(124,92,255,.1);color:var(--text-mid);}
+  .edge-stat-list .row span:last-child{color:var(--amber);font-family:'Orbitron',sans-serif;}
+
+  /* ---------- VAULT (sub-tabs, flags, splits) ---------- */
+  .vault-subtab{opacity:.55;transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy);}
+  .vault-subtab.active{opacity:1;background:rgba(0,240,255,.1);}
+
+  .game-vault-group{margin-bottom:26px;}
+
+  /* Grid-rows reveal — animates height without needing height:auto, which can't be transitioned */
+  .gw-reveal{
+    display:grid;
+    grid-template-rows:0fr;
+    transition:grid-template-rows .32s var(--ease-snappy);
+  }
+  .gw-reveal.gw-reveal-open{ grid-template-rows:1fr; }
+  .gw-reveal-inner{ overflow:hidden; min-height:0; }
+  .gw-reveal-fade{ opacity:0; transition:opacity .22s var(--ease-snappy); }
+  .gw-reveal.gw-reveal-open .gw-reveal-fade{ opacity:1; transition-delay:.08s; }
+  .game-vault-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:8px 4px;border-bottom:1px solid var(--grid-line);margin-bottom:6px;
+    font-family:'Orbitron',sans-serif;font-size:.78rem;color:var(--text-hi);
+  }
+  .game-vault-head .ctx{font-size:.65rem;color:var(--text-dim);}
+
+  .flag-badge{font-family:'Orbitron',sans-serif;font-size:.6rem;padding:.18em .5em;border:1px solid;white-space:nowrap;display:inline-block;margin:1px 0;}
+  .flag-badge.due{color:var(--amber);border-color:var(--amber);}
+  .flag-badge.over{color:var(--loss);border-color:var(--loss);}
+  .flag-badge.breakout{color:var(--win);border-color:var(--win);}
+  .flag-badge.cheat{color:var(--cyan);border-color:var(--cyan);}
+  .edge-row > div:nth-child(3){display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
+
+  .cheat-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 10px;}
+  .cheat-box{background:var(--bg-panel-2);border:1px solid var(--grid-line);padding:10px 12px;clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);}
+  .cheat-box .lbl{font-family:'Orbitron',sans-serif;font-size:.6rem;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
+  .cheat-box .val{font-family:'Orbitron',sans-serif;font-size:1.3rem;color:var(--text-hi);}
+  .cheat-explain{font-size:.7rem;color:var(--text-dim);line-height:1.5;margin-bottom:10px;}
+  .zone-table{margin-bottom:6px;}
+
+  .split-bars{display:flex;flex-direction:column;gap:10px;margin:10px 0 16px;}
+  .split-bar-row .lbl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--text-dim);margin-bottom:3px;font-family:'Orbitron',sans-serif;}
+  .split-bar-track{height:6px;background:rgba(124,92,255,.15);position:relative;}
+  .split-bar-fill{height:100%;}
+  .split-bar-fill.baseline{background:var(--pink);}
+  .split-bar-fill.opportunity{background:var(--cyan);}
+  .split-bar-fill.c0{background:var(--cyan);}
+  .split-bar-fill.c1{background:var(--pink);}
+  .split-bar-fill.c2{background:var(--purple);}
+  .split-bar-fill.c3{background:var(--amber);}
+  .form-stat{font-size:.62rem;color:var(--text-dim);text-align:right;margin-top:2px;}
+  .reason-line{font-size:.7rem;color:var(--amber);margin:4px 0 0;}
+
+  .vault-summary{
+    font-size:.8rem;color:var(--text-mid);
+    border-left:2px solid var(--purple);
+    padding:8px 12px;margin:14px 0;
+    background:rgba(124,92,255,.06);
+  }
+
+  .parlay-card{
+    background:var(--bg-panel);border:1px solid var(--grid-line);
+    padding:12px 16px;margin-bottom:10px;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  .parlay-card .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .parlay-card .head .tag2{font-family:'Orbitron',sans-serif;font-size:.65rem;color:var(--text-dim);border:1px solid var(--grid-line);padding:.15em .5em;}
+  .parlay-card .head .score{font-family:'Orbitron',sans-serif;color:var(--win);font-size:1rem;}
+  .parlay-leg{font-size:.78rem;color:var(--text-hi);padding:2px 0;}
+  .parlay-leg .sub{color:var(--text-dim);font-size:.68rem;}
+  .parlay-reason{font-size:.68rem;color:var(--amber);margin-top:6px;}
+
+  .empty, .loading, .error{
+    color:var(--text-dim);
+    font-size:.85rem;
+    padding:20px 4px;
+  }
+  .error{color:var(--pink);}
+
+  footer{
+    text-align:center;
+    color:var(--text-dim);
+    font-size:.72rem;
+    padding:30px 20px 50px;
+    border-top:1px solid var(--grid-line);
+    margin-top:40px;
+  }
+  footer a{color:var(--purple);}
+
+  @media (prefers-reduced-motion: reduce){
+    .hero::before, .hero-title h1{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-title">
+    <h1>GRIDWAVE</h1>
+    <p class="hero-sub">Football analytics, jacked in.</p>
+    <div class="hero-meta">
+      <span id="meta-week">LOADING WEEK…</span>
+      <span id="meta-clock"></span>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs">
+  <button data-view="teams" class="active">TEAMS</button>
+  <button data-view="edge">VAULT</button>
+  <button data-view="players">PLAYERS</button>
+  <button data-view="markets">MARKETS</button>
+</nav>
+
+<div class="license-bar">
+  <span class="license-label">PREMIUM ACCESS</span>
+  <input type="password" id="license-key" placeholder="paste your license key">
+  <button class="action" id="license-save-btn">UNLOCK</button>
+  <span id="license-status" class="license-status"></span>
+  <a id="license-buy-link" href="#" target="_blank" rel="noopener">Get a license →</a>
+</div>
+
+<main>
+
+  <!-- TEAMS -->
+  <section id="view-teams" class="view active">
+    <div class="panel-title"><h2>THIS WEEK</h2><div class="rule"></div><span class="tag">live · espn</span></div>
+    <div id="ticker" class="ticker"><div class="loading">Pulling scoreboard…</div></div>
+
+    <div class="panel-title"><h2>STANDINGS</h2><div class="rule"></div><span class="tag">by division</span></div>
+    <div id="standings"><div class="loading">Pulling standings…</div></div>
+
+    <div class="panel-title"><h2>SCORING EFFICIENCY</h2><div class="rule"></div><span class="tag">pts for / game</span></div>
+    <div id="stat-grid" class="stat-grid"><div class="loading">Crunching team stats…</div></div>
+  </section>
+
+  <!-- EDGE / VAULT -->
+  <section id="view-edge" class="view">
+    <div class="panel-title"><h2>THE VAULT</h2><div class="rule"></div><span id="vault-mode-tag" class="tag">premium · weekly scoring engine</span></div>
+    <div class="key-box">
+      Scored per prop category — each has its own components (e.g. Rush Yards leans on
+      <strong style="color:var(--cyan)">Carry Share</strong>, <strong style="color:var(--cyan)">Box Count Diet</strong>,
+      <strong style="color:var(--cyan)">Script Lean</strong>, <strong style="color:var(--cyan)">Ground Form</strong>),
+      each percentile-ranked against the player's own position. Flags: <strong style="color:var(--amber)">DUE</strong>
+      (strong underlying signal, production hasn't shown up yet), <strong style="color:var(--loss)">OVERPERFORMING</strong>
+      (production running hot vs. opportunity — expect regression), <strong style="color:var(--win)">BREAKOUT</strong>
+      (role and efficiency both trending up). Early in the season, boards fall back to a per-game
+      <strong>Matchups</strong> view until every team has three weeks of film. Premium — unlock with your license key above.
+    </div>
+
+    <div class="search-row">
+      <button class="action vault-subtab active" data-subtab="gamevault">GAME VAULT</button>
+      <button class="action vault-subtab" data-subtab="rankings">RANKINGS</button>
+      <button class="action vault-subtab" data-subtab="parlays">PARLAYS</button>
+    </div>
+    <div class="search-row">
+      <select id="edge-category" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:'Share Tech Mono',monospace;padding:.7em .9em;">
+        <option value="anytd">ANY TD</option>
+        <option value="passyards">PASS YARDS</option>
+        <option value="passtds">PASS TDS</option>
+        <option value="rushyards">RUSH YARDS</option>
+        <option value="receptions">RECEPTIONS</option>
+      </select>
+      <select id="edge-scope" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:'Share Tech Mono',monospace;padding:.7em .9em;">
+        <option value="season">SEASON</option>
+        <option value="last3">LAST 3 GAMES</option>
+      </select>
+      <button class="action" id="edge-load-btn">LOAD</button>
+    </div>
+
+    <div id="vault-gamevault" class="vault-panel">
+      <div id="gamevault-results"><div class="empty">Unlock with a license key above, then hit LOAD.</div></div>
+    </div>
+
+    <div id="vault-rankings" class="vault-panel" style="display:none;">
+      <div id="edge-results"><div class="empty">Hit LOAD above.</div></div>
+    </div>
+
+    <div id="vault-parlays" class="vault-panel" style="display:none;">
+      <div class="key-box" style="font-size:.75rem;">
+        Auto-built cross-game combinations from the highest-scored players in the selected category this week.
+        Not odds or EV math — just the model's top plays, paired up. Bet responsibly.
+      </div>
+      <div id="parlay-results"><div class="empty">Load the Vault first.</div></div>
+    </div>
+
+    <div id="edge-detail"></div>
+  </section>
+
+  <!-- PLAYERS -->
+  <section id="view-players" class="view">
+    <div class="panel-title"><h2>SEARCH A PLAYER</h2><div class="rule"></div><span class="tag">sleeper db</span></div>
+    <div class="search-row">
+      <input type="text" id="player-search" placeholder="type a name… e.g. mahomes">
+      <button class="action" id="player-search-btn">SEARCH</button>
+    </div>
+    <div id="player-results"></div>
+
+    <div class="panel-title"><h2>TRENDING ADDS</h2><div class="rule"></div><span class="tag">last 24h · fantasy waivers</span></div>
+    <div id="trend-add"><div class="loading">Loading trends…</div></div>
+
+    <div class="panel-title"><h2>TRENDING DROPS</h2><div class="rule"></div><span class="tag">last 24h · fantasy waivers</span></div>
+    <div id="trend-drop"><div class="loading">Loading trends…</div></div>
+  </section>
+
+  <!-- MARKETS -->
+  <section id="view-markets" class="view">
+    <div class="panel-title"><h2>ODDS</h2><div class="rule"></div><span class="tag">premium feed</span></div>
+    <div class="key-box">
+      Live spreads, totals, and moneylines. Premium feature — unlock with your license key above, then load lines below.
+    </div>
+    <div class="search-row">
+      <button class="action" id="odds-load-btn">LOAD LINES</button>
+    </div>
+    <div id="odds-results"><div class="empty">Unlock with a license key above, then load lines.</div></div>
+  </section>
+
+</main>
+
+<footer>
+  TEAMS &amp; PLAYERS use ESPN's public site API and Sleeper's public API directly — free, no login. EDGE &amp; MARKETS
+  are premium features served through a licensed backend. Built for GitHub Pages.
+</footer>
+
+<script>
+(function(){
+
+  /* ---------------- helpers ---------------- */
+  const $ = sel => document.querySelector(sel);
+  const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; };
+  const showError = (container, msg) => { container.innerHTML=''; container.appendChild(el('div','error', msg)); };
+  // Shake on error, glow-pulse on success — brief, non-blocking feedback on an action button.
+  const gwFeedback = (btn, ok) => {
+    if(!btn) return;
+    btn.classList.remove('gw-shake','gw-pulse-ok');
+    void btn.offsetWidth; // restart animation if same class is reapplied quickly
+    btn.classList.add(ok ? 'gw-pulse-ok' : 'gw-shake');
+    setTimeout(()=> btn.classList.remove('gw-shake','gw-pulse-ok'), 600);
+  };
+
+  /* ---------------- tabs ---------------- */
+  document.querySelectorAll('nav.tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
+      btn.classList.add('active');
+      $('#view-'+btn.dataset.view).classList.add('active');
+    });
+  });
+
+  /* ---------------- clock ---------------- */
+  function tickClock(){
+    const now = new Date();
+    $('#meta-clock').textContent = now.toLocaleString('en-US',{ weekday:'short', hour:'2-digit', minute:'2-digit' });
+  }
+  tickClock(); setInterval(tickClock, 30000);
+
+  /* ================= PREMIUM / LICENSE ================= */
+
+  // Fill these in once you've deployed the worker and set up your Whop product.
+  const WORKER_BASE = 'https://gridwave-worker.YOURSUBDOMAIN.workers.dev';
+  const WHOP_CHECKOUT_URL = 'https://whop.com/YOUR-PRODUCT';
+
+  $('#license-buy-link').href = WHOP_CHECKOUT_URL;
+
+  const LICENSE_STORAGE = 'gridwave_license_key';
+  function getLicenseKey(){ return localStorage.getItem(LICENSE_STORAGE) || ''; }
+
+  function setLicenseStatus(msg, ok){
+    const s = $('#license-status');
+    s.textContent = msg;
+    s.className = 'license-status ' + (ok ? 'ok' : 'bad');
+  }
+
+  // Wraps fetch to a premium worker endpoint; handles the 402-not-licensed case uniformly.
+  async function premiumFetch(path){
+    const key = getLicenseKey();
+    if(!key){ throw new Error('NO_LICENSE'); }
+    const res = await fetch(WORKER_BASE + path, {
+      headers: { 'X-License-Key': key }
+    });
+    if(res.status === 402){
+      setLicenseStatus('invalid or expired', false);
+      throw new Error('NO_LICENSE');
+    }
+    if(!res.ok){ throw new Error('worker responded ' + res.status); }
+    return res;
+  }
+
+  const savedLicense = getLicenseKey();
+  if(savedLicense){ $('#license-key').value = savedLicense; setLicenseStatus('checking…', true); }
+
+  $('#license-save-btn').addEventListener('click', async ()=>{
+    const btn = $('#license-save-btn');
+    const key = $('#license-key').value.trim();
+    if(!key){ setLicenseStatus('enter a key', false); gwFeedback(btn, false); return; }
+    localStorage.setItem(LICENSE_STORAGE, key);
+    setLicenseStatus('checking…', true);
+    try{
+      // cheapest premium call, just to confirm the key works
+      await premiumFetch('/odds?check=1');
+      setLicenseStatus('unlocked ✓', true);
+      gwFeedback(btn, true);
+    }catch(err){
+      if(err.message !== 'NO_LICENSE') setLicenseStatus('could not reach worker', false);
+      gwFeedback(btn, false);
+    }
+  });
+
+  /* ================= TEAMS ================= */
+
+  // Shared across tabs: this week's schedule + defensive context, used by the VAULT.
+  window.gwSchedule = {};      // team_abbr -> { opponent, home, venue, dateISO }
+  window.gwDefenseRank = {};   // team_abbr -> { paPerGame, rank } (rank 1 = stingiest defense)
+  window.gwTeamPPG = {};       // team_abbr -> points scored per game (used as a scoring-environment proxy)
+
+  const ESPN_SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+  const ESPN_STANDINGS  = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/standings';
+
+  fetch(ESPN_SCOREBOARD).then(r=>r.json()).then(data=>{
+    const week = data?.week?.number;
+    const season = data?.season?.year;
+    $('#meta-week').textContent = week ? `WEEK ${week} · ${season}` : 'OFFSEASON';
+
+    const ticker = $('#ticker');
+    ticker.innerHTML = '';
+    const events = data.events || [];
+    if(!events.length){ ticker.appendChild(el('div','empty','No games on the board right now.')); return; }
+
+    window.gwWeekEvents = events; // raw events, reused by Game Vault
+
+    events.forEach(ev=>{
+      const comp = ev.competitions?.[0];
+      const [home, away] = comp.competitors.sort((a,b)=> a.homeAway==='home' ? 1 : -1).reverse();
+      const state = comp.status?.type?.state; // pre, in, post
+      const venueName = comp.venue?.fullName || '';
+      const homeAbbr = home.team?.abbreviation, awayAbbr = away.team?.abbreviation;
+      if(homeAbbr) gwSchedule[homeAbbr] = { opponent: awayAbbr, home: true, venue: venueName, dateISO: ev.date, eventId: ev.id };
+      if(awayAbbr) gwSchedule[awayAbbr] = { opponent: homeAbbr, home: false, venue: venueName, dateISO: ev.date, eventId: ev.id };
+
+      const card = el('div','game-card');
+      const statusText = comp.status?.type?.shortDetail || '';
+      card.appendChild(el('div', 'status' + (state==='in' ? ' live' : ''), statusText.toUpperCase()));
+      [away, home].forEach(team=>{
+        const row = el('div','row');
+        row.appendChild(el('span','abbr', team.team?.abbreviation || '???'));
+        row.appendChild(el('span','score', state==='pre' ? '' : (team.score ?? '')));
+        card.appendChild(row);
+      });
+      ticker.appendChild(card);
+    });
+  }).catch(err=>{
+    showError($('#ticker'), 'Could not reach ESPN scoreboard (' + err.message + ').');
+    $('#meta-week').textContent = '';
+  });
+
+  fetch(ESPN_STANDINGS).then(r=>r.json()).then(data=>{
+    const container = $('#standings');
+    container.innerHTML = '';
+    const groups = data.children || []; // conferences
+    if(!groups.length){ container.appendChild(el('div','empty','Standings unavailable right now.')); return; }
+
+    const table = el('table');
+    const thead = el('thead','', '<tr><th>Team</th><th style="text-align:right">W</th><th style="text-align:right">L</th><th style="text-align:right">PF</th><th style="text-align:right">PA</th><th style="text-align:right">DIFF</th></tr>');
+    table.appendChild(thead);
+    const tbody = el('tbody');
+
+    const statGridEntries = [];
+    const paEntries = []; // for defense-rank computation
+
+    groups.forEach(conf=>{
+      (conf.children || [conf]).forEach(div=>{
+        const divName = div.name || conf.name || '';
+        const head = el('tr','division-head', `<td colspan="6">${divName}</td>`);
+        tbody.appendChild(head);
+
+        const entries = (div.standings?.entries || []).slice().sort((a,b)=>{
+          const wa = +(a.stats.find(s=>s.name==='wins')?.value ?? 0);
+          const wb = +(b.stats.find(s=>s.name==='wins')?.value ?? 0);
+          return wb - wa;
+        });
+
+        entries.forEach(entry=>{
+          const stat = name => entry.stats.find(s=>s.name===name)?.value;
+          const wins = stat('wins') ?? 0;
+          const losses = stat('losses') ?? 0;
+          const pf = stat('pointsFor') ?? 0;
+          const pa = stat('pointsAgainst') ?? 0;
+          const diff = stat('pointDifferential') ?? (pf - pa);
+          const gamesPlayed = (+wins + +losses) || 1;
+          const abbr = entry.team?.abbreviation;
+
+          const tr = el('tr');
+          tr.innerHTML = `
+            <td class="team-cell">${entry.team?.displayName || abbr}</td>
+            <td class="num">${wins}</td>
+            <td class="num">${losses}</td>
+            <td class="num">${pf}</td>
+            <td class="num">${pa}</td>
+            <td class="num ${diff>0?'pos':(diff<0?'neg':'')}">${diff>0?'+':''}${diff}</td>
+          `;
+          tbody.appendChild(tr);
+
+          statGridEntries.push({ name: abbr || entry.team?.shortDisplayName, ppg: (pf / gamesPlayed).toFixed(1) });
+          if(abbr) gwTeamPPG[abbr] = pf / gamesPlayed;
+          if(abbr) paEntries.push({ abbr, paPerGame: pa / gamesPlayed });
+        });
+      });
+    });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    // rank 1 = fewest points allowed per game (toughest matchup), higher = softer defense (smash spot)
+    paEntries.sort((a,b)=> a.paPerGame - b.paPerGame);
+    paEntries.forEach((t,i)=>{ gwDefenseRank[t.abbr] = { paPerGame: t.paPerGame, rank: i+1, of: paEntries.length }; });
+
+    const grid = $('#stat-grid');
+    grid.innerHTML = '';
+    statGridEntries
+      .sort((a,b)=> b.ppg - a.ppg)
+      .forEach(t=>{
+        const chip = el('div','stat-chip');
+        chip.innerHTML = `<div class="team">${t.name}</div><div class="figure">${t.ppg}</div><div class="label">PTS / GAME</div>`;
+        grid.appendChild(chip);
+      });
+  }).catch(err=>{
+    showError($('#standings'), 'Could not reach ESPN standings (' + err.message + ').');
+    showError($('#stat-grid'), 'Team stats need standings data to compute.');
+  });
+
+  /* ================= PLAYERS ================= */
+
+  const SLEEPER_PLAYERS  = 'https://api.sleeper.app/v1/players/nfl';
+  const SLEEPER_TREND_ADD  = 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=15';
+  const SLEEPER_TREND_DROP = 'https://api.sleeper.app/v1/players/nfl/trending/drop?lookback_hours=24&limit=15';
+  const CACHE_KEY = 'gridwave_sleeper_players_v1';
+  const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+  let playersMap = null;
+  let playersLoadingPromise = null;
+
+  function loadPlayers(){
+    if(playersMap) return Promise.resolve(playersMap);
+    if(playersLoadingPromise) return playersLoadingPromise;
+
+    playersLoadingPromise = (async ()=>{
+      try{
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if(cached && (Date.now() - cached.at) < CACHE_TTL_MS){
+          playersMap = cached.data;
+          return playersMap;
+        }
+      }catch(e){ /* ignore bad cache */ }
+
+      const res = await fetch(SLEEPER_PLAYERS);
+      const raw = await res.json();
+      const trimmed = {};
+      Object.keys(raw).forEach(id=>{
+        const p = raw[id];
+        if(!p || !p.full_name) return;
+        trimmed[id] = { name: p.full_name, team: p.team, pos: p.position, status: p.status };
+      });
+      playersMap = trimmed;
+      try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data: trimmed })); }
+      catch(e){ /* storage full or unavailable, fine to skip caching */ }
+      return playersMap;
+    })();
+
+    return playersLoadingPromise;
+  }
+
+  function renderPlayerRow(container, p, badge){
+    const row = el('div','player-row');
+    const left = el('div');
+    left.innerHTML = `<div class="name">${p.name}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'}</div>`;
+    row.appendChild(left);
+    if(badge) row.appendChild(el('span','trend-badge ' + badge.cls, badge.text));
+    container.appendChild(row);
+  }
+
+  $('#player-search-btn').addEventListener('click', doSearch);
+  $('#player-search').addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(); });
+
+  function doSearch(){
+    const q = $('#player-search').value.trim().toLowerCase();
+    const results = $('#player-results');
+    results.innerHTML = '';
+    if(!q){ return; }
+    results.appendChild(el('div','loading','Searching…'));
+
+    loadPlayers().then(map=>{
+      results.innerHTML = '';
+      const matches = Object.values(map)
+        .filter(p=> p.name.toLowerCase().includes(q))
+        .slice(0, 20);
+      if(!matches.length){ results.appendChild(el('div','empty','No players matched that search.')); return; }
+      matches.forEach(p=> renderPlayerRow(results, p));
+    }).catch(err=>{
+      showError(results, 'Could not load the player database (' + err.message + ').');
+    });
+  }
+
+  function renderTrending(containerId, url, badgeCls, badgeLabel){
+    const container = $(containerId);
+    Promise.all([fetch(url).then(r=>r.json()), loadPlayers()])
+      .then(([trending, map])=>{
+        container.innerHTML = '';
+        if(!trending || !trending.length){ container.appendChild(el('div','empty','No trending data right now.')); return; }
+        trending.forEach(t=>{
+          const p = map[t.player_id];
+          if(!p) return;
+          renderPlayerRow(container, p, { cls: badgeCls, text: badgeLabel + ' ' + t.count });
+        });
+      })
+      .catch(err=> showError(container, 'Could not load trends (' + err.message + ').'));
+  }
+
+  renderTrending('#trend-add', SLEEPER_TREND_ADD, 'add', '▲');
+  renderTrending('#trend-drop', SLEEPER_TREND_DROP, 'drop', '▼');
+
+  /* ================= MARKETS ================= */
+
+  $('#odds-load-btn').addEventListener('click', loadOdds);
+
+  async function loadOdds(){
+    const btn = $('#odds-load-btn');
+    const container = $('#odds-results');
+    container.innerHTML = '';
+    container.appendChild(el('div','loading','Loading lines…'));
+
+    try{
+      const res = await premiumFetch('/odds');
+      const games = await res.json();
+      container.innerHTML = '';
+      if(!games || !games.length){ container.appendChild(el('div','empty','No upcoming games with posted lines.')); gwFeedback(btn, true); return; }
+      games.forEach(g=>{
+        const book = g.bookmakers?.[0];
+        const card = el('div','odds-card');
+        card.appendChild(el('div','matchup', `${g.away_team} @ ${g.home_team}`));
+        if(book){
+          book.markets.forEach(m=>{
+            m.outcomes.forEach(o=>{
+              const line = el('div','odds-line');
+              const label = m.key === 'totals' ? `${o.name} ${o.point ?? ''}` : (o.point!==undefined ? `${o.name} ${o.point>0?'+':''}${o.point}` : o.name);
+              line.innerHTML = `<span>${m.key.toUpperCase()} · ${label}</span><span>${o.price>0?'+':''}${o.price}</span>`;
+              card.appendChild(line);
+            });
+          });
+          const src = el('div','odds-line'); src.style.opacity='.6'; src.style.fontSize='.68rem';
+          src.innerHTML = `<span>via ${book.title}</span><span></span>`;
+          card.appendChild(src);
+        }
+        container.appendChild(card);
+      });
+      gwFeedback(btn, true);
+    }catch(err){
+      gwFeedback(btn, false);
+      if(err.message === 'NO_LICENSE'){
+        showError(container, 'Unlock with a valid license key above first.');
+      }else{
+        showError(container, 'Could not load odds (' + err.message + ').');
+      }
+    }
+  }
+
+  /* ================= EDGE / VAULT ================= */
+
+  const NFLVERSE_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv';
+  const PBP_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv';
+
+  // Home stadium per team — used for weather. dome:true means climate-controlled, weather doesn't matter.
+  const STADIUMS = {
+    ARI:{lat:33.5276,lon:-112.2626,dome:true}, ATL:{lat:33.7554,lon:-84.4008,dome:true},
+    BAL:{lat:39.2780,lon:-76.6227,dome:false}, BUF:{lat:42.7738,lon:-78.7870,dome:false},
+    CAR:{lat:35.2258,lon:-80.8528,dome:false}, CHI:{lat:41.8623,lon:-87.6167,dome:false},
+    CIN:{lat:39.0954,lon:-84.5160,dome:false}, CLE:{lat:41.5061,lon:-81.6995,dome:false},
+    DAL:{lat:32.7473,lon:-97.0945,dome:true},  DEN:{lat:39.7439,lon:-105.0201,dome:false},
+    DET:{lat:42.3400,lon:-83.0456,dome:true},  GB:{lat:44.5013,lon:-88.0622,dome:false},
+    HOU:{lat:29.6847,lon:-95.4107,dome:true},  IND:{lat:39.7601,lon:-86.1639,dome:true},
+    JAX:{lat:30.3239,lon:-81.6373,dome:false}, KC:{lat:39.0489,lon:-94.4839,dome:false},
+    LV:{lat:36.0909,lon:-115.1833,dome:true},  LAC:{lat:33.9535,lon:-118.3392,dome:true},
+    LAR:{lat:33.9535,lon:-118.3392,dome:true}, MIA:{lat:25.9580,lon:-80.2389,dome:false},
+    MIN:{lat:44.9740,lon:-93.2581,dome:true},  NE:{lat:42.0909,lon:-71.2643,dome:false},
+    NO:{lat:29.9511,lon:-90.0812,dome:true},   NYG:{lat:40.8135,lon:-74.0745,dome:false},
+    NYJ:{lat:40.8135,lon:-74.0745,dome:false}, PHI:{lat:39.9008,lon:-75.1675,dome:false},
+    PIT:{lat:40.4468,lon:-80.0158,dome:false}, SF:{lat:37.4030,lon:-121.9700,dome:false},
+    SEA:{lat:47.5952,lon:-122.3316,dome:false},TB:{lat:27.9759,lon:-82.5033,dome:false},
+    TEN:{lat:36.1665,lon:-86.7713,dome:false}, WSH:{lat:38.9077,lon:-76.8645,dome:false}
+  };
+
+  let rawPlayers = null;   // id -> player with per-week raw stat rows (unfiltered, season-long)
+  let allWeekRows = null;  // flat list of every skill-position week-row, used to build defense splits
+  let pbpRows = null;      // play-by-play rows — powers zone-based expected-TD ("Cheat Code") math
+  let edgeFlat = null;     // current category+scope, sorted by score desc
+  let matchupsMode = false; // true = early season, not enough film yet for a full cross-league Vault
+
+  // RFC4180-aware line parser — the play-by-play file has quoted fields with commas inside
+  // (play descriptions, weather strings), so a naive split(',') misaligns every column after one.
+  function parseCSVLine(line){
+    const cells = [];
+    let cur = '', inQuotes = false;
+    for(let i=0;i<line.length;i++){
+      const ch = line[i];
+      if(inQuotes){
+        if(ch === '"'){
+          if(line[i+1] === '"'){ cur += '"'; i++; }
+          else { inQuotes = false; }
+        } else { cur += ch; }
+      } else {
+        if(ch === '"'){ inQuotes = true; }
+        else if(ch === ','){ cells.push(cur); cur=''; }
+        else { cur += ch; }
+      }
+    }
+    cells.push(cur);
+    return cells;
+  }
+
+  function parseCSV(text){
+    const lines = text.split(/\r?\n/).filter(l => l.length);
+    const headers = parseCSVLine(lines[0]);
+    const rows = [];
+    for(let i=1;i<lines.length;i++){
+      const cells = parseCSVLine(lines[i]);
+      if(cells.length < headers.length - 2) continue; // skip malformed
+      const row = {};
+      headers.forEach((h,idx)=> row[h] = cells[idx]);
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+  function percentileRank(values, v){
+    if(values.length <= 1) return 50;
+    const sorted = values.slice().sort((a,b)=>a-b);
+    let below = 0;
+    sorted.forEach(x=>{ if(x < v) below++; });
+    return Math.round((below / (sorted.length - 1)) * 100);
+  }
+
+  // Parse the CSV once into per-player, per-week raw rows, plus a flat row list for defense aggregation.
+  async function loadRawPlayers(){
+    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(NFLVERSE_CSV));
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    const byPlayer = {};
+    const flat = [];
+    rows.forEach(r=>{
+      const pos = r.position;
+      if(!['QB','RB','WR','TE'].includes(pos)) return;
+      const wk = {
+        week: +r.week, team: r.team, opponent_team: r.opponent_team,
+        targets: num(r.targets), receptions: num(r.receptions), rec_yards: num(r.receiving_yards),
+        rec_td: num(r.receiving_tds), rec_epa: num(r.receiving_epa),
+        carries: num(r.carries), rush_yards: num(r.rushing_yards), rush_td: num(r.rushing_tds), rush_epa: num(r.rushing_epa),
+        attempts: num(r.attempts), pass_yards: num(r.passing_yards), pass_td: num(r.passing_tds), pass_epa: num(r.passing_epa),
+        pass_air_yards: num(r.passing_air_yards),
+        explosive: num(r.receiving_20)+num(r.receiving_40)+num(r.rushing_20)+num(r.rushing_40)+num(r.passing_20)+num(r.passing_40),
+        turnoverEvents: num(r.rushing_fumbles_lost)+num(r.receiving_fumbles_lost)+num(r.sack_fumbles_lost)+num(r.passing_interceptions)
+      };
+      flat.push(wk);
+
+      const id = r.player_id;
+      if(!byPlayer[id]){
+        byPlayer[id] = { id, name: r.player_display_name || r.player_name, pos, team: r.team, weeks: [] };
+      }
+      byPlayer[id].team = r.team; // keep most recent team on file
+      byPlayer[id].weeks.push(wk);
+    });
+
+    Object.values(byPlayer).forEach(p=> p.weeks.sort((a,b)=>a.week-b.week));
+    allWeekRows = flat;
+    return byPlayer;
+  }
+
+  // Play-by-play — much heavier than the weekly file (every play, not a per-game rollup), so it's
+  // only fetched once, in parallel with the weekly file, and cached for the session.
+  async function loadPBP(){
+    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(PBP_CSV));
+    const text = await res.text();
+    const rows = parseCSV(text);
+    return rows.map(r=> ({
+      week: +r.week, posteam: r.posteam, defteam: r.defteam,
+      yardline100: r.yardline_100 === '' ? null : +r.yardline_100,
+      rushAttempt: r.rush_attempt === '1', passAttempt: r.pass_attempt === '1',
+      rushTd: r.rush_touchdown === '1', passTd: r.pass_touchdown === '1',
+      rusherId: r.rusher_player_id || null, receiverId: r.receiver_player_id || null
+    })).filter(r=> r.yardline100 !== null && (r.rushAttempt || r.passAttempt));
+  }
+
+  // Zone buckets, closest to the goal line first — mirrors how red-zone/goal-line splits are usually cut.
+  function zoneOf(yardline100){
+    if(yardline100 <= 5) return 'goalline';
+    if(yardline100 <= 20) return 'redzone';
+    if(yardline100 <= 40) return 'fringe';
+    return 'open';
+  }
+  const ZONE_LABELS = { goalline:'Goal Line (in 5)', redzone:'Red Zone (6-20)', fringe:'Fringe (21-40)', open:'Open Field' };
+  const ZONE_ORDER = ['goalline','redzone','fringe','open'];
+
+  // League-wide "how often does a touch in this zone become a TD" — the baseline every player's
+  // actual zone usage gets priced against. Always computed off full available data for a stable sample.
+  function buildZoneLeagueRates(){
+    const rates = {};
+    ZONE_ORDER.forEach(z=> rates[z] = { rushAtt:0, rushTd:0, tgt:0, recTd:0 });
+    pbpRows.forEach(r=>{
+      const z = zoneOf(r.yardline100);
+      if(r.rushAttempt){ rates[z].rushAtt++; if(r.rushTd) rates[z].rushTd++; }
+      if(r.passAttempt && r.receiverId){ rates[z].tgt++; if(r.passTd) rates[z].recTd++; }
+    });
+    ZONE_ORDER.forEach(z=>{
+      const b = rates[z];
+      b.rushRate = b.rushAtt>0 ? b.rushTd/b.rushAtt : 0;
+      b.recRate = b.tgt>0 ? b.recTd/b.tgt : 0;
+    });
+    return rates;
+  }
+
+  // One player's touches broken out by zone, priced against the league rates — this is the
+  // "expected touchdowns" / "TD Debt" math (xTD minus actual TDs scored).
+  function computeZoneBreakdown(playerId, scope, leagueRates){
+    const maxWeek = weeksOfFilmAvailable();
+    const rows = pbpRows.filter(r=>{
+      if(scope === 'last3' && r.week <= maxWeek-3) return false;
+      return r.rusherId === playerId || r.receiverId === playerId;
+    });
+
+    const zones = {};
+    ZONE_ORDER.forEach(z=> zones[z] = { carries:0, targets:0, tds:0 });
+    let scored = 0;
+    rows.forEach(r=>{
+      const z = zoneOf(r.yardline100);
+      if(r.rusherId === playerId && r.rushAttempt){ zones[z].carries++; if(r.rushTd){ zones[z].tds++; scored++; } }
+      if(r.receiverId === playerId && r.passAttempt){ zones[z].targets++; if(r.passTd){ zones[z].tds++; scored++; } }
+    });
+
+    let xTD = 0;
+    const zoneRows = ZONE_ORDER.map(z=>{
+      const b = zones[z];
+      const zxtd = b.carries*leagueRates[z].rushRate + b.targets*leagueRates[z].recRate;
+      xTD += zxtd;
+      return { key:z, label:ZONE_LABELS[z], carries:b.carries, targets:b.targets, xtd:zxtd };
+    });
+
+    return { zones: zoneRows, xTD, scored, debt: xTD - scored };
+  }
+
+  // What "weeks of film" every team roughly has — a simple proxy for the real product's
+  // "Vault lines arrive once every team has three weeks" behavior.
+  function weeksOfFilmAvailable(){
+    if(!allWeekRows || !allWeekRows.length) return 0;
+    return Math.max(...allWeekRows.map(w=>w.week));
+  }
+
+  // Aggregates what each team has ALLOWED (as the opponent), for the matchup-quality components.
+  function buildDefenseSplits(scope){
+    const maxWeek = weeksOfFilmAvailable();
+    const inScope = scope === 'last3' ? allWeekRows.filter(w=> w.week > maxWeek - 3) : allWeekRows;
+
+    const byTeam = {};
+    inScope.forEach(w=>{
+      const opp = w.opponent_team;
+      if(!opp) return;
+      if(!byTeam[opp]) byTeam[opp] = { weeksSeen:new Set(), passYards:0, passTd:0, rushYards:0, rushTd:0, recYards:0, receptions:0 };
+      const t = byTeam[opp];
+      t.weeksSeen.add(w.week);
+      t.passYards += w.pass_yards; t.passTd += w.pass_td;
+      t.rushYards += w.rush_yards; t.rushTd += w.rush_td;
+      t.recYards += w.rec_yards; t.receptions += w.receptions;
+    });
+
+    const teams = Object.keys(byTeam);
+    const perGame = key => teams.map(t=> byTeam[t][key] / Math.max(1, byTeam[t].weeksSeen.size));
+    const passYardsVals = perGame('passYards'), rushYardsVals = perGame('rushYards'), recYardsVals = perGame('recYards');
+
+    const splits = {};
+    teams.forEach(t=>{
+      const games = Math.max(1, byTeam[t].weeksSeen.size);
+      splits[t] = {
+        passYardsPerGame: byTeam[t].passYards/games,
+        rushYardsPerGame: byTeam[t].rushYards/games,
+        recYardsPerGame: byTeam[t].recYards/games,
+        pPassLeak: percentileRank(passYardsVals, byTeam[t].passYards/games),
+        pRushLeak: percentileRank(rushYardsVals, byTeam[t].rushYards/games),
+        pRecLeak: percentileRank(recYardsVals, byTeam[t].recYards/games)
+      };
+    });
+    return splits;
+  }
+
+  // Each team's own pass/rush tendency, relative to league average — the "Script Lean" ingredient.
+  function buildScriptLean(scope){
+    const maxWeek = weeksOfFilmAvailable();
+    const inScope = scope === 'last3' ? allWeekRows.filter(w=> w.week > maxWeek - 3) : allWeekRows;
+    const byTeam = {};
+    inScope.forEach(w=>{
+      if(!byTeam[w.team]) byTeam[w.team] = { pass:0, rush:0 };
+      byTeam[w.team].pass += w.attempts;
+      byTeam[w.team].rush += w.carries;
+    });
+    const teams = Object.keys(byTeam);
+    const passRateOf = t => byTeam[t].pass / Math.max(1, byTeam[t].pass + byTeam[t].rush);
+    const leagueAvg = teams.reduce((s,t)=> s+passRateOf(t), 0) / Math.max(1, teams.length);
+    const out = {};
+    teams.forEach(t=> out[t] = passRateOf(t) - leagueAvg); // positive = pass-leaning offense
+    return out;
+  }
+
+  function sumWeeks(weeks){
+    const s = { games:weeks.length, targets:0,receptions:0,rec_yards:0,rec_td:0,rec_epa:0,
+      carries:0,rush_yards:0,rush_td:0,rush_epa:0, attempts:0,pass_yards:0,pass_td:0,pass_epa:0,pass_air_yards:0,
+      explosive:0, turnovers:0 };
+    weeks.forEach(w=>{
+      s.targets+=w.targets; s.receptions+=w.receptions; s.rec_yards+=w.rec_yards; s.rec_td+=w.rec_td; s.rec_epa+=w.rec_epa;
+      s.carries+=w.carries; s.rush_yards+=w.rush_yards; s.rush_td+=w.rush_td; s.rush_epa+=w.rush_epa;
+      s.attempts+=w.attempts; s.pass_yards+=w.pass_yards; s.pass_td+=w.pass_td; s.pass_epa+=w.pass_epa; s.pass_air_yards+=w.pass_air_yards;
+      s.explosive+=w.explosive; s.turnovers+=w.turnoverEvents;
+    });
+    return s;
+  }
+
+  // Category definitions: which positions qualify, which 4 components drive the score, and the
+  // small "form" readout shown under the score badge (mirrors their per-category hit-rate/production line).
+  const CATEGORIES = {
+    anytd: {
+      label: 'ANY TD', positions: ['QB','RB','WR','TE'],
+      components(p, scope){
+        return [
+          { key:'volume', label:'Volume', value:p.opportunity },
+          { key:'redzone', label:'Red Zone Role', value:p.tdRate },
+          { key:'explosive', label:'Explosiveness', value:p.explosive/Math.max(1,p.games) },
+          { key:'script', label:'Shootout Script', value:(p.teamPPG||0) + (p.oppPAPG||0) }
+        ];
+      },
+      formStat(p){ return `${Math.round(p.hitRate*100)}% TD`; }
+    },
+    passyards: {
+      label: 'PASS YARDS', positions: ['QB'],
+      components(p){
+        return [
+          { key:'airvol', label:'Air Volume', value:p.pass_air_yards/Math.max(1,p.games) },
+          { key:'secleak', label:'Secondary Leak', value:p.oppPassAllowedPG||0 },
+          { key:'script', label:'Script Lean', value:(p.scriptLean||0)*100 },
+          { key:'env', label:'Environment', value:p.teamPPG||0 }
+        ];
+      },
+      formStat(p){ return `${(p.pass_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; }
+    },
+    passtds: {
+      label: 'PASS TDS', positions: ['QB'],
+      components(p){
+        return [
+          { key:'rzpass', label:'Red Zone Passing', value: p.attempts>0 ? p.pass_td/p.attempts : 0 },
+          { key:'airvol', label:'Air Volume', value:p.pass_air_yards/Math.max(1,p.games) },
+          { key:'secleak', label:'Secondary Leak', value:p.oppPassAllowedPG||0 },
+          { key:'script', label:'Script Lean', value:(p.scriptLean||0)*100 }
+        ];
+      },
+      formStat(p){ return `${(p.pass_td/Math.max(1,p.games)).toFixed(2)} TD/GM`; }
+    },
+    rushyards: {
+      label: 'RUSH YARDS', positions: ['RB','QB'],
+      components(p){
+        return [
+          { key:'carryshare', label:'Carry Share', value:p.carryShare||0 },
+          { key:'boxcount', label:'Box Count Diet', value:p.oppRushAllowedPG||0 },
+          { key:'script', label:'Script Lean', value:-(p.scriptLean||0)*100 },
+          { key:'ground', label:'Ground Form', value:p.rush_yards/Math.max(1,p.games) }
+        ];
+      },
+      formStat(p){ return `${(p.rush_yards/Math.max(1,p.games)).toFixed(1)} YDS/GM`; }
+    },
+    receptions: {
+      label: 'RECEPTIONS', positions: ['WR','TE','RB'],
+      components(p){
+        return [
+          { key:'targetdesign', label:'Target Design', value:p.targetShare||0 },
+          { key:'hands', label:'Hands', value:p.targets>0 ? p.receptions/p.targets : 0 },
+          { key:'covleak', label:'Coverage Leak', value:p.oppRecAllowedPG||0 },
+          { key:'script', label:'Script Lean', value:(p.scriptLean||0)*100 }
+        ];
+      },
+      formStat(p){ return `${(p.receptions/Math.max(1,p.games)).toFixed(1)} REC/GM`; }
+    }
+  };
+
+  // Builds the flat, sorted, scored list for one category + scope.
+  function computeCategoryScores(category, scope){
+    const def = CATEGORIES[category];
+    const defenseSplits = buildDefenseSplits(scope);
+    const scriptLean = buildScriptLean(scope);
+    const maxWeek = weeksOfFilmAvailable();
+    const zoneLeagueRates = pbpRows ? buildZoneLeagueRates() : null;
+
+    // team pass/rush totals this scope, for carry share / target share
+    const teamTotals = {};
+    const inScopeRows = scope === 'last3' ? allWeekRows.filter(w=> w.week > maxWeek-3) : allWeekRows;
+    inScopeRows.forEach(w=>{
+      if(!teamTotals[w.team]) teamTotals[w.team] = { carries:0, targets:0, pointsProxy:0, games:new Set() };
+      teamTotals[w.team].carries += w.carries;
+      teamTotals[w.team].targets += w.targets;
+      teamTotals[w.team].games.add(w.week);
+    });
+
+    const list = [];
+    Object.values(rawPlayers).forEach(raw=>{
+      if(!def.positions.includes(raw.pos)) return;
+      if(raw.weeks.length < 1) return;
+      const weeksInScope = scope === 'last3' ? raw.weeks.slice(-3) : raw.weeks;
+      if(!weeksInScope.length) return;
+      const agg = sumWeeks(weeksInScope);
+
+      const p = Object.assign({ id:raw.id, name:raw.name, pos:raw.pos, team:raw.team }, agg);
+      p.opportunity = p.pos==='QB' ? p.attempts : (p.pos==='RB' ? p.carries + p.targets*0.5 : p.targets);
+      p.tds = p.rec_td + p.rush_td + p.pass_td;
+      const totalOpp = p.attempts + p.carries + p.targets;
+      p.tdRate = totalOpp>0 ? p.tds/totalOpp : 0;
+      p.hitRate = p.games>0 ? weeksInScope.filter(w=> (w.rec_td+w.rush_td+w.pass_td)>0).length / p.games : 0;
+
+      const tTot = teamTotals[p.team];
+      p.carryShare = tTot && tTot.carries>0 ? p.carries/tTot.carries : 0;
+      p.targetShare = tTot && tTot.targets>0 ? p.targets/tTot.targets : 0;
+      p.scriptLean = scriptLean[p.team] || 0;
+
+      const sched = window.gwSchedule ? window.gwSchedule[p.team] : null;
+      const oppSplit = sched ? defenseSplits[sched.opponent] : null;
+      p.oppPassAllowedPG = oppSplit ? oppSplit.passYardsPerGame : 0;
+      p.oppRushAllowedPG = oppSplit ? oppSplit.rushYardsPerGame : 0;
+      p.oppRecAllowedPG = oppSplit ? oppSplit.recYardsPerGame : 0;
+      p.opponent = sched ? sched.opponent : null;
+      p.venue = sched ? sched.venue : null;
+      p.gameHome = sched ? sched.home : null;
+
+      const teamStat = window.gwTeamPPG ? window.gwTeamPPG[p.team] : null;
+      const oppStat = sched && window.gwTeamPPG ? window.gwTeamPPG[sched.opponent] : null;
+      p.teamPPG = teamStat || 0;
+      p.oppPAPG = window.gwDefenseRank && sched && window.gwDefenseRank[sched.opponent] ? window.gwDefenseRank[sched.opponent].paPerGame : 0;
+
+      // trend, off full season history, independent of the scope toggle — drives BREAKOUT/DUE/OVERPERFORMING
+      const lastWk = raw.weeks[raw.weeks.length-1];
+      const lastEpa = (lastWk.rec_epa||0)+(lastWk.rush_epa||0)+(lastWk.pass_epa||0);
+      const priorWeeks = raw.weeks.slice(0,-1);
+      const priorAvgEpa = priorWeeks.length ? priorWeeks.reduce((s,w)=> s+(w.rec_epa+w.rush_epa+w.pass_epa),0)/priorWeeks.length : lastEpa;
+      p.trend = lastWk ? (lastEpa - priorAvgEpa) : 0;
+      const lastOpp = p.pos==='QB' ? lastWk.attempts : (p.pos==='RB' ? lastWk.carries+lastWk.targets*0.5 : lastWk.targets);
+      const priorAvgOpp = priorWeeks.length
+        ? priorWeeks.reduce((s,w)=> s + (p.pos==='QB'?w.attempts:(p.pos==='RB'?w.carries+w.targets*0.5:w.targets)), 0)/priorWeeks.length
+        : lastOpp;
+      p.oppTrend = lastWk ? (lastOpp - priorAvgOpp) : 0;
+      const fullOpp = raw.weeks.reduce((s,w)=> s + (p.pos==='QB'?w.attempts:(p.pos==='RB'?w.carries+w.targets*0.5:w.targets)), 0);
+      const fullTds = raw.weeks.reduce((s,w)=> s + w.rec_td+w.rush_td+w.pass_td, 0);
+      p.fullTdRate = fullOpp>0 ? fullTds/fullOpp : 0;
+
+      p.components = def.components(p, scope);
+
+      if(zoneLeagueRates){
+        const zb = computeZoneBreakdown(p.id, scope, zoneLeagueRates);
+        p.zoneBreakdown = zb.zones;
+        p.xTD = zb.xTD;
+        p.tdScored = zb.scored;
+        p.tdDebt = zb.debt;
+      }
+
+      list.push(p);
+    });
+
+    // percentile-rank each component within this category's position pool, composite = average
+    def.components({},scope).forEach((c,i)=>{
+      const vals = list.map(p=> p.components[i].value);
+      list.forEach(p=> p.components[i].pct = percentileRank(vals, p.components[i].value));
+    });
+    const fullOppVals = list.map(p=>p.opportunity), tdRateVals = list.map(p=>p.fullTdRate);
+    const redZoneShareVals = list.map(p=>{
+      if(!p.zoneBreakdown) return 0;
+      const inZone = t=> p.zoneBreakdown.find(z=>z.key===t);
+      const goal = inZone('goalline'), red = inZone('redzone');
+      const total = p.opportunity || 1;
+      return ((goal?goal.carries+goal.targets:0) + (red?red.carries+red.targets:0)) / total;
+    });
+    list.forEach((p,idx)=>{
+      p.pFullOpp = percentileRank(fullOppVals, p.opportunity);
+      p.pTdRate = percentileRank(tdRateVals, p.fullTdRate);
+      p.score = Math.round(p.components.reduce((s,c)=>s+c.pct,0) / p.components.length);
+      p.formStat = def.formStat(p);
+      p.reason = p.components.slice().sort((a,b)=>b.pct-a.pct).slice(0,2).map(c=>c.label).join(' + ');
+
+      // Cheat Code: real signals only counted when the play-by-play data is loaded.
+      p.cheatCodeCount = 0;
+      if(p.tdDebt !== undefined && p.tdDebt > 1.0) p.cheatCodeCount++;
+      const pRedZoneShare = percentileRank(redZoneShareVals, redZoneShareVals[idx]);
+      if(pRedZoneShare >= 80 && p.opportunity > 0) p.cheatCodeCount++;
+
+      p.flag = null;
+      if(p.oppTrend > 0 && p.trend > 1.0 && p.pFullOpp < 75){ p.flag = 'breakout'; }
+      else if(p.tdDebt !== undefined ? p.tdDebt > 1.0 : (p.pFullOpp >= 65 && p.pTdRate <= 35)){ p.flag = 'due'; }
+      else if(p.tdDebt !== undefined ? p.tdDebt < -1.0 : (p.pTdRate >= 80 && p.pFullOpp <= 50)){ p.flag = 'over'; }
+    });
+
+    list.sort((a,b)=> b.score-a.score);
+    return list;
+  }
+
+  function flagBadge(flag){
+    if(flag==='due') return '<span class="flag-badge due">DUE</span>';
+    if(flag==='over') return '<span class="flag-badge over">OVERPERFORMING</span>';
+    if(flag==='breakout') return '<span class="flag-badge breakout">BREAKOUT</span>';
+    return '';
+  }
+  function cheatCodeBadge(p){
+    return p.cheatCodeCount > 0 ? `<span class="flag-badge cheat">⚡ CHEAT CODE · ${p.cheatCodeCount}</span>` : '';
+  }
+
+  /* ---- sub-tab switching ---- */
+  document.querySelectorAll('.vault-subtab').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.vault-subtab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.vault-panel').forEach(p=> p.style.display='none');
+      $('#vault-' + btn.dataset.subtab).style.display = '';
+      $('#edge-detail').innerHTML = '';
+    });
+  });
+
+  /* ---- RANKINGS ---- */
+  function renderEdgeRankings(){
+    const container = $('#edge-results');
+    if(!edgeFlat){ return; }
+    container.innerHTML = '';
+    if(!edgeFlat.length){ container.appendChild(el('div','empty','No qualifying players yet this season.')); return; }
+    edgeFlat.slice(0,25).forEach((p,i)=>{
+      const row = el('div','edge-row');
+      const trendCls = p.trend > 1.5 ? 'surging' : (p.trend < -1.5 ? 'cooling' : 'steady');
+      const trendText = p.trend > 1.5 ? 'SURGING' : (p.trend < -1.5 ? 'COOLING' : 'STEADY');
+      const flagPart = p.flag ? flagBadge(p.flag) : `<span class="badge ${trendCls}">${trendText}</span>`;
+      row.innerHTML = `
+        <div class="rank">#${i+1}</div>
+        <div class="who"><div class="name">${p.name}</div><div class="meta">${p.team} · ${p.pos} · ${p.games} gm</div><div class="reason-line">${p.reason}</div></div>
+        <div>${flagPart}${cheatCodeBadge(p)}</div>
+        <div><div class="score">${p.score}</div><div class="form-stat">${p.formStat}</div></div>
+      `;
+      row.addEventListener('click', ()=> renderEdgeDetail(p));
+      container.appendChild(row);
+    });
+  }
+
+  /* ---- GAME VAULT ---- */
+  function renderGameVault(){
+    const container = $('#gamevault-results');
+    container.innerHTML = '';
+    if(!edgeFlat || !edgeFlat.length){ container.appendChild(el('div','empty','No scored players yet.')); return; }
+    const events = window.gwWeekEvents || [];
+    if(!events.length){ container.appendChild(el('div','empty','No games on the board this week.')); return; }
+
+    events.forEach(ev=>{
+      const comp = ev.competitions?.[0];
+      const [home, away] = comp.competitors.sort((a,b)=> a.homeAway==='home' ? 1 : -1).reverse();
+      const homeAbbr = home.team?.abbreviation, awayAbbr = away.team?.abbreviation;
+      const inGame = edgeFlat.filter(p=> p.team===homeAbbr || p.team===awayAbbr);
+      if(!inGame.length) return;
+
+      // In Matchups mode (early season) the real product re-normalizes each game's top score to 100.
+      const maxInGame = matchupsMode ? Math.max(...inGame.map(p=>p.score), 1) : null;
+      const displayScore = p => matchupsMode ? (p.score/maxInGame*100).toFixed(1) : p.score;
+
+      const group = el('div','game-vault-group');
+      const statusText = comp.status?.type?.shortDetail || '';
+      group.appendChild(el('div','game-vault-head', `<span>${awayAbbr} @ ${homeAbbr}</span><span class="ctx">${statusText} · ${inGame.length} players</span>`));
+
+      const renderRow = (p,i) => {
+        const row = el('div','edge-row');
+        const badge = p.flag ? flagBadge(p.flag) : '';
+        row.innerHTML = `
+          <div class="rank">#${i+1}</div>
+          <div class="who"><div class="name">${p.name}</div><div class="meta">${p.team} · ${p.pos}</div><div class="reason-line">${p.reason}</div></div>
+          <div>${badge}${cheatCodeBadge(p)}</div>
+          <div><div class="score">${displayScore(p)}</div><div class="form-stat">${p.formStat}</div></div>
+        `;
+        row.addEventListener('click', ()=> renderEdgeDetail(p));
+        return row;
+      };
+
+      inGame.slice(0,8).forEach((p,i)=> group.appendChild(renderRow(p,i)));
+      if(inGame.length > 8){
+        // Grid-rows reveal trick (0fr -> 1fr) instead of an instant DOM insert — animates the
+        // extra rows open smoothly since height:auto can't be transitioned directly.
+        const reveal = el('div','gw-reveal');
+        const inner = el('div','gw-reveal-inner');
+        const fade = el('div','gw-reveal-fade');
+        inGame.slice(8).forEach((p,i)=> fade.appendChild(renderRow(p,i+8)));
+        inner.appendChild(fade);
+        reveal.appendChild(inner);
+
+        const more = el('div','empty', `+ ${inGame.length-8} more in this game`);
+        more.style.cursor='pointer'; more.style.padding='6px 12px';
+        more.addEventListener('click', ()=>{
+          reveal.classList.add('gw-reveal-open');
+          more.remove();
+        });
+        group.appendChild(more);
+        group.appendChild(reveal);
+      }
+      container.appendChild(group);
+    });
+  }
+
+  /* ---- PLAYER VAULT DETAIL ---- */
+  function renderEdgeDetail(p){
+    currentDetailPlayer = p;
+    const container = $('#edge-detail');
+
+    const statRows = [];
+    if(p.pos==='QB'){
+      statRows.push(['Attempts', p.attempts], ['Pass yards', Math.round(p.pass_yards)], ['Pass TDs', p.pass_td], ['Pass EPA', p.pass_epa.toFixed(1)]);
+    } else {
+      statRows.push(['Targets', p.targets], ['Receptions', p.receptions], ['Rec yards', Math.round(p.rec_yards)], ['Rec TDs', p.rec_td]);
+      if(p.carries){ statRows.push(['Carries', p.carries], ['Rush yards', Math.round(p.rush_yards)]); }
+    }
+    statRows.push(['Turnovers', p.turnovers]);
+
+    const summary = p.opponent
+      ? `${p.name} (${p.team}) ${p.gameHome ? 'hosts' : 'faces'} ${p.opponent}${p.venue ? ' at ' + p.venue : ''}.`
+      : `${p.name} (${p.team}) — no game found on this week's board.`;
+
+    const componentBars = p.components.map((c,i)=>`
+      <div class="split-bar-row">
+        <div class="lbl"><span>${c.label.toUpperCase()}</span><span>${c.value.toFixed(1)}</span></div>
+        <div class="split-bar-track"><div class="split-bar-fill c${i}" style="width:${c.pct}%"></div></div>
+      </div>
+    `).join('');
+
+    const cheatCodeHtml = p.tdDebt === undefined ? `
+      <div class="key-box" style="font-size:.72rem;margin-top:14px;">
+        NFL Cheat Code needs the full play-by-play file — hit LOAD again once it's finished loading
+        (it's a bigger download than the rest of the Vault, so it can lag a moment behind).
+      </div>
+    ` : `
+      <div class="panel-title" style="margin:16px 0 4px;"><h2 style="font-size:.7rem;">NFL CHEAT CODE</h2><div class="rule"></div></div>
+      <div class="cheat-boxes">
+        <div class="cheat-box"><div class="lbl">EXPECTED TDS</div><div class="val">${p.xTD.toFixed(1)}</div></div>
+        <div class="cheat-box"><div class="lbl">SCORED</div><div class="val">${p.tdScored}</div></div>
+        <div class="cheat-box"><div class="lbl">TD DEBT</div><div class="val" style="color:${p.tdDebt>=0?'var(--win)':'var(--loss)'}">${p.tdDebt>=0?'+':''}${p.tdDebt.toFixed(1)}</div></div>
+      </div>
+      <div class="cheat-explain">His touches priced by where they happen: positive debt means the ball has found
+        him in scoring spots more than the scoreboard shows. Due to convert.</div>
+      <table class="zone-table">
+        <thead><tr><th>ZONE</th><th style="text-align:right">CARRIES</th><th style="text-align:right">TARGETS</th><th style="text-align:right">xTD</th></tr></thead>
+        <tbody>
+          ${p.zoneBreakdown.map(z=>`
+            <tr>
+              <td>${z.label}</td>
+              <td class="num">${z.carries || '—'}</td>
+              <td class="num">${z.targets || '—'}</td>
+              <td class="num pos">${z.xtd.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+
+    container.innerHTML = `
+      <div class="edge-detail-card">
+        <div>
+          <h3>${p.name} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
+          <div class="sub">${p.team} · ${p.pos} · VAULT score ${p.score}/100 · ${p.formStat}</div>
+          <div class="reason-line">${p.reason}</div>
+
+          <div class="panel-title" style="margin:14px 0 4px;"><h2 style="font-size:.7rem;">COMPONENT SCORES</h2><div class="rule"></div></div>
+          <div class="split-bars">${componentBars}</div>
+
+          ${cheatCodeHtml}
+
+          <div class="vault-summary">${summary}</div>
+
+          <div class="edge-stat-list">
+            ${statRows.map(([k,v])=>`<div class="row"><span>${k}</span><span>${v}</span></div>`).join('')}
+          </div>
+
+          <div id="vault-weather" style="margin-top:12px;font-size:.72rem;color:var(--text-dim);">Checking weather…</div>
+          <div id="vault-lines" style="margin-top:10px;font-size:.72rem;color:var(--text-dim);"></div>
+        </div>
+      </div>
+    `;
+
+    loadWeatherFor(p);
+    loadLineHistoryFor(p);
+  }
+
+  async function loadWeatherFor(p){
+    const target = $('#vault-weather');
+    if(!target) return;
+    const homeAbbr = p.gameHome ? p.team : p.opponent;
+    const stadium = homeAbbr ? STADIUMS[homeAbbr] : null;
+    if(!stadium){ target.textContent = ''; return; }
+    if(stadium.dome){ target.textContent = 'Dome / fixed roof — weather is not a factor.'; return; }
+    try{
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${stadium.lat}&longitude=${stadium.lon}&current=temperature_2m,wind_speed_10m,precipitation&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const c = data.current;
+      if(!c){ target.textContent = ''; return; }
+      target.innerHTML = `Current at venue: ${Math.round(c.temperature_2m)}°F · wind ${Math.round(c.wind_speed_10m)} mph${c.precipitation>0?' · precip':''} <span style="opacity:.6">(now, not necessarily kickoff)</span>`;
+    }catch(e){ target.textContent = ''; }
+  }
+
+  async function loadLineHistoryFor(p){
+    const target = $('#vault-lines');
+    if(!target || !p.opponent) return;
+    const homeAbbr = p.gameHome ? p.team : p.opponent;
+    const awayAbbr = p.gameHome ? p.opponent : p.team;
+    target.innerHTML = 'Loading line history…';
+    try{
+      const res = await premiumFetch(`/line-history?away=${encodeURIComponent(awayAbbr)}&home=${encodeURIComponent(homeAbbr)}`);
+      const snaps = await res.json();
+      if(!snaps || !snaps.length){
+        target.textContent = 'No line history yet — the worker snapshots odds on a schedule, so this fills in as the week goes on.';
+        return;
+      }
+      const first = snaps[0], last = snaps[snaps.length-1];
+      target.innerHTML = `Spread movement: ${first.spread ?? '—'} → ${last.spread ?? '—'} · total ${first.total ?? '—'} → ${last.total ?? '—'} (${snaps.length} snapshots)`;
+    }catch(e){
+      target.textContent = '';
+    }
+  }
+
+  /* ---- PARLAY ENGINE ---- */
+  function renderParlays(){
+    const container = $('#parlay-results');
+    container.innerHTML = '';
+    if(!edgeFlat || !edgeFlat.length){ container.appendChild(el('div','empty','Load the Vault first.')); return; }
+
+    const candidates = edgeFlat.filter(p=> p.score >= 55 && p.opponent).slice(0, 14);
+    if(candidates.length < 2){ container.appendChild(el('div','empty','Not enough qualifying players yet.')); return; }
+
+    const combos = [];
+    for(let i=0;i<candidates.length;i++){
+      for(let j=i+1;j<candidates.length;j++){
+        if(candidates[i].team===candidates[j].team) continue; // skip trivial same-team stack
+        const eventA = window.gwSchedule?.[candidates[i].team]?.eventId;
+        const eventB = window.gwSchedule?.[candidates[j].team]?.eventId;
+        if(eventA && eventB && eventA===eventB) continue; // keep it cross-game like the reference product
+        const legs2 = [candidates[i], candidates[j]];
+        combos.push({ legs: legs2, score: (legs2[0].score+legs2[1].score)/2 });
+      }
+    }
+    combos.sort((a,b)=> b.score-a.score);
+    const top2leg = combos.slice(0,4);
+
+    const combos3 = [];
+    for(let i=0;i<top2leg.length;i++){
+      for(let k=0;k<candidates.length;k++){
+        const c = candidates[k];
+        if(top2leg[i].legs.some(l=>l.id===c.id)) continue;
+        const usedEvents = top2leg[i].legs.map(l=> window.gwSchedule?.[l.team]?.eventId);
+        const cEvent = window.gwSchedule?.[c.team]?.eventId;
+        if(usedEvents.includes(cEvent)) continue;
+        const legs3 = [...top2leg[i].legs, c];
+        combos3.push({ legs: legs3, score: legs3.reduce((s,l)=>s+l.score,0)/legs3.length });
+      }
+    }
+    combos3.sort((a,b)=> b.score-a.score);
+    const top3leg = combos3.slice(0,3);
+
+    [...top2leg, ...top3leg].sort((a,b)=> b.score-a.score).forEach((combo,i)=>{
+      const card = el('div','parlay-card');
+      const tags = [...new Set(combo.legs.map(l=>l.reason.split(' + ')[0]))];
+      card.innerHTML = `
+        <div class="head">
+          <span>#${i+1} <span class="tag2">${combo.legs.length}-LEG</span> <span class="tag2">CROSS-GAME</span></span>
+          <span class="score">${combo.score.toFixed(1)}</span>
+        </div>
+        ${combo.legs.map(l=>`<div class="parlay-leg">${l.name} <span class="sub">(${l.team} · ${l.pos})</span></div>`).join('')}
+        <div class="parlay-reason">${tags.join(' + ')}</div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  /* ---- load / category / scope wiring ---- */
+  function refreshCurrentSubtab(){
+    const active = document.querySelector('.vault-subtab.active')?.dataset.subtab || 'gamevault';
+    if(active==='gamevault') renderGameVault();
+    else if(active==='rankings') renderEdgeRankings();
+    else if(active==='parlays') renderParlays();
+  }
+
+  function rebuildScores(){
+    const scope = $('#edge-scope').value;
+    const category = $('#edge-category').value;
+    edgeFlat = computeCategoryScores(category, scope);
+
+    matchupsMode = weeksOfFilmAvailable() < 3;
+    $('#vault-mode-tag').textContent = matchupsMode
+      ? 'premium · early season · matchups view'
+      : 'premium · weekly scoring engine';
+  }
+
+  let currentDetailPlayer = null; // tracks who's open, so we can refresh it once PBP finishes loading
+
+  $('#edge-load-btn').addEventListener('click', async ()=>{
+    const btn = $('#edge-load-btn');
+    const results = $('#gamevault-results');
+    results.innerHTML = '';
+    results.appendChild(el('div','loading','Fetching + scoring the season\'s data…'));
+    $('#edge-detail').innerHTML = '';
+    currentDetailPlayer = null;
+    try{
+      if(!rawPlayers) rawPlayers = await loadRawPlayers();
+      rebuildScores();
+      refreshCurrentSubtab();
+      gwFeedback(btn, true);
+
+      // Play-by-play (powers NFL Cheat Code / TD Debt) is a much bigger file — load it in the
+      // background and quietly re-render once it lands, rather than blocking the whole Vault on it.
+      if(!pbpRows){
+        loadPBP().then(rows=>{
+          pbpRows = rows;
+          rebuildScores();
+          refreshCurrentSubtab();
+          if(currentDetailPlayer){
+            const refreshed = edgeFlat.find(p=> p.id === currentDetailPlayer.id);
+            if(refreshed) renderEdgeDetail(refreshed);
+          }
+        }).catch(()=>{ /* Cheat Code just won't be available this session — everything else still works */ });
+      }
+    }catch(err){
+      gwFeedback(btn, false);
+      if(err.message === 'NO_LICENSE'){
+        showError(results, 'Unlock with a valid license key above first.');
+      }else{
+        showError(results, 'Could not load the Vault (' + err.message + ').');
+      }
+    }
+  });
+
+  $('#edge-scope').addEventListener('change', ()=>{
+    if(!rawPlayers) return;
+    rebuildScores();
+    refreshCurrentSubtab();
+    $('#edge-detail').innerHTML = '';
+  });
+
+  $('#edge-category').addEventListener('change', ()=>{
+    if(!rawPlayers) return;
+    rebuildScores();
+    refreshCurrentSubtab();
+    $('#edge-detail').innerHTML = '';
+  });
+
+})();
+</script>
+</body>
+</html>

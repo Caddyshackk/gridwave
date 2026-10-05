@@ -1,0 +1,12 @@
+name = "gridwave-worker"
+main = "gridwave-worker.js"
+compatibility_date = "2026-01-01"
+
+kv_namespaces = [
+  { binding = "LICENSES", id = "fe87fe1743cd429ba56c789906709bfa" },
+  { binding = "LINES",    id = "9c88d5486fbf4e728d0140a1e4d00013" }
+]
+
+# [triggers]
+# every 30 minutes — plenty of resolution for line movement, light on your Odds API quota
+# crons = ["*/30 * * * *"]
