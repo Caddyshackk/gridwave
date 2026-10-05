@@ -1646,6 +1646,7 @@
         <div>${injBadge(p.injStatus)}${flagPart}${cheatCodeBadge(p)}</div>
         <div><div class="score">${p.score}</div><div class="form-stat">${p.formStat}</div></div>
       `;
+      row.dataset.pid = p.id;
       row.addEventListener('click', (e)=>{
         const box = toggleInline(row, b=> renderEdgeDetail(p, b));
         // Clicking the CHEAT CODE badge opens the panel and jumps straight to that section
@@ -1691,6 +1692,7 @@
           <div>${injBadge(p.injStatus)}${badge}${cheatCodeBadge(p)}</div>
           <div><div class="score">${displayScore(p)}</div><div class="form-stat">${p.formStat}</div></div>
         `;
+        row.dataset.pid = p.id;
         row.addEventListener('click', (e)=>{
         const box = toggleInline(row, b=> renderEdgeDetail(p, b));
         // Clicking the CHEAT CODE badge opens the panel and jumps straight to that section
@@ -1999,12 +2001,14 @@
       // background and quietly re-render once it lands, rather than blocking the whole Vault on it.
       if(!pbpRows){
         loadPBP().then(rows=>{
+          const openId = currentDetailPlayer?.id;
           pbpRows = rows;
           rebuildScores();
           refreshCurrentSubtab();
-          if(currentDetailPlayer && currentDetailTarget && currentDetailTarget.isConnected){
-            const refreshed = edgeFlat.find(p=> p.id === currentDetailPlayer.id);
-            if(refreshed) renderEdgeDetail(refreshed, currentDetailTarget);
+          if(openId != null){
+            const row = document.querySelector(`.edge-row[data-pid="${CSS.escape(String(openId))}"]`);
+            const p = edgeFlat.find(x=> x.id === openId);
+            if(row && p) toggleInline(row, b=> renderEdgeDetail(p, b));
           }
         }).catch(()=>{ /* Cheat Code just won't be available this session — everything else still works */ });
       }
