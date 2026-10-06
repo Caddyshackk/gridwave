@@ -426,6 +426,25 @@
   .cheat-box .lbl{font-family:var(--font-display);font-size:.6rem;color:var(--text-dim);letter-spacing:.05em;margin-bottom:4px;}
   .cheat-box .val{font-family:var(--font-display);font-size:1.3rem;color:var(--text-hi);}
   .cheat-explain{font-size:.7rem;color:var(--text-dim);line-height:1.5;margin-bottom:10px;}
+  /* Any TD detail: tags, chips, probability bar */
+  .td-tags{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 8px;}
+  .td-tag{font-family:var(--font-display);font-size:.66rem;letter-spacing:.05em;padding:.4em .8em;border:1px solid;}
+  .td-tag.on{color:var(--win);border-color:var(--win);}
+  .td-tag.off{color:var(--text-dim);border-color:var(--grid-line);text-decoration:line-through;}
+  .td-why{margin:4px 0 10px;font-size:.7rem;color:var(--text-mid);}
+  .td-why summary{cursor:pointer;font-family:var(--font-display);letter-spacing:.06em;color:var(--text-dim);margin-bottom:6px;}
+  .td-why-row{padding:3px 0;line-height:1.45;}
+  .td-why-row.off{opacity:.55;}
+  .td-chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;}
+  .td-chip{font-family:var(--font-display);font-size:.66rem;color:var(--text-dim);letter-spacing:.04em;padding:.45em .8em;border:1px solid var(--grid-line);background:var(--bg-panel-2);}
+  .td-chip b{color:var(--win);font-weight:600;margin-left:4px;}
+  .td-chip.due{border-color:var(--amber);} .td-chip.due b{color:var(--amber);}
+  .td-prob{margin:14px 0 6px;}
+  .td-prob .lbl{display:flex;justify-content:space-between;font-family:var(--font-display);font-size:.68rem;color:var(--text-dim);letter-spacing:.05em;margin-bottom:6px;}
+  .td-prob .val{color:var(--win);font-size:1rem;}
+  .td-prob .track{height:8px;background:rgba(124,92,255,.15);}
+  .td-prob .fill{height:100%;background:var(--win);}
+  .td-math{font-size:.64rem;color:var(--text-dim);margin-top:6px;}
   .zone-table{margin-bottom:6px;}
 
   .split-bars{display:flex;flex-direction:column;gap:10px;margin:10px 0 16px;}
@@ -1064,6 +1083,13 @@
 
   const NFLVERSE_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv';
   const PBP_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv';
+  // FTN charting — per-play "defenders in the box", joined onto play-by-play for the LIGHT BOX tag.
+  const FTN_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_2026.csv';
+
+  // nflverse and ESPN disagree on two abbreviations (Rams, Commanders). Everything in the Vault
+  // keys off ESPN's (schedule, stadiums, odds), so nflverse rows are translated on the way in.
+  const NFLVERSE_TO_ESPN = { LA:'LAR', WAS:'WSH' };
+  const espnTeam = t => NFLVERSE_TO_ESPN[t] || t;
 
   // Home stadium per team — used for weather. dome:true means climate-controlled, weather doesn't matter.
   const STADIUMS = {
@@ -1149,7 +1175,8 @@
       const pos = r.position;
       if(!['QB','RB','WR','TE'].includes(pos)) return;
       const wk = {
-        week: +r.week, team: r.team, opponent_team: r.opponent_team,
+        week: +r.week, team: espnTeam(r.team), opponent_team: espnTeam(r.opponent_team),
+        pid: r.player_id, pos, // needed to work out each player's weekly role (RB1, WR2…) for role splits
         targets: num(r.targets), receptions: num(r.receptions), rec_yards: num(r.receiving_yards),
         rec_td: num(r.receiving_tds), rec_epa: num(r.receiving_epa),
         carries: num(r.carries), rush_yards: num(r.rushing_yards), rush_td: num(r.rushing_tds), rush_epa: num(r.rushing_epa),
@@ -1162,9 +1189,9 @@
 
       const id = r.player_id;
       if(!byPlayer[id]){
-        byPlayer[id] = { id, name: r.player_display_name || r.player_name, pos, team: r.team, weeks: [] };
+        byPlayer[id] = { id, name: r.player_display_name || r.player_name, pos, team: espnTeam(r.team), weeks: [] };
       }
-      byPlayer[id].team = r.team; // keep most recent team on file
+      byPlayer[id].team = espnTeam(r.team); // keep most recent team on file
       byPlayer[id].weeks.push(wk);
     });
 
@@ -1176,11 +1203,18 @@
   // Play-by-play — much heavier than the weekly file (every play, not a per-game rollup), so it's
   // only fetched once, in parallel with the weekly file, and cached for the session.
   async function loadPBP(){
-    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(PBP_CSV));
+    // FTN is optional — if it's missing or late this week, LIGHT BOX just goes dark; nothing else breaks.
+    const [res, ftnRows] = await Promise.all([
+      premiumFetch('/nflverse?url=' + encodeURIComponent(PBP_CSV)),
+      premiumFetch('/nflverse?url=' + encodeURIComponent(FTN_CSV)).then(r=> r.text()).then(parseCSV).catch(()=> [])
+    ]);
+    const boxByPlay = {};
+    ftnRows.forEach(f=>{ if(f.n_defense_box !== '' && f.n_defense_box != null) boxByPlay[f.nflverse_game_id + '|' + f.nflverse_play_id] = +f.n_defense_box; });
     const text = await res.text();
     const rows = parseCSV(text);
     return rows.map(r=> ({
-      week: +r.week, posteam: r.posteam, defteam: r.defteam,
+      week: +r.week, posteam: espnTeam(r.posteam), defteam: espnTeam(r.defteam),
+      boxCount: boxByPlay[r.game_id + '|' + r.play_id] ?? null,
       yardline100: r.yardline_100 === '' ? null : +r.yardline_100,
       rushAttempt: r.rush_attempt === '1', passAttempt: r.pass_attempt === '1',
       rushTd: r.rush_touchdown === '1', passTd: r.pass_touchdown === '1',
@@ -1243,6 +1277,124 @@
     });
 
     return { zones: zoneRows, xTD, scored, debt: xTD - scored };
+  }
+
+  // ---- Vegas lines: spread, total, implied team total (total/2 − spread/2) per team ----
+  // Primary source is the worker's /odds route (median across books, so one stale book can't skew
+  // it). Any team still missing a line falls back to the odds ESPN ships on the scoreboard.
+  window.gwLines = {};
+  async function loadGameLines(){
+    const lines = {};
+    const set = (home, away, homeSpread, total)=>{
+      lines[home] = { spread: homeSpread,  total, implied: total/2 - homeSpread/2 };
+      lines[away] = { spread: -homeSpread, total, implied: total/2 + homeSpread/2 };
+    };
+    const median = a=>{ const s=a.slice().sort((x,y)=>x-y), m=s.length>>1; return s.length%2 ? s[m] : (s[m-1]+s[m])/2; };
+    const events = window.gwWeekEvents || [];
+    const nameToAbbr = {};
+    events.forEach(ev=> (ev.competitions?.[0]?.competitors || []).forEach(c=>{
+      if(c.team?.displayName) nameToAbbr[c.team.displayName] = c.team.abbreviation;
+    }));
+
+    try{
+      const games = await (await premiumFetch('/odds')).json();
+      (games || []).forEach(g=>{
+        const home = nameToAbbr[g.home_team], away = nameToAbbr[g.away_team];
+        // only this week's matchup — the Odds API also lists games further out
+        if(!home || !away || window.gwSchedule?.[home]?.opponent !== away) return;
+        const spreads = [], totals = [];
+        (g.bookmakers || []).forEach(b=>{
+          const hs = b.markets?.find(m=> m.key==='spreads')?.outcomes?.find(o=> o.name===g.home_team)?.point;
+          const ov = b.markets?.find(m=> m.key==='totals')?.outcomes?.find(o=> o.name==='Over')?.point;
+          if(typeof hs === 'number') spreads.push(hs);
+          if(typeof ov === 'number') totals.push(ov);
+        });
+        if(spreads.length && totals.length) set(home, away, median(spreads), median(totals));
+      });
+    }catch(e){ /* quota out / worker down — ESPN fallback below */ }
+
+    events.forEach(ev=>{
+      const comp = ev.competitions?.[0];
+      const home = comp?.competitors?.find(c=> c.homeAway==='home')?.team?.abbreviation;
+      const away = comp?.competitors?.find(c=> c.homeAway==='away')?.team?.abbreviation;
+      const o = comp?.odds?.[0];
+      if(!home || !away || lines[home] || !o || typeof o.overUnder !== 'number') return;
+      // ESPN "details" looks like "DET -4.5" (favorite + spread) or "EVEN"
+      const m = /^([A-Z]{2,4})\s+(-?\d+(?:\.\d+)?)$/.exec((o.details || '').trim());
+      let homeSpread = 0;
+      if(m) homeSpread = m[1] === home ? +m[2] : -(+m[2]);
+      else if(!/even/i.test(o.details || '')) return;
+      set(home, away, homeSpread, o.overUnder);
+    });
+
+    window.gwLines = lines;
+    return lines;
+  }
+
+  // ---- Role-based defense splits ----
+  // What each defense has allowed to a team's lead back, WR1, WR2, etc. over its last 8 games.
+  // A player's role in a given week = his rank on his own team at his position by opportunities
+  // (RB: carries + targets, WR/TE: targets). This is the "allowed X to lead backs, 5th most" read.
+  const ROLE_LABELS = { RB1:'lead backs', RB2:'second backs', WR1:'lead wideouts', WR2:'second wideouts', WR3:'third wideouts', TE1:'lead tight ends', TE2:'second tight ends' };
+  const ROLE_SHORT  = { RB1:'LEAD BACK', RB2:'RB2', WR1:'WR1', WR2:'WR2', WR3:'WR3', TE1:'TE1', TE2:'TE2' };
+  function buildRoleSplits(){
+    const maxWeek = weeksOfFilmAvailable();
+    const roleOf = {};          // `${pid}|${week}` -> 'RB1' | 'WR2' | …
+    const defGames = {};        // defense -> Set of weeks it played (denominator for per-game rates)
+    const groups = {};
+    allWeekRows.forEach(w=>{
+      if(w.opponent_team && w.week > maxWeek - 8) (defGames[w.opponent_team] = defGames[w.opponent_team] || new Set()).add(w.week);
+      if(!['RB','WR','TE'].includes(w.pos)) return;
+      const k = w.team + '|' + w.week + '|' + w.pos;
+      (groups[k] = groups[k] || []).push(w);
+    });
+
+    const def = {};             // defense -> role -> running totals
+    const oppOf = w=> w.pos==='RB' ? w.carries + w.targets : w.targets;
+    Object.values(groups).forEach(rows=>{
+      rows.sort((a,b)=> oppOf(b) - oppOf(a));
+      rows.slice(0, rows[0].pos==='WR' ? 3 : 2).forEach((w,i)=>{
+        if(oppOf(w) <= 0) return;
+        const role = w.pos + (i+1);
+        roleOf[w.pid + '|' + w.week] = role;
+        if(!w.opponent_team || w.week <= maxWeek - 8) return;
+        const d = (def[w.opponent_team] = def[w.opponent_team] || {});
+        const r = (d[role] = d[role] || { tds:0, yards:0, targets:0, recentTds:0 });
+        r.tds += w.rush_td + w.rec_td;
+        r.yards += w.rush_yards + w.rec_yards;
+        r.targets += w.targets;
+        if(w.week > maxWeek - 3) r.recentTds += w.rush_td + w.rec_td;
+      });
+    });
+
+    // per-game rates, league average, and a rank per role (1 = allowed the most)
+    const leagueTdPG = {};
+    Object.keys(ROLE_LABELS).forEach(role=>{
+      const teams = Object.keys(defGames);
+      let tds = 0, games = 0;
+      teams.forEach(t=>{
+        def[t] = def[t] || {};
+        const r = def[t][role] = def[t][role] || { tds:0, yards:0, targets:0, recentTds:0 };
+        r.games = defGames[t].size;
+        r.tdPG = r.tds / Math.max(1, r.games);
+        r.yardsPG = r.yards / Math.max(1, r.games);
+        tds += r.tds; games += r.games;
+      });
+      leagueTdPG[role] = games ? tds / games : 0;
+      teams.slice().sort((a,b)=> (def[b][role].tdPG - def[a][role].tdPG) || (def[b][role].yardsPG - def[a][role].yardsPG))
+        .forEach((t,i)=> def[t][role].rank = i + 1);
+    });
+    return { roleOf, def, leagueTdPG, teamCount: Object.keys(defGames).length };
+  }
+
+  // A player's current role = his role in his most recent game (null if he was outside the top 2/3).
+  function currentRoleOf(raw, splits){
+    for(let i = raw.weeks.length - 1; i >= 0; i--){
+      const role = splits.roleOf[raw.id + '|' + raw.weeks[i].week];
+      if(role) return role;
+      if(i < raw.weeks.length - 2) break; // only look back 3 games
+    }
+    return null;
   }
 
   // What "weeks of film" every team roughly has — a simple proxy for the real product's
@@ -1327,24 +1479,29 @@
       // into the end zone (rushing/receiving). A QB throwing TD passes isn't "scoring" for this
       // market, and mixing QBs into RB/WR/TE opportunity scales distorts the percentile ranking.
       label: 'ANY TD', positions: ['RB','WR','TE'],
+      // These four bars are display-only for Any TD — the score itself comes from applyAnyTdModel()
+      // (TD probability + tags). They show the usage/environment inputs that drive that probability.
       components(p, scope){
         return [
-          { key:'volume', label:'Volume', value:p.opportunity },
-          { key:'redzone', label:'Red Zone Role', value:p.tdRate },
-          { key:'explosive', label:'Explosiveness', value:p.explosive/Math.max(1,p.games) },
-          { key:'script', label:'Shootout Script', value:(p.teamPPG||0) + (p.oppPAPG||0) }
+          { key:'volume', label:'Opportunities / Game', value:(p.carries + p.targets)/Math.max(1,p.games) },
+          { key:'redzone', label:'Red Zone Share %', value:(p.rzShare||0)*100 },
+          { key:'goalline', label:'Goal Line Opps / Game', value:p.glPG||0 },
+          { key:'script', label:'Implied Team Total', value:p.implied || p.teamPPG || 0 }
         ];
       },
-      formStat(p){ return `${Math.round(p.hitRate*100)}% TD`; },
+      formStat(p){ return `${Math.round((p.tdProb ?? p.hitRate)*100)}% TD`; },
       // Named, single-number reads on the same signals the component bars blend together —
       // pulled out on request so "target share" etc. shows as its own line, not just buried
       // inside a composite percentile.
       advancedStats(p){
+        const touches = p.carries + p.receptions;
         return [
-          ['Red Zone TD Rate', (p.tdRate*100).toFixed(1)+'%'],
-          ['Opportunities / Game', (p.opportunity/Math.max(1,p.games)).toFixed(1)],
-          ['Team PPG', (p.teamPPG||0).toFixed(1)],
-          ['Opponent PA/Game', (p.oppPAPG||0).toFixed(1)]
+          ['Expected TDs This Game', p.lambda != null ? p.lambda.toFixed(2) : '—'],
+          ['Red Zone Share', p.rzShare != null ? (p.rzShare*100).toFixed(0)+'%' : '—'],
+          ['Goal Line Opps / Game', p.glPG != null ? p.glPG.toFixed(1) : '—'],
+          ['Target Share', ((p.targetShare||0)*100).toFixed(1)+'%'],
+          ['TD Rate (per touch)', touches>0 ? (((p.rec_td+p.rush_td)/touches)*100).toFixed(1)+'%' : '—'],
+          ['Team PPG / Opp PA per Game', `${(p.teamPPG||0).toFixed(1)} / ${(p.oppPAPG||0).toFixed(1)}`]
         ];
       },
       primaryStatLabel: 'TDs',
@@ -1483,6 +1640,26 @@
       teamTotals[w.team].games.add(w.week);
     });
 
+    // One pass over play-by-play: each team's red-zone opportunities (the denominator for RZ share)
+    // and each rusher's carries vs. light boxes (6 or fewer defenders, from FTN charting).
+    const teamRz = {}, boxBy = {};
+    let lgBoxKnown = 0, lgBoxLight = 0;
+    if(pbpRows){
+      pbpRows.forEach(r=>{
+        if(scope === 'last3' && r.week <= maxWeek-3) return;
+        if(r.yardline100 <= 20 && r.posteam){
+          if(r.rushAttempt && r.rusherId) teamRz[r.posteam] = (teamRz[r.posteam]||0) + 1;
+          if(r.passAttempt && r.receiverId) teamRz[r.posteam] = (teamRz[r.posteam]||0) + 1;
+        }
+        if(r.rushAttempt && r.rusherId && r.boxCount != null && r.boxCount > 0){
+          const b = (boxBy[r.rusherId] = boxBy[r.rusherId] || { known:0, light:0 });
+          b.known++; lgBoxKnown++;
+          if(r.boxCount <= 6){ b.light++; lgBoxLight++; }
+        }
+      });
+    }
+    const lgLightShare = lgBoxKnown ? lgBoxLight/lgBoxKnown : null;
+
     const list = [];
     Object.values(rawPlayers).forEach(raw=>{
       if(!def.positions.includes(raw.pos)) return;
@@ -1517,6 +1694,8 @@
       const oppStat = sched && window.gwTeamPPG ? window.gwTeamPPG[sched.opponent] : null;
       p.teamPPG = teamStat || 0;
       p.oppPAPG = window.gwDefenseRank && sched && window.gwDefenseRank[sched.opponent] ? window.gwDefenseRank[sched.opponent].paPerGame : 0;
+      p.line = (window.gwLines && window.gwLines[p.team]) || null;   // { spread, total, implied }
+      p.implied = p.line ? p.line.implied : null;
       p.category = category; // so the detail panel knows which advancedStats/primaryStat to use
       p.seasonGames = raw.weeks.length; // needed in the percentile pass below, where `raw` isn't in scope
       const injSp = injuryFor(p.name, p.pos, p.team);
@@ -1541,15 +1720,23 @@
       const fullTds = raw.weeks.reduce((s,w)=> s + w.rec_td+w.rush_td+w.pass_td, 0);
       p.fullTdRate = fullOpp>0 ? fullTds/fullOpp : 0;
 
-      p.components = def.components(p, scope);
-
       if(zoneLeagueRates){
         const zb = computeZoneBreakdown(p.id, scope, zoneLeagueRates);
         p.zoneBreakdown = zb.zones;
         p.xTD = zb.xTD;
         p.tdScored = zb.scored;
         p.tdDebt = zb.debt;
+        const gl = zb.zones.find(z=> z.key==='goalline'), rz = zb.zones.find(z=> z.key==='redzone');
+        const rzOpps = gl.carries + gl.targets + rz.carries + rz.targets;
+        p.rzShare = teamRz[p.team] ? rzOpps / teamRz[p.team] : 0;
+        p.glPG = (gl.carries + gl.targets) / Math.max(1, p.games);
+        const bx = boxBy[p.id];
+        p.lightBoxShare = bx && bx.known >= 10 ? bx.light / bx.known : null;
+        p.lgLightShare = lgLightShare;
       }
+
+      // after the zone block, so Any TD's bars can use red-zone share / goal-line usage
+      p.components = def.components(p, scope);
 
       list.push(p);
     });
@@ -1595,9 +1782,134 @@
       }
     });
 
+    if(category === 'anytd') applyAnyTdModel(list);
+
     list.sort((a,b)=> b.score-a.score);
     return list;
   }
+
+  /* ===================== ANY TD MODEL ===================== */
+  // P(anytime TD) = 1 − e^(−λ), where λ = expected TDs in THIS game:
+  //   usage   — zone-priced xTD per game (where his touches happen), blended 75/25 with his actual
+  //             TDs per game, then shrunk toward the average for his role (lead back, WR1…) so a
+  //             2-game sample can't run away with it
+  //   × env   — his team's Vegas implied total ÷ league-average implied total (falls back to team PPG)
+  //   × matchup — TDs this defense allows to his role, shrunk toward league average
+  // Score = 1.3 × TD% + 2 per tag that fires + 2 if DUE (capped at 99.9).
+  const ordinal = n => n + (['th','st','nd','rd'][(n%100-20)%10] || ['th','st','nd','rd'][n%100] || 'th');
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // Tuning knobs — picked by backtesting weeks 3–4 of 2026 (Brier score + top-40 calibration).
+  // Bigger usageK/defK = more shrinkage toward average; calib scales every λ.
+  const ANYTD_PARAMS = { usageK: 3, defK: 10, muLo: 0.8, muHi: 1.25, envLo: 0.6, envHi: 1.5, calib: 0.85 };
+
+  function applyAnyTdModel(list){
+    const splits = buildRoleSplits();
+    const avg = a => a.length ? a.reduce((s,v)=> s+v, 0) / a.length : null;
+    const lgImplied = avg(Object.values(window.gwLines || {}).map(l=> l.implied));
+    const lgPPG = avg(Object.values(window.gwTeamPPG || {}).filter(v=> v > 0));
+
+    // position fallbacks: TDs per game (shrink target when no role) and TDs per opportunity (no-PBP usage)
+    const posBase = {};
+    list.forEach(p=>{
+      const b = (posBase[p.pos] = posBase[p.pos] || { tds:0, games:0, opps:0 });
+      b.tds += p.rec_td + p.rush_td; b.games += p.games; b.opps += p.carries + p.targets;
+    });
+
+    // RZ share rank within position (players with 2+ games, so one-week flukes don't crowd the top 10)
+    const rzRank = {};
+    ['RB','WR','TE'].forEach(pos=>{
+      list.filter(p=> p.pos===pos && p.games >= 2 && p.rzShare > 0)
+        .sort((a,b)=> b.rzShare - a.rzShare)
+        .forEach((p,i)=> rzRank[p.id] = i + 1);
+    });
+
+    list.forEach(p=>{
+      const raw = rawPlayers[p.id];
+      const role = raw ? currentRoleOf(raw, splits) : null;
+      const pb = posBase[p.pos];
+      const games = Math.max(1, p.games);
+      const actualPG = (p.rec_td + p.rush_td) / games;
+
+      // 1) usage
+      const usagePG = p.xTD !== undefined
+        ? 0.75 * (p.xTD / games) + 0.25 * actualPG
+        : 0.75 * ((p.carries + p.targets) / games) * (pb.tds / Math.max(1, pb.opps)) + 0.25 * actualPG;
+      const prior = role ? splits.leagueTdPG[role] : pb.tds / Math.max(1, pb.games);
+      const K = ANYTD_PARAMS.usageK; // phantom games of "average for his role"
+      const usage = (usagePG * p.games + prior * K) / (p.games + K);
+
+      // 2) game environment
+      let env = 1;
+      if(p.implied && lgImplied) env = p.implied / lgImplied;
+      else if(p.teamPPG && lgPPG) env = p.teamPPG / lgPPG;
+      env = clamp(env, ANYTD_PARAMS.envLo, ANYTD_PARAMS.envHi);
+
+      // 3) role matchup
+      const d = role && p.opponent ? splits.def[p.opponent]?.[role] : null;
+      const lgRole = role ? splits.leagueTdPG[role] : 0;
+      let matchup = 1;
+      if(d && lgRole > 0){
+        const KG = ANYTD_PARAMS.defK; // phantom league-average games — a defense's 3-game split is mostly noise
+        matchup = clamp((d.tds + lgRole * KG) / ((d.games + KG) * lgRole), ANYTD_PARAMS.muLo, ANYTD_PARAMS.muHi);
+      }
+
+      p.role = role;
+      p.usagePG = usage; p.env = env; p.matchup = matchup;
+      p.lambda = usage * env * matchup * ANYTD_PARAMS.calib;
+      p.tdProb = 1 - Math.exp(-p.lambda);
+
+      // 4) tags
+      const tags = [];
+      const r = rzRank[p.id];
+      tags.push({ key:'rz', label:'RZ SHARE TOP 10', on: !!r && r <= 10,
+        why: p.rzShare != null
+          ? `${Math.round(p.rzShare*100)}% of ${p.team}'s red-zone opportunities${r ? ` — #${r} among ${p.pos}s` : ''}.`
+          : 'Needs play-by-play — fills in once it finishes loading.' });
+
+      tags.push({ key:'fav', label:'FAVORED', on: !!p.line && p.line.spread < 0,
+        why: p.line ? `${p.team} ${p.line.spread>0?'+':''}${p.line.spread} vs ${p.opponent}.` : 'No line posted for this game yet.' });
+
+      if(p.pos === 'RB'){
+        const on = p.lightBoxShare != null && p.lgLightShare != null && p.lightBoxShare >= p.lgLightShare + 0.05;
+        tags.push({ key:'box', label:'LIGHT BOX DIET', on,
+          why: p.lightBoxShare != null
+            ? `${Math.round(p.lightBoxShare*100)}% of his carries came against 6 or fewer in the box (league ${Math.round(p.lgLightShare*100)}%).`
+            : 'Not enough charted carries yet (needs 10+ with box counts).' });
+      }else{
+        const bar = p.pos === 'TE' ? 0.18 : 0.22;
+        tags.push({ key:'hog', label:'TARGET HOG', on: (p.targetShare||0) >= bar,
+          why: `${((p.targetShare||0)*100).toFixed(1)}% target share (tag fires at ${Math.round(bar*100)}%+ for ${p.pos}s).` });
+      }
+
+      const roleName = role ? ROLE_LABELS[role] : null;
+      tags.push({ key:'weak', label: role ? `DEF BOTTOM 8 VS ${ROLE_SHORT[role]}` : 'DEF BOTTOM 8 VS ROLE',
+        on: !!d && d.rank <= 8,
+        why: d ? `${p.opponent} has allowed ${d.tds} TDs and ${Math.round(d.yards)} yards to ${roleName} in its last ${d.games} games — ${ordinal(d.rank)} most of ${splits.teamCount}.`
+               : (role ? 'No opponent on this week\'s board.' : 'Not a top-2 back / top-3 receiver / top-2 TE on his team lately.') });
+
+      tags.push({ key:'leak', label:'ACTIVE LEAK', on: !!d && d.recentTds >= 2,
+        why: d ? `${p.opponent} has given up ${d.recentTds} TD${d.recentTds===1?'':'s'} to ${roleName} in its last 3 games.` : '—' });
+
+      p.tags = tags;
+      const fired = tags.filter(t=> t.on).length;
+      const due = p.flag === 'due';
+      p.score = Math.round(Math.min(99.9, 130 * p.tdProb + 2 * fired + (due ? 2 : 0)) * 10) / 10;
+      p.formStat = `${Math.round(p.tdProb*100)}% TD`;
+      p.roleNote = d ? tags.find(t=> t.key==='weak').why : null;
+
+      // reason line, most important first
+      const why = [];
+      if(r && r <= 10) why.push('Elite Red Zone Role');
+      if(usage >= 0.45) why.push('High Volume');
+      if(env >= 1.12) why.push('Shootout Script');
+      if(d && d.rank <= 8) why.push('Soft Matchup');
+      if(due && p.tdDebt !== undefined) why.push(`Due For TD (Debt +${p.tdDebt.toFixed(1)})`);
+      p.reason = why.length ? why.slice(0,3).join(' + ') : 'Low Scoring Role';
+    });
+  }
+  /* =================== END ANY TD MODEL =================== */
+
+  const fmtScore = s => Number.isInteger(s) ? String(s) : s.toFixed(1);
 
   function flagBadge(flag){
     if(flag==='due') return '<span class="flag-badge due">DUE</span>';
@@ -1644,7 +1956,7 @@
         <div class="rank">#${i+1}</div>
         <div class="who"><div class="name">${p.name}</div><div class="meta">${p.team} · ${p.pos} · ${p.games} gm</div><div class="reason-line">${p.reason}</div></div>
         <div>${injBadge(p.injStatus)}${flagPart}${cheatCodeBadge(p)}</div>
-        <div><div class="score">${p.score}</div><div class="form-stat">${p.formStat}</div></div>
+        <div><div class="score">${fmtScore(p.score)}</div><div class="form-stat">${p.formStat}</div></div>
       `;
       row.dataset.pid = p.id;
       row.addEventListener('click', (e)=>{
@@ -1677,7 +1989,8 @@
 
       // In Matchups mode (early season) the real product re-normalizes each game's top score to 100.
       const maxInGame = matchupsMode ? Math.max(...inGame.map(p=>p.score), 1) : null;
-      const displayScore = p => matchupsMode ? (p.score/maxInGame*100).toFixed(1) : p.score;
+      // Any TD is already on a probability scale, so it's never re-normalized
+      const displayScore = p => (matchupsMode && p.category !== 'anytd') ? (p.score/maxInGame*100).toFixed(1) : fmtScore(p.score);
 
       const group = el('div','game-vault-group');
       const statusText = comp.status?.type?.shortDetail || '';
@@ -1812,6 +2125,40 @@
       `;
     }
 
+    // Any TD: tags (lit / struck), why they fired, Vegas chips, usage chips, probability bar + the math
+    let anytdHtml = '';
+    if(p.category === 'anytd' && p.tags){
+      const pct = Math.round(p.tdProb * 100);
+      const touchesPG = (p.carries + p.receptions) / Math.max(1, p.games);
+      const touches = p.carries + p.receptions;
+      const sp = p.line ? p.line.spread : null;
+      anytdHtml = `
+        <div class="td-tags">${p.tags.map(t=>`<span class="td-tag ${t.on?'on':'off'}">${t.on?'✓':'✕'} ${t.label}</span>`).join('')}</div>
+        <details class="td-why"><summary>WHY THE TAGS FIRED · ${p.tags.filter(t=>t.on).length}</summary>
+          ${p.tags.map(t=>`<div class="td-why-row ${t.on?'on':'off'}"><b>${t.label}</b> — ${t.why}</div>`).join('')}
+        </details>
+        <div class="td-chips">
+          ${p.line ? `
+            <span class="td-chip">SCRIPT <b>${sp<0 ? 'Fav by '+Math.abs(sp) : sp>0 ? 'Dog by '+sp : 'Pick'}</b></span>
+            <span class="td-chip">TOTAL <b>${p.line.total}</b></span>
+            <span class="td-chip">IMPLIED <b>${p.line.implied.toFixed(1)} pts</b></span>` : `<span class="td-chip">NO LINE POSTED YET</span>`}
+        </div>
+        <div class="td-chips">
+          <span class="td-chip">TOUCHES/G <b>${touchesPG.toFixed(1)}</b></span>
+          <span class="td-chip">RZ SHARE <b>${p.rzShare != null ? Math.round(p.rzShare*100)+'%' : '—'}</b></span>
+          <span class="td-chip">GOAL LINE/G <b>${p.glPG != null ? p.glPG.toFixed(1) : '—'}</b></span>
+          <span class="td-chip">TARGET SHARE <b>${Math.round((p.targetShare||0)*100)}%</b></span>
+          <span class="td-chip">TD RATE <b>${touches>0 ? Math.round(((p.rec_td+p.rush_td)/touches)*100)+'%' : '—'}</b></span>
+          ${p.flag==='due' && p.tdDebt !== undefined ? `<span class="td-chip due">DUE <b>+${p.tdDebt.toFixed(1)}</b></span>` : ''}
+        </div>
+        <div class="td-prob">
+          <div class="lbl"><span>ANYTIME-TD PROBABILITY</span><span class="val">${pct}%</span></div>
+          <div class="track"><div class="fill" style="width:${pct}%"></div></div>
+          <div class="td-math">Expected TDs ${p.lambda.toFixed(2)} = usage ${p.usagePG.toFixed(2)} × game script ${p.env.toFixed(2)} × matchup ${p.matchup.toFixed(2)}${p.role ? ` · role: ${ROLE_SHORT[p.role]}` : ''}</div>
+        </div>
+      `;
+    }
+
     const cheatCodeHtml = p.tdDebt === undefined ? `
       <div class="key-box" style="font-size:.72rem;margin-top:14px;">
         NFL Cheat Code needs the full play-by-play file — hit LOAD again once it's finished loading
@@ -1845,8 +2192,10 @@
       <div class="edge-detail-card">
         <div>
           <h3>${p.name} ${injBadge(p.injStatus)} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
-          <div class="sub">${p.team} · ${p.pos} · VAULT score ${p.score}/100 · ${p.formStat}${p.injStatus ? ' · ' + p.injStatus + (p.injPart ? ' (' + p.injPart + ')' : '') : ''}</div>
+          <div class="sub">${p.team} · ${p.pos} · VAULT score ${fmtScore(p.score)}/100 · ${p.formStat}${p.injStatus ? ' · ' + p.injStatus + (p.injPart ? ' (' + p.injPart + ')' : '') : ''}</div>
           <div class="reason-line">${p.reason}</div>
+
+          ${anytdHtml}
 
           <div class="panel-title" style="margin:14px 0 4px;"><h2 style="font-size:.7rem;">COMPONENT SCORES</h2><div class="rule"></div></div>
           <div class="split-bars">${componentBars}</div>
@@ -1993,6 +2342,7 @@
     try{
       if(!rawPlayers) rawPlayers = await loadRawPlayers();
       try{ await loadPlayers(); buildInjuryIndex(); }catch(e){ /* injuries just won't show */ }
+      await loadGameLines(); // spread/total/implied for the Any TD model — never throws, falls back to ESPN odds
       rebuildScores();
       refreshCurrentSubtab();
       gwFeedback(btn, true);
