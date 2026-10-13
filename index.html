@@ -316,6 +316,7 @@
   .trend-badge{font-family:var(--font-display);font-size:.7rem;padding:.2em .6em;border:1px solid;}
   .trend-badge.add{color:var(--win);border-color:var(--win);}
   .trend-badge.drop{color:var(--loss);border-color:var(--loss);}
+  .trend-badge.steady{color:var(--cyan);border-color:rgba(0,240,255,.4);}
 
   /* ---------- MARKETS ---------- */
   .key-box{
@@ -372,6 +373,11 @@
   details.gw-sec > summary .tag{ font-size:.58rem; color:var(--text-dim); letter-spacing:0; }
   details.gw-sec > .gw-sec-body{ padding:2px 12px 12px; }
   .edge-detail-head{ display:flex; gap:12px; align-items:center; }
+  .pos-filter{ display:flex; align-items:center; gap:10px; margin:0 0 10px; font-family:var(--font-display); font-size:.68rem; letter-spacing:.06em; color:var(--text-mid); }
+  .pos-filter select{ background:var(--bg-panel); color:var(--text-hi); border:1px solid var(--grid-line); padding:4px 8px; font-family:var(--font-display); font-size:.7rem; }
+  details.pos-sec > summary{ font-size:.8rem; padding:12px 14px; }
+  details.pos-sec .gw-sec-body{ padding:0 0 6px; }
+  .pos-note{ font-size:.66rem; color:var(--text-dim); padding:6px 14px 8px; }
   .gv-insights{ display:flex; flex-direction:column; gap:6px; padding:10px 12px 12px; border-bottom:1px solid rgba(124,92,255,.12); }
   .gv-insight{ font-size:.7rem; color:var(--text-mid); background:rgba(124,92,255,.08); border:1px solid var(--grid-line); border-radius:6px; padding:4px 10px; width:fit-content; max-width:100%; }
   .gv-insight b{ color:var(--cyan); font-family:var(--font-display); }
@@ -616,6 +622,9 @@
     <div id="player-results"></div>
     <div id="player-detail"></div>
 
+    <div class="panel-title"><h2>BROWSE BY POSITION</h2><div class="rule"></div><span class="tag">tap a position to open it</span></div>
+    <div id="pos-browser"></div>
+
     <div class="panel-title"><h2>TRENDING ADDS</h2><div class="rule"></div><span class="tag">last 24h · fantasy waivers</span></div>
     <div id="trend-add"><div class="loading">Loading trends…</div></div>
 
@@ -727,7 +736,12 @@
       setLicenseStatus('invalid or expired', false);
       throw new Error('NO_LICENSE');
     }
-    if(!res.ok){ throw new Error('worker responded ' + res.status); }
+    if(!res.ok){
+      const e = new Error('worker responded ' + res.status);
+      e.status = res.status;
+      try{ const j = await res.clone().json(); e.detail = j.message || j.error_code || j.error || ''; }catch(_){ /* body wasn't JSON */ }
+      throw e;
+    }
     return res;
   }
 
@@ -1062,6 +1076,30 @@
 
   $('#odds-load-btn').addEventListener('click', loadOdds);
 
+  const ODDS_SAVED_KEY = 'gridwave_odds_last_good';
+
+  function renderOddsGames(games, container){
+    games.forEach(g=>{
+      const book = g.bookmakers?.[0];
+      const card = el('div','odds-card');
+      card.appendChild(el('div','matchup', `${g.away_team} @ ${g.home_team}`));
+      if(book){
+        book.markets.forEach(m=>{
+          m.outcomes.forEach(o=>{
+            const line = el('div','odds-line');
+            const label = m.key === 'totals' ? `${o.name} ${o.point ?? ''}` : (o.point!==undefined ? `${o.name} ${o.point>0?'+':''}${o.point}` : o.name);
+            line.innerHTML = `<span>${m.key.toUpperCase()} · ${label}</span><span>${o.price>0?'+':''}${o.price}</span>`;
+            card.appendChild(line);
+          });
+        });
+        const src = el('div','odds-line'); src.style.opacity='.6'; src.style.fontSize='.68rem';
+        src.innerHTML = `<span>via ${book.title}</span><span></span>`;
+        card.appendChild(src);
+      }
+      container.appendChild(card);
+    });
+  }
+
   async function loadOdds(){
     const btn = $('#odds-load-btn');
     const container = $('#odds-results');
@@ -1072,33 +1110,31 @@
       const res = await premiumFetch('/odds');
       const games = await res.json();
       container.innerHTML = '';
-      if(!games || !games.length){ container.appendChild(el('div','empty','No upcoming games with posted lines.')); gwFeedback(btn, true); return; }
-      games.forEach(g=>{
-        const book = g.bookmakers?.[0];
-        const card = el('div','odds-card');
-        card.appendChild(el('div','matchup', `${g.away_team} @ ${g.home_team}`));
-        if(book){
-          book.markets.forEach(m=>{
-            m.outcomes.forEach(o=>{
-              const line = el('div','odds-line');
-              const label = m.key === 'totals' ? `${o.name} ${o.point ?? ''}` : (o.point!==undefined ? `${o.name} ${o.point>0?'+':''}${o.point}` : o.name);
-              line.innerHTML = `<span>${m.key.toUpperCase()} · ${label}</span><span>${o.price>0?'+':''}${o.price}</span>`;
-              card.appendChild(line);
-            });
-          });
-          const src = el('div','odds-line'); src.style.opacity='.6'; src.style.fontSize='.68rem';
-          src.innerHTML = `<span>via ${book.title}</span><span></span>`;
-          card.appendChild(src);
-        }
-        container.appendChild(card);
-      });
+      if(!Array.isArray(games) || !games.length){ container.appendChild(el('div','empty','No upcoming games with posted lines.')); gwFeedback(btn, true); return; }
+      try{ localStorage.setItem(ODDS_SAVED_KEY, JSON.stringify({ at: Date.now(), games })); }catch(_){ /* storage unavailable */ }
+      renderOddsGames(games, container);
       gwFeedback(btn, true);
     }catch(err){
       gwFeedback(btn, false);
+      container.innerHTML = '';
       if(err.message === 'NO_LICENSE'){
         showError(container, 'Unlock with a valid license key above first.');
+        return;
+      }
+      // The worker relays the odds provider's status. 401 = the Odds API key is out of credits or invalid;
+      // 429 = provider rate limit. Say that plainly instead of a bare "worker responded 401".
+      let why = 'Could not load odds (' + err.message + ').';
+      if(err.status === 401) why = 'The odds provider rejected the request (401) — the Odds API key is out of credits for this month or invalid. Check usage at the-odds-api.com.';
+      else if(err.status === 429) why = 'Too many requests right now (429). Try again in a minute.';
+      else if(err.status === 404) why = 'The worker has no /odds route deployed (404) — redeploy gridwave-worker.js.';
+      let saved = null;
+      try{ saved = JSON.parse(localStorage.getItem(ODDS_SAVED_KEY) || 'null'); }catch(_){ /* ignore */ }
+      if(saved && Array.isArray(saved.games) && saved.games.length){
+        const when = new Date(saved.at).toLocaleString('en-US',{ month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+        container.appendChild(el('div','key-box', `${why}<br>Showing the last lines this browser loaded successfully (${when}) — they may be out of date.`));
+        renderOddsGames(saved.games, container);
       }else{
-        showError(container, 'Could not load odds (' + err.message + ').');
+        showError(container, why);
       }
     }
   }
@@ -2063,6 +2099,84 @@
       target.textContent = '';
     }
   }
+
+  /* ---- PLAYERS TAB: browse by position (accordion) ---- */
+  const POS_GROUPS = [
+    ['QB','QUARTERBACKS','PASS YDS', raw=> raw.weeks.reduce((s,w)=> s + w.pass_yards, 0)],
+    ['RB','RUNNING BACKS','SCRIM YDS', raw=> raw.weeks.reduce((s,w)=> s + w.rush_yards + w.rec_yards, 0)],
+    ['WR','WIDE RECEIVERS','REC YDS',  raw=> raw.weeks.reduce((s,w)=> s + w.rec_yards, 0)],
+    ['TE','TIGHT ENDS','REC YDS',      raw=> raw.weeks.reduce((s,w)=> s + w.rec_yards, 0)]
+  ];
+  let _prodIndex = null, _prodFor = null;
+  function productionFor(sp){
+    if(!rawPlayers) return null;
+    if(!_prodIndex || _prodFor !== rawPlayers){
+      _prodIndex = {};
+      Object.values(rawPlayers).forEach(raw=>{
+        const g = POS_GROUPS.find(x=> x[0] === raw.pos); if(!g) return;
+        const k = normalizeName(raw.name) + '|' + raw.pos;
+        (_prodIndex[k] = _prodIndex[k] || []).push({ team: raw.team, val: g[3](raw) });
+      });
+      _prodFor = rawPlayers;
+    }
+    const arr = _prodIndex[normalizeName(sp.name) + '|' + sp.pos];
+    if(!arr) return null;
+    const hit = arr.find(x=> x.team === sp.team) || (arr.length === 1 ? arr[0] : null);
+    return hit ? hit.val : null;
+  }
+
+  async function fillPositionSection(det){
+    const pos = det.dataset.pos;
+    const body = det.querySelector('.gw-sec-body');
+    const group = POS_GROUPS.find(g=> g[0] === pos);
+    body.innerHTML = '<div class="loading">Loading players…</div>';
+    try{
+      const map = await loadPlayers();
+      // Season stats rank the list. They come from the same cached file the Vault uses; if that can't
+      // load (no license yet), the list just falls back to A-Z.
+      if(!rawPlayers && getLicenseKey()){ try{ rawPlayers = await loadRawPlayers(); }catch(_){ /* A-Z fallback */ } }
+      const team = $('#pos-team').value;
+      let list = Object.values(map).filter(p=> p.pos === pos && p.team && p.status === 'Active' && (!team || p.team === team));
+      list = list.map(p=> ({ p, v: productionFor(p) }));
+      list.sort((a,b)=> (b.v ?? -1) - (a.v ?? -1) || a.p.name.localeCompare(b.p.name));
+      det.querySelector('summary .tag').textContent = list.length + ' players';
+      body.innerHTML = '';
+      if(!list.length){ body.appendChild(el('div','empty','No active players found.')); return; }
+      if(!rawPlayers) body.appendChild(el('div','pos-note','Sorted A–Z. Unlock + load the Vault and this list ranks by season production.'));
+      else body.appendChild(el('div','pos-note',`Ranked by season ${group[2].toLowerCase()}.`));
+      list.forEach(({p,v})=> renderPlayerRow(body, p, v == null ? null : { cls:'steady', text: Math.round(v) + ' ' + group[2] }));
+    }catch(err){
+      showError(body, 'Could not load players (' + err.message + ').');
+    }
+  }
+
+  (function initPositionBrowser(){
+    const host = $('#pos-browser');
+    if(!host) return;
+    host.innerHTML = `
+      <div class="pos-filter"><label for="pos-team">TEAM</label>
+        <select id="pos-team"><option value="">ALL TEAMS</option></select></div>
+      ${POS_GROUPS.map(g=> `<details class="gw-sec pos-sec" data-pos="${g[0]}"><summary>${g[1]}<span class="tag"></span></summary><div class="gw-sec-body"></div></details>`).join('')}
+    `;
+    const sections = [...host.querySelectorAll('details.pos-sec')];
+    // accordion: opening one position collapses the others
+    sections.forEach(det=> det.addEventListener('toggle', ()=>{
+      if(!det.open) { clearDetails(); return; }
+      sections.forEach(o=>{ if(o !== det) o.open = false; });
+      clearDetails();
+      fillPositionSection(det);
+    }));
+    // fill the team dropdown once the player DB is in (it's cached, so this is cheap)
+    loadPlayers().then(map=>{
+      const teams = [...new Set(Object.values(map).filter(p=> p.team && ['QB','RB','WR','TE'].includes(p.pos)).map(p=> p.team))].sort();
+      const sel = $('#pos-team');
+      teams.forEach(t=>{ const o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o); });
+    }).catch(()=>{});
+    $('#pos-team').addEventListener('change', ()=>{
+      const open = sections.find(d=> d.open);
+      if(open){ clearDetails(); fillPositionSection(open); }
+    });
+  })();
 
   /* ---- PARLAY ENGINE ---- */
   function renderParlays(){
