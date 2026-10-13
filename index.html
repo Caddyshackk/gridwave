@@ -353,7 +353,7 @@
   /* Player-card rows: headshot + chips + score pill */
   .edge-row.card-row{ grid-template-columns:2em 46px 1fr auto auto; gap:10px; }
   .avatar{ position:relative; width:44px; height:44px; flex:none; }
-  .avatar .ph{ width:44px; height:44px; border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:top; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
+  .avatar .ph{ width:44px; height:44px; border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:50% 12%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
   .avatar .tm{ position:absolute; right:-6px; bottom:-4px; background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-display); font-size:.5rem; line-height:1; padding:2px 3px; border-radius:3px; }
   .avatar.lg, .avatar.lg .ph{ width:60px; height:60px; }
   .chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
@@ -411,6 +411,7 @@
   /* Inline expand-under-row detail panels (Vault rows + Players rows) */
   .inline-detail{ padding:0 0 10px; }
   .inline-detail .edge-detail-card{ max-width:none; margin-top:6px; }
+  .inline-detail.no-anim .edge-detail-card{ animation:none; }
   .edge-row.row-open, .player-row.row-open{ background:rgba(124,92,255,.10); }
   .flag-badge{ cursor:pointer; }
   .flag-badge.inj-out{ color:var(--loss); border-color:var(--loss); background:rgba(255,35,88,.10); }
@@ -1629,11 +1630,19 @@
     const raw = (typeof rawPlayers !== 'undefined' && rawPlayers) ? rawPlayers[p.id] : null;
     const url = raw && raw.headshot ? raw.headshot : '';
     const ini = initialsOf(p.name);
+    // nflverse's NFL.com URLs are Cloudinary links with only f_auto,q_auto. Ask for a sharper,
+    // 320px-wide, best-quality render; if that URL 404s, gwImgErr falls back to the original, then initials.
+    const hi = url.replace('/upload/f_auto,q_auto/', '/upload/f_auto,q_auto:best,w_320,c_scale/');
     const img = url
-      ? `<img class="ph" src="${url}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;ph&quot;>${ini}</div>'">`
+      ? `<img class="ph" src="${hi}" data-orig="${url}" data-ini="${ini}" alt="" decoding="async" onerror="gwImgErr(this)">`
       : `<div class="ph">${ini}</div>`;
     return `<div class="avatar${large?' lg':''}">${img}<span class="tm">${p.team}</span></div>`;
   }
+  window.gwImgErr = function(img){
+    if(img.dataset.orig && img.getAttribute('src') !== img.dataset.orig){ img.src = img.dataset.orig; return; }
+    const d = document.createElement('div'); d.className = 'ph'; d.textContent = img.dataset.ini || '?';
+    img.replaceWith(d);
+  };
   // One shared card-row builder for Rankings and Game Vault
   function cardRowHtml(p, rank, scoreText, flagPart, extraMeta){
     return `
@@ -1688,6 +1697,7 @@
     if(!list.length){ container.appendChild(el('div','empty','No qualifying players yet this season.')); return; }
     list.slice(0,25).forEach((p,i)=>{
       const row = el('div','edge-row card-row');
+      row.dataset.pid = p.id;
       const trendCls = p.trend > 1.5 ? 'surging' : (p.trend < -1.5 ? 'cooling' : 'steady');
       const trendText = p.trend > 1.5 ? 'SURGING' : (p.trend < -1.5 ? 'COOLING' : 'STEADY');
       const flagPart = p.flag ? flagBadge(p.flag) : `<span class="badge ${trendCls}">${trendText}</span>`;
@@ -1730,6 +1740,7 @@
 
       const renderRow = (p,i) => {
         const row = el('div','edge-row card-row');
+        row.dataset.pid = p.id;
         const badge = p.flag ? flagBadge(p.flag) : '';
         row.innerHTML = cardRowHtml(p, i+1, displayScore(p), badge, '');
         row.addEventListener('click', (e)=>{
@@ -2040,11 +2051,23 @@
       if(!pbpRows){
         loadPBP().then(rows=>{
           pbpRows = rows;
+          // refreshCurrentSubtab() rebuilds every row, which destroys the inline panel the user has
+          // open (that was the "collapse" on first open). Remember who was open, rebuild, then
+          // re-open the same player's panel under their new row with no entrance animation.
+          const openId = currentDetailPlayer ? currentDetailPlayer.id : null;
           rebuildScores();
           refreshCurrentSubtab();
-          if(currentDetailPlayer && currentDetailTarget && currentDetailTarget.isConnected){
-            const refreshed = edgeFlat.find(p=> p.id === currentDetailPlayer.id);
-            if(refreshed) renderEdgeDetail(refreshed, currentDetailTarget);
+          if(openId){
+            const refreshed = edgeFlat.find(p=> p.id === openId);
+            const row = document.querySelector(`.edge-row[data-pid="${openId}"]`);
+            if(refreshed && row){
+              clearDetails();
+              const box = document.createElement('div');
+              box.className = 'inline-detail no-anim';
+              row.after(box);
+              row.classList.add('row-open');
+              renderEdgeDetail(refreshed, box);
+            }
           }
         }).catch(()=>{ /* Cheat Code just won't be available this session — everything else still works */ });
       }
