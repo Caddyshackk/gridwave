@@ -351,18 +351,18 @@
   }
   .edge-row:hover{background:rgba(124,92,255,.08);}
   /* Player-card rows: headshot + chips + score pill */
-  .edge-row.card-row{ grid-template-columns:2em 66px 1fr auto auto; gap:12px; }
-  .avatar{ position:relative; width:64px; height:64px; flex:none; }
-  .avatar .ph{ width:64px; height:64px; object-view-box:inset(0 12% 26% 12%); box-sizing:border-box; image-rendering:auto; transform:translateZ(0); border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:50% 18%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
+  .edge-row.card-row{ grid-template-columns:2em 82px 1fr auto auto; gap:14px; }
+  .avatar{ position:relative; width:80px; height:80px; flex:none; }
+  .avatar .ph{ width:80px; height:80px; object-view-box:inset(0 12% 26% 12%); box-sizing:border-box; image-rendering:auto; transform:translateZ(0); border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:50% 18%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
   .avatar .tm{ position:absolute; right:-8px; bottom:-4px; z-index:1; background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-display); font-size:.5rem; line-height:1; padding:2px 3px; border-radius:3px; }
-  .avatar.lg, .avatar.lg .ph{ width:88px; height:88px; }
+  .avatar.lg, .avatar.lg .ph{ width:96px; height:96px; }
   .chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
   .chip{ font-family:var(--font-display); font-size:.58rem; letter-spacing:.05em; padding:1px 6px; border-radius:999px; border:1px solid var(--grid-line); color:var(--text-mid); }
   .chip.pos{ color:var(--cyan); border-color:rgba(0,240,255,.4); }
   .edge-row.card-row .score{ display:inline-block; min-width:0; padding:2px 10px; border-radius:999px; background:rgba(0,255,150,.12); border:1px solid var(--win); color:var(--win); font-size:1rem; }
   .edge-row.card-row > div:last-child{ text-align:right; }
   .edge-row .badges{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
-  @media (max-width:560px){ .edge-row.card-row{ grid-template-columns:1.6em 56px 1fr auto; } .edge-row.card-row .badges{ display:none; } }
+  @media (max-width:560px){ .edge-row.card-row .avatar, .edge-row.card-row .avatar .ph{ width:56px; height:56px; } .edge-row.card-row{ grid-template-columns:1.6em 58px 1fr auto; } .edge-row.card-row .badges{ display:none; } }
   /* Collapsible framed detail sections */
   details.gw-sec{ margin-top:12px; border:1px solid var(--grid-line); border-radius:6px; background:rgba(13,11,26,.55); }
   details.gw-sec > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:9px 12px; font-family:var(--font-display); font-size:.7rem; letter-spacing:.08em; color:var(--text-hi); user-select:none; }
@@ -372,6 +372,9 @@
   details.gw-sec > summary .tag{ font-size:.58rem; color:var(--text-dim); letter-spacing:0; }
   details.gw-sec > .gw-sec-body{ padding:2px 12px 12px; }
   .edge-detail-head{ display:flex; gap:12px; align-items:center; }
+  .gv-insights{ display:flex; flex-direction:column; gap:6px; padding:10px 12px 12px; border-bottom:1px solid rgba(124,92,255,.12); }
+  .gv-insight{ font-size:.7rem; color:var(--text-mid); background:rgba(124,92,255,.08); border:1px solid var(--grid-line); border-radius:6px; padding:4px 10px; width:fit-content; max-width:100%; }
+  .gv-insight b{ color:var(--cyan); font-family:var(--font-display); }
   .edge-row .rank{font-family:var(--font-display);color:var(--text-dim);font-size:.8rem;}
   .edge-row .who .name{color:var(--text-hi);font-weight:700;font-size:.85rem;}
   .edge-row .who .meta{color:var(--text-dim);font-size:.7rem;}
@@ -1653,7 +1656,7 @@
     const espn = espnIdFor(p.name, p.pos, p.team);
     const srcs = [];
     if(espn){
-      const h = large ? 176 : 128, w = Math.round(h * 1.378);
+      const h = large ? 192 : 160, w = Math.round(h * 1.378);
       const file = `/i/headshots/nfl/players/full/${espn}.png`;
       srcs.push(`https://a.espncdn.com/combiner/i?img=${file}&w=${w}&h=${h}`);
       srcs.push(`https://a.espncdn.com/i${file.slice(2)}`);
@@ -1741,6 +1744,79 @@
     });
   }
 
+  /* ---- GAME INSIGHTS: what each defense has allowed lately, ranked league-wide ---- */
+  // Built from the per-week nflverse rows already in memory (no extra fetch). Role slots are inferred
+  // per team-week: lead back = most carries, WR1/WR2 and TE1/TE2 = most targets, QB = most attempts.
+  const INSIGHT_METRICS = [
+    { label:'rush yards to lead backs',          get: e=> e.rb1 && e.rb1.rush_yards },
+    { label:'rush TDs to lead backs',            get: e=> e.rb1 && e.rb1.rush_td },
+    { label:'receiving yards to lead backs',     get: e=> e.rb1 && e.rb1.rec_yards },
+    { label:'receiving yards to top wideouts',   get: e=> e.wr1 && e.wr1.rec_yards },
+    { label:'receiving yards to second wideouts',get: e=> e.wr2 && e.wr2.rec_yards },
+    { label:'receiving yards to top tight ends', get: e=> e.te1 && e.te1.rec_yards },
+    { label:'targets to second tight ends',      get: e=> e.te2 && e.te2.targets },
+    { label:'passing yards to quarterbacks',     get: e=> e.qb1 && e.qb1.pass_yards },
+    { label:'passing TDs to quarterbacks',       get: e=> e.qb1 && e.qb1.pass_td }
+  ];
+  const INSIGHT_WINDOW = 5;
+  let _insightCache = null, _insightFor = null;
+  function ordinalMost(rank){
+    if(rank === 1) return 'the most in the league';
+    const sfx = (rank%100>=11 && rank%100<=13) ? 'th' : ({1:'st',2:'nd',3:'rd'}[rank%10] || 'th');
+    return rank + sfx + ' most';
+  }
+  function buildDefenseInsights(){
+    if(!rawPlayers) return null;
+    if(_insightCache && _insightFor === rawPlayers) return _insightCache;
+    // 1) group every player-week by offense team + week
+    const tw = {};
+    Object.values(rawPlayers).forEach(pl=> pl.weeks.forEach(w=>{
+      if(!w.team || !w.opponent_team) return;
+      (tw[w.team + '|' + w.week] = tw[w.team + '|' + w.week] || { team:w.team, opp:w.opponent_team, week:w.week, rows:[] }).rows.push({ pos:pl.pos, w });
+    }));
+    // 2) per defense, per week: the stat lines allowed to each role slot
+    const defWeeks = {}; // defTeam -> [{week, ...slots}]
+    Object.values(tw).forEach(g=>{
+      const by = (pos, key)=> g.rows.filter(r=> r.pos===pos).sort((a,b)=> b.w[key]-a.w[key]).map(r=> r.w);
+      const rbs = by('RB','carries'), wrs = by('WR','targets'), tes = by('TE','targets'), qbs = by('QB','attempts');
+      (defWeeks[g.opp] = defWeeks[g.opp] || []).push({ week:g.week, rb1:rbs[0], wr1:wrs[0], wr2:wrs[1], te1:tes[0], te2:tes[1], qb1:qbs[0] });
+    });
+    // 3) last-N-games totals per defense per metric, then league rank (1 = allowed the most)
+    const totals = {}; // metric idx -> { team: {sum, games} }
+    INSIGHT_METRICS.forEach((m,mi)=>{ totals[mi] = {}; });
+    Object.entries(defWeeks).forEach(([team, arr])=>{
+      const last = arr.sort((a,b)=> b.week-a.week).slice(0, INSIGHT_WINDOW);
+      INSIGHT_METRICS.forEach((m,mi)=>{
+        totals[mi][team] = { sum: last.reduce((s,e)=> s + (m.get(e) || 0), 0), games: last.length };
+      });
+    });
+    const out = {}; // team -> [{ mi, sum, games, rank }]
+    INSIGHT_METRICS.forEach((m,mi)=>{
+      const ranked = Object.entries(totals[mi]).sort((a,b)=> b[1].sum - a[1].sum);
+      ranked.forEach(([team, t], idx)=>{
+        (out[team] = out[team] || []).push({ mi, sum:t.sum, games:t.games, rank:idx+1 });
+      });
+    });
+    _insightCache = out; _insightFor = rawPlayers;
+    return out;
+  }
+  // Up to 4 notable lines for a matchup: each defense's best-ranked (top 5) categories, max 2 per side.
+  function gameInsightsFor(homeAbbr, awayAbbr){
+    const all = buildDefenseInsights();
+    if(!all) return [];
+    const pick = (team)=> (all[team] || [])
+      .filter(x=> x.rank <= 5 && x.games >= 2 && x.sum > 0)
+      .sort((a,b)=> a.rank - b.rank)
+      .slice(0, 2)
+      .map(x=> ({ team, ...x }));
+    const lines = [...pick(homeAbbr), ...pick(awayAbbr)].sort((a,b)=> a.rank - b.rank).slice(0, 4);
+    return lines.map(x=>{
+      const m = INSIGHT_METRICS[x.mi];
+      const n = Number.isInteger(x.sum) ? x.sum : x.sum.toFixed(0);
+      return `<div class="gv-insight"><b>${x.team}</b> has allowed ${n} ${m.label} in its last ${x.games} games, ${ordinalMost(x.rank)}.</div>`;
+    });
+  }
+
   /* ---- GAME VAULT ---- */
   function renderGameVault(){
     const container = $('#gamevault-results');
@@ -1764,6 +1840,8 @@
       const group = el('div','game-vault-group');
       const statusText = comp.status?.type?.shortDetail || '';
       group.appendChild(el('div','game-vault-head', `<span>${awayAbbr} @ ${homeAbbr}</span><span class="ctx">${statusText} · ${inGame.length} players</span>`));
+      const insights = gameInsightsFor(homeAbbr, awayAbbr);
+      if(insights.length) group.appendChild(el('div','gv-insights', insights.join('')));
 
       const renderRow = (p,i) => {
         const row = el('div','edge-row card-row');
