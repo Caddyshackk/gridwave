@@ -373,6 +373,39 @@
   details.gw-sec > summary .tag{ font-size:.58rem; color:var(--text-dim); letter-spacing:0; }
   details.gw-sec > .gw-sec-body{ padding:2px 12px 12px; }
   .edge-detail-head{ display:flex; gap:12px; align-items:center; }
+  .dvp-wrap{ overflow-x:auto; border:1px solid var(--grid-line); border-radius:8px; }
+  table.dvp{ width:100%; border-collapse:collapse; font-size:.74rem; min-width:860px; }
+  table.dvp th{ position:sticky; top:0; background:var(--bg-panel); color:var(--text-dim); font-family:var(--font-display); font-size:.6rem; letter-spacing:.05em; text-align:right; padding:9px 8px; cursor:pointer; white-space:nowrap; border-bottom:1px solid var(--grid-line); user-select:none; }
+  table.dvp th:first-child, table.dvp th:nth-child(2){ text-align:left; }
+  table.dvp th.sorted{ color:var(--cyan); }
+  table.dvp td{ padding:8px; text-align:right; border-bottom:1px solid rgba(124,92,255,.10); color:var(--text-mid); white-space:nowrap; }
+  table.dvp td:first-child, table.dvp td:nth-child(2){ text-align:left; }
+  table.dvp tr.dvp-row{ cursor:pointer; }
+  table.dvp tr.dvp-row:hover{ background:rgba(124,92,255,.08); }
+  table.dvp tr.dvp-row.open{ background:rgba(124,92,255,.12); }
+  .dvp-team{ display:flex; align-items:center; gap:8px; color:var(--text-hi); font-family:var(--font-display); font-weight:700; }
+  .dvp-team img{ width:22px; height:22px; object-fit:contain; }
+  .dvp-cell b{ font-weight:600; }
+  .dvp-cell small{ color:var(--text-dim); font-size:.58rem; margin-left:4px; }
+  .dvp-cell.hot{ background:rgba(0,255,150,.10); color:var(--win); }
+  .dvp-cell.cold{ background:rgba(255,35,88,.10); color:var(--loss); }
+  tr.dvp-detail > td{ text-align:left !important; white-space:normal; padding:10px 12px 14px; background:rgba(13,11,26,.5); }
+  .dvp-faces{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:10px; }
+  .dvp-face{ display:flex; align-items:center; gap:12px; border:1px solid var(--grid-line); border-radius:8px; padding:10px; }
+  .dvp-face .avatar, .dvp-face .avatar .ph{ width:56px; height:56px; }
+  .dvp-face .nm{ color:var(--text-hi); font-weight:700; font-size:.8rem; }
+  .dvp-face .sub{ color:var(--text-dim); font-size:.66rem; margin-top:2px; }
+  .dvp-face .rk{ font-family:var(--font-display); font-size:.62rem; margin-top:4px; }
+  .dvp-face .rk.hot{ color:var(--win); } .dvp-face .rk.cold{ color:var(--loss); }
+  .metric-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-bottom:24px; }
+  .metric-card{ background:var(--bg-panel); border:1px solid var(--grid-line); border-radius:8px; padding:16px 18px; }
+  .metric-card h3{ margin:0 0 8px; font-size:.95rem; color:var(--text-hi); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .metric-card p{ font-size:.76rem; color:var(--text-mid); line-height:1.6; margin:0 0 10px; }
+  .metric-card ul{ margin:0; padding-left:18px; font-size:.74rem; color:var(--text-mid); line-height:1.65; }
+  .metric-card li{ margin-bottom:5px; }
+  .metric-card li b{ color:var(--cyan); font-weight:600; }
+  .metric-card .flag-badge{ cursor:default; margin-right:4px; }
+  .metric-formula{ background:rgba(0,0,0,.35); border:1px solid var(--grid-line); border-radius:6px; padding:8px 10px; font-size:.72rem; color:var(--amber); margin-bottom:10px; }
   .pos-filter{ display:flex; align-items:center; gap:10px; margin:0 0 10px; font-family:var(--font-display); font-size:.68rem; letter-spacing:.06em; color:var(--text-mid); }
   .pos-filter select{ background:var(--bg-panel); color:var(--text-hi); border:1px solid var(--grid-line); padding:4px 8px; font-family:var(--font-display); font-size:.7rem; }
   details.pos-sec > summary{ font-size:.8rem; padding:12px 14px; }
@@ -530,8 +563,10 @@
 <nav class="tabs">
   <button data-view="teams" class="active">TEAMS</button>
   <button data-view="edge">VAULT</button>
+  <button data-view="matchups">MATCHUPS</button>
   <button data-view="players">PLAYERS</button>
   <button data-view="markets">MARKETS</button>
+  <button data-view="metrics">METRICS</button>
 </nav>
 
 <div class="license-bar">
@@ -559,15 +594,9 @@
   <!-- EDGE / VAULT -->
   <section id="view-edge" class="view">
     <div class="panel-title"><h2>THE VAULT</h2><div class="rule"></div><span id="vault-mode-tag" class="tag">premium · weekly scoring engine</span></div>
-    <div class="key-box">
-      Scored per prop category — each has its own components (e.g. Rush Yards leans on
-      <strong style="color:var(--cyan)">Carry Share</strong>, <strong style="color:var(--cyan)">Box Count Diet</strong>,
-      <strong style="color:var(--cyan)">Script Lean</strong>, <strong style="color:var(--cyan)">Ground Form</strong>),
-      each percentile-ranked against the player's own position. Flags: <strong style="color:var(--amber)">DUE</strong>
-      (strong underlying signal, production hasn't shown up yet), <strong style="color:var(--loss)">OVERPERFORMING</strong>
-      (production running hot vs. opportunity — expect regression), <strong style="color:var(--win)">BREAKOUT</strong>
-      (role and efficiency both trending up). Early in the season, boards fall back to a per-game
-      <strong>Matchups</strong> view until every team has three weeks of film. Premium — unlock with your license key above.
+    <div class="key-box" style="font-size:.74rem;">
+      Every score, flag and badge is explained in the <a href="#" id="goto-metrics" style="color:var(--cyan);">METRICS tab →</a>
+      Premium — unlock with your license key above.
     </div>
 
     <div class="search-row">
@@ -602,14 +631,29 @@
     </div>
 
     <div id="vault-parlays" class="vault-panel" style="display:none;">
-      <div class="key-box" style="font-size:.75rem;">
-        Auto-built cross-game combinations from the highest-scored players in the selected category this week.
-        Not odds or EV math — just the model's top plays, paired up. Bet responsibly.
-      </div>
+      <div class="key-box" style="font-size:.74rem;">Model picks paired up — not odds or EV math. Bet responsibly. Details in METRICS.</div>
       <div id="parlay-results"><div class="empty">Load the Vault first.</div></div>
     </div>
 
     <div id="edge-detail"></div>
+  </section>
+
+  <!-- MATCHUPS -->
+  <section id="view-matchups" class="view">
+    <div class="panel-title"><h2>DEFENSE VS POSITION</h2><div class="rule"></div><span class="tag" id="dvp-tag">premium · what each defense allows</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      How much each defense gives up to every role. <span style="color:var(--win)">Green</span> = among the 8 most generous in the league (good for the offense),
+      <span style="color:var(--loss)">red</span> = among the 8 stingiest. Click a column to sort, click a defense to see who faces it this week.
+    </div>
+    <div class="search-row">
+      <select id="dvp-window" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
+        <option value="3">LAST 3 GAMES</option>
+        <option value="5" selected>LAST 5 GAMES</option>
+        <option value="99">FULL SEASON</option>
+      </select>
+      <button class="action" id="dvp-load-btn">LOAD</button>
+    </div>
+    <div id="dvp-results"><div class="empty">Unlock with a license key above, then hit LOAD.</div></div>
   </section>
 
   <!-- PLAYERS -->
@@ -642,6 +686,182 @@
       <button class="action" id="odds-load-btn">LOAD LINES</button>
     </div>
     <div id="odds-results"><div class="empty">Unlock with a license key above, then load lines.</div></div>
+  </section>
+
+  <!-- METRICS -->
+  <section id="view-metrics" class="view">
+    <div class="panel-title"><h2>HOW GRIDWAVE WORKS</h2><div class="rule"></div><span class="tag">every score, flag &amp; badge explained</span></div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <h3>VAULT Score</h3>
+        <p>The 0–100 number on every card. It ranks a player against everyone at the same positions for the prop category you picked.</p>
+        <div class="metric-formula">score = average of the 4 component percentiles</div>
+        <ul>
+          <li>Each category has its own 4 components (listed below), all weighted equally at 25%.</li>
+          <li>A component is a percentile: 90 means better than 90% of comparable players.</li>
+          <li><b>Season</b> uses every game played. <b>Last 3</b> uses only the most recent three.</li>
+          <li>Before every team has 3 weeks of film, boards switch to a per-game <b>Matchups</b> view and each game's top score is re-scaled to 100.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Reason line &amp; form stat</h3>
+        <p>The small text under a player's name and under his score.</p>
+        <ul>
+          <li><b>Reason line</b> (yellow): his two highest-ranked components, i.e. what is driving the score, such as "Volume + Explosiveness".</li>
+          <li><b>Form stat</b> under the score: a quick production read for the category, such as "60% TD" (share of games with a rush or receiving TD) or "74.5 YDS/GM".</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Flags</h3>
+        <p>One flag at most per player, checked in this order. All need 4+ games played, since a few games of touchdown luck is mostly noise.</p>
+        <ul>
+          <li><span class="flag-badge breakout">BREAKOUT</span> His last 2 games beat his earlier average in EPA (by more than 1.0) and his opportunity is rising, but his season opportunity is still below the 75th percentile, so he isn't already a known workhorse.</li>
+          <li><span class="flag-badge due">DUE</span> His TD debt is above the bar (see TD Debt). Touches say more TDs are coming. Without play-by-play loaded: top-35% opportunity but bottom-35% TD rate.</li>
+          <li><span class="flag-badge over">OVERPERFORMING</span> Scored more than his touches support (debt below minus the bar). Expect regression. Without play-by-play: top-20% TD rate on middling opportunity.</li>
+          <li><b>SURGING / COOLING / STEADY</b> (Rankings, when no flag): recent EPA more than +1.5 above, more than 1.5 below, or near his earlier average.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>TD Debt &amp; <span class="flag-badge cheat">⚡ CHEAT CODE</span></h3>
+        <p>Every touch is priced by where it happened, at the league's real conversion rate from that spot (from play-by-play).</p>
+        <ul>
+          <li><b>Zones:</b> goal line (inside the 5), red zone (6–20), fringe (21–40), open field. Carries and targets are counted separately.</li>
+          <li><b>Expected TDs (xTD)</b> = sum of those priced touches. <b>TD Debt</b> = xTD minus TDs actually scored.</li>
+          <li>Positive debt: the ball finds him in scoring spots more than the scoreboard shows. Negative: he has scored more than his looks support.</li>
+          <li>The bar for DUE / OVERPERFORMING is <b>2.5 − 0.15 × games played</b>, never below 1.0, so it gets easier to trigger as the sample grows.</li>
+          <li>The <b>CHEAT CODE · n</b> badge counts signals that fired: (1) TD debt above 1.0, (2) goal-line + red-zone share of his touches in the top 20% of his group. Click it to jump to the zone table.</li>
+          <li>Needs the play-by-play file, a bigger download that finishes loading a moment after the rest.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Game insights</h3>
+        <p>The lines under each game in Game Vault, like "IND has allowed 217 receiving yards to lead backs in its last 5 games, the most in the league."</p>
+        <ul>
+          <li>Totals are for each defense's last 5 games, ranked across all 32 teams (1 = allowed the most).</li>
+          <li>Only top-5 league ranks are shown: at most 2 lines per defense, 4 per game.</li>
+          <li>There's no depth chart in the data, so roles are inferred per game: lead back = most carries, WR1/WR2 and TE1/TE2 = most targets, QB = most attempts.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Matchups tab</h3>
+        <p>The full league table behind the game insights: what every defense allows to each role.</p>
+        <ul>
+          <li>Each cell is the total over the window you pick (last 3, last 5 or full season) with the league rank beside it. Rank 1 = allowed the most.</li>
+          <li><span style="color:var(--win)">Green</span> = top 8 most generous, <span style="color:var(--loss)">red</span> = bottom 8 (stingiest). Click any header to sort.</li>
+          <li>Click a defense to see this week's opposing QB, lead back, top two wideouts and top tight end, each with how that defense ranks against his role.</li>
+          <li>Roles are inferred from usage, same as the game insights.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Injury badges</h3>
+        <p>Pulled from Sleeper's player database.</p>
+        <ul>
+          <li><span class="flag-badge inj-q">QUESTIONABLE</span> stays on the board with the badge.</li>
+          <li><span class="flag-badge inj-out">OUT</span> / IR / PUP / Doubtful / Suspended / DNR / COVID / NA are hidden while <b>HIDE OUT / IR / DOUBTFUL</b> is checked. Scores are always computed on the full pool, so unchecking it never changes anyone's number.</li>
+          <li>Statuses can be up to 24 hours old. The "as of" time shows next to the toggle.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel-title"><h2>COMPONENTS BY CATEGORY</h2><div class="rule"></div><span class="tag">the 4 inputs behind each score</span></div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <h3>ANY TD <span class="chip">RB · WR · TE</span></h3>
+        <ul>
+          <li><b>Volume</b> — opportunities in the window (RB: carries + ½ targets; WR/TE: targets).</li>
+          <li><b>Red Zone Role</b> — TDs per opportunity (scoring efficiency). Actual red-zone share is in Cheat Code.</li>
+          <li><b>Explosiveness</b> — 20+ and 40+ yard plays per game.</li>
+          <li><b>Shootout Script</b> — his team's points per game plus the opponent's points allowed per game.</li>
+        </ul>
+        <p style="margin-top:8px">QBs are left out on purpose: a TD pass isn't "scoring" in this market.</p>
+      </div>
+      <div class="metric-card">
+        <h3>PASS YARDS <span class="chip">QB</span></h3>
+        <ul>
+          <li><b>Air Volume</b> — passing air yards per game.</li>
+          <li><b>Secondary Leak</b> — pass yards the opponent allows per game.</li>
+          <li><b>Script Lean</b> — how pass-heavy his team is versus the league average.</li>
+          <li><b>Environment</b> — his team's points per game.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>PASS TDS <span class="chip">QB</span></h3>
+        <ul>
+          <li><b>Red Zone Passing</b> — pass TDs per attempt.</li>
+          <li><b>Air Volume</b> — passing air yards per game.</li>
+          <li><b>Secondary Leak</b> — pass yards the opponent allows per game.</li>
+          <li><b>Script Lean</b> — pass-heavy versus league average.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>RUSH YARDS <span class="chip">RB · QB</span></h3>
+        <ul>
+          <li><b>Carry Share</b> — his share of his team's carries.</li>
+          <li><b>Box Count Diet</b> — rush yards the opponent allows per game. A proxy, not charted defenders-in-the-box.</li>
+          <li><b>Script Lean</b> — rewards run-heavy teams (the inverse of pass lean).</li>
+          <li><b>Ground Form</b> — his rush yards per game.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>RECEPTIONS <span class="chip">WR · TE · RB</span></h3>
+        <ul>
+          <li><b>Target Design</b> — his share of his team's targets.</li>
+          <li><b>Hands</b> — receptions per target (catch rate).</li>
+          <li><b>Coverage Leak</b> — receiving yards the opponent allows per game.</li>
+          <li><b>Script Lean</b> — pass-heavy versus league average.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>REC YARDS <span class="chip">WR · TE · RB</span></h3>
+        <ul>
+          <li><b>Target Design</b> — his share of his team's targets.</li>
+          <li><b>Yards / Target</b> — receiving yards per target.</li>
+          <li><b>Coverage Leak</b> — receiving yards the opponent allows per game.</li>
+          <li><b>Script Lean</b> — pass-heavy versus league average.</li>
+        </ul>
+        <p style="margin-top:8px">Separate from Receptions on purpose: a player can clear the catches number and miss the yards number.</p>
+      </div>
+    </div>
+
+    <div class="panel-title"><h2>DATA &amp; LIMITS</h2><div class="rule"></div><span class="tag">what each number is, and what it isn't</span></div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <h3>Where the data comes from</h3>
+        <ul>
+          <li><b>nflverse</b> — weekly player stats and play-by-play (stats, TD Debt, headshot fallbacks).</li>
+          <li><b>ESPN</b> — scoreboard, standings, schedule and player headshots.</li>
+          <li><b>Sleeper</b> — rosters, injuries and ESPN player IDs.</li>
+          <li><b>Open-Meteo</b> — venue weather. <b>The Odds API</b> — game lines (Markets).</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Research chart &amp; game log</h3>
+        <ul>
+          <li>Bars are green or red against the player's <b>own season average</b>, not a sportsbook line. GRIDWAVE has no per-player prop-line source yet.</li>
+          <li>The game log shows week, opponent and the stat only, with no W/L or final score yet.</li>
+          <li>Section headers in a player's panel collapse and open with the chevron.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Not included (yet)</h3>
+        <ul>
+          <li><b>Real box counts and coverage shells</b> (light/stacked boxes, single-high vs two-high) need charted pre-snap data. It isn't in the free sources, so Box Count Diet uses rush yards allowed instead.</li>
+          <li><b>Per-player prop lines</b> — the free odds tier covers game spreads, totals and moneylines only.</li>
+          <li>Name matching between Sleeper and nflverse is done by name and position, so a rare mismatch can drop an injury tag or a photo.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Parlays</h3>
+        <p>Cross-game combinations built from the highest-scored players in the selected category this week. They're the model's top plays paired up, not odds or EV math. Bet responsibly.</p>
+      </div>
+    </div>
   </section>
 
 </main>
@@ -692,6 +912,13 @@
   }
 
   /* ---------------- tabs ---------------- */
+  document.addEventListener('click', e=>{
+    if(e.target && e.target.id === 'goto-metrics'){
+      e.preventDefault();
+      const b = document.querySelector('nav.tabs button[data-view="metrics"]'); if(b) b.click();
+      window.scrollTo({ top:0, behavior:'smooth' });
+    }
+  });
   document.querySelectorAll('nav.tabs button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
@@ -1164,6 +1391,8 @@
     TEN:{lat:36.1665,lon:-86.7713,dome:false}, WSH:{lat:38.9077,lon:-76.8645,dome:false}
   };
 
+  const TEAM_FIX = { LA:'LAR', WAS:'WSH', JAC:'JAX', ARZ:'ARI', BLT:'BAL', CLV:'CLE', HST:'HOU', SD:'LAC', STL:'LAR', OAK:'LV' };
+  const fixTeam = t => TEAM_FIX[t] || t;
   let rawPlayers = null;   // id -> player with per-week raw stat rows (unfiltered, season-long)
   let allWeekRows = null;  // flat list of every skill-position week-row, used to build defense splits
   let pbpRows = null;      // play-by-play rows — powers zone-based expected-TD ("Cheat Code") math
@@ -1227,6 +1456,9 @@
     rows.forEach(r=>{
       const pos = r.position;
       if(!['QB','RB','WR','TE'].includes(pos)) return;
+      // nflverse and ESPN spell a few teams differently (LA/LAR, WAS/WSH, JAC/JAX); the schedule,
+      // stadiums and team logos all use ESPN's, so normalize here or those players never match a game.
+      r.team = fixTeam(r.team); r.opponent_team = fixTeam(r.opponent_team);
       const wk = {
         week: +r.week, team: r.team, opponent_team: r.opponent_team,
         targets: num(r.targets), receptions: num(r.receptions), rec_yards: num(r.receiving_yards),
@@ -1795,15 +2027,17 @@
     { label:'passing TDs to quarterbacks',       get: e=> e.qb1 && e.qb1.pass_td }
   ];
   const INSIGHT_WINDOW = 5;
-  let _insightCache = null, _insightFor = null;
+  let _insightCache = {}, _insightFor = null;
   function ordinalMost(rank){
     if(rank === 1) return 'the most in the league';
     const sfx = (rank%100>=11 && rank%100<=13) ? 'th' : ({1:'st',2:'nd',3:'rd'}[rank%10] || 'th');
     return rank + sfx + ' most';
   }
-  function buildDefenseInsights(){
+  function buildDefenseInsights(win){
     if(!rawPlayers) return null;
-    if(_insightCache && _insightFor === rawPlayers) return _insightCache;
+    win = win || INSIGHT_WINDOW;
+    if(_insightFor !== rawPlayers){ _insightCache = {}; _insightFor = rawPlayers; }
+    if(_insightCache[win]) return _insightCache[win];
     // 1) group every player-week by offense team + week
     const tw = {};
     Object.values(rawPlayers).forEach(pl=> pl.weeks.forEach(w=>{
@@ -1821,7 +2055,7 @@
     const totals = {}; // metric idx -> { team: {sum, games} }
     INSIGHT_METRICS.forEach((m,mi)=>{ totals[mi] = {}; });
     Object.entries(defWeeks).forEach(([team, arr])=>{
-      const last = arr.sort((a,b)=> b.week-a.week).slice(0, INSIGHT_WINDOW);
+      const last = arr.sort((a,b)=> b.week-a.week).slice(0, win);
       INSIGHT_METRICS.forEach((m,mi)=>{
         totals[mi][team] = { sum: last.reduce((s,e)=> s + (m.get(e) || 0), 0), games: last.length };
       });
@@ -1833,7 +2067,7 @@
         (out[team] = out[team] || []).push({ mi, sum:t.sum, games:t.games, rank:idx+1 });
       });
     });
-    _insightCache = out; _insightFor = rawPlayers;
+    _insightCache[win] = out;
     return out;
   }
   // Up to 4 notable lines for a matchup: each defense's best-ranked (top 5) categories, max 2 per side.
@@ -1986,8 +2220,7 @@
 
       researchHtml = gwSection('RESEARCH', `
         <div style="display:flex;gap:6px;align-items:flex-end;padding:8px 4px 0;overflow-x:auto;">${bars}</div>
-        <div style="font-size:.62rem;color:var(--text-dim);margin-top:6px;">Green/red is against this player's own season average (${avg.toFixed(1)}), not a sportsbook line — GRIDWAVE doesn't have a per-player prop-line data source yet.</div>
-      `, { tag: `${catDef.primaryStatLabel} · ${hitCount}/${values.length} at or above own avg` });
+      `, { tag: `${catDef.primaryStatLabel} · ${hitCount}/${values.length} at/above own avg ${avg.toFixed(1)}` });
 
       const logRows = weeks.slice().reverse().map(w=>{
         const v = catDef.primaryStat(w);
@@ -1998,7 +2231,7 @@
           <thead><tr><th>WEEK</th><th>OPP</th><th style="text-align:right">${catDef.primaryStatLabel.toUpperCase()}</th></tr></thead>
           <tbody>${logRows}</tbody>
         </table>
-      `, { open:false, tag:'week + opponent only — no W/L or final score yet' });
+      `, { open:false, tag:'week · opponent · stat' });
     }
 
     const cheatBody = p.tdDebt === undefined ? `
@@ -2177,6 +2410,108 @@
       if(open){ clearDetails(); fillPositionSection(open); }
     });
   })();
+
+  /* ---- MATCHUPS TAB: defense vs position ---- */
+  const DVP_COLS = [ // [metric index in INSIGHT_METRICS, short header]
+    [0,'RB RUSH YDS'], [1,'RB RUSH TD'], [2,'RB REC YDS'], [3,'WR1 REC YDS'], [4,'WR2 REC YDS'],
+    [5,'TE1 REC YDS'], [6,'TE2 TGT'], [7,'QB PASS YDS'], [8,'QB PASS TD']
+  ];
+  let dvpSort = { mi: 0, asc: true }; // asc on rank = most-allowed first
+
+  // Who an offense will send at a defense: QB1/RB1/WR1/WR2/TE1 by season usage, paired with the
+  // DvP metric that describes how this defense treats that role.
+  function offenseSlots(team){
+    const mine = Object.values(rawPlayers).filter(pl=> pl.team === team);
+    const top = (pos, key, n)=> mine.filter(pl=> pl.pos === pos)
+      .map(pl=> ({ pl, v: pl.weeks.reduce((a,w)=> a + w[key], 0) })).sort((a,b)=> b.v - a.v).slice(0, n).map(x=> x.pl);
+    const per = (pl, f)=> pl.weeks.length ? pl.weeks.reduce((a,w)=> a + f(w), 0) / pl.weeks.length : 0;
+    const out = [];
+    top('QB','attempts',1).forEach(pl=> out.push({ pl, role:'QB', mi:7, stat:`${per(pl,w=>w.pass_yards).toFixed(0)} pass yds/g` }));
+    top('RB','carries',1).forEach(pl=> out.push({ pl, role:'RB1', mi:0, stat:`${per(pl,w=>w.rush_yards).toFixed(0)} rush yds/g` }));
+    top('WR','targets',2).forEach((pl,i)=> out.push({ pl, role:'WR'+(i+1), mi:3+i, stat:`${per(pl,w=>w.rec_yards).toFixed(0)} rec yds/g` }));
+    top('TE','targets',1).forEach(pl=> out.push({ pl, role:'TE1', mi:5, stat:`${per(pl,w=>w.rec_yards).toFixed(0)} rec yds/g` }));
+    return out;
+  }
+
+  function dvpFacesHtml(def, rankOf){
+    const sched = window.gwSchedule && window.gwSchedule[def];
+    if(!sched) return '<div class="empty">No game this week for this defense (bye, or the schedule hasn\'t loaded).</div>';
+    const slots = offenseSlots(sched.opponent);
+    if(!slots.length) return '<div class="empty">No season stats on file for ' + sched.opponent + ' yet.</div>';
+    const cards = slots.map(sl=>{
+      const r = rankOf(sl.mi);
+      const cls = r.rank <= 8 ? 'hot' : (r.rank >= 25 ? 'cold' : '');
+      const p = { id:sl.pl.id, name:sl.pl.name, pos:sl.pl.pos, team:sl.pl.team };
+      return `<div class="dvp-face">${avatarHtml(p)}<div><div class="nm">${sl.pl.name}</div>
+        <div class="sub">${sl.role} · ${sl.pl.team} · ${sl.stat}</div>
+        <div class="rk ${cls}">${def} #${r.rank} of 32 in ${INSIGHT_METRICS[sl.mi].label} allowed</div></div></div>`;
+    }).join('');
+    return `<div class="sub" style="margin-bottom:8px;color:var(--text-dim);font-size:.7rem;">${sched.opponent} ${sched.home ? '@' : 'vs'} ${def} this week — rank 1 means ${def} allows the most to that role</div><div class="dvp-faces">${cards}</div>`;
+  }
+
+  function renderDvp(){
+    const container = $('#dvp-results');
+    if(!rawPlayers){ container.innerHTML = '<div class="empty">Hit LOAD to pull the season data.</div>'; return; }
+    const win = +$('#dvp-window').value;
+    const all = buildDefenseInsights(win);
+    const teams = Object.keys(all);
+    const cell = (team, mi)=> all[team].find(x=> x.mi === mi);
+    teams.sort((a,b)=>{
+      const ra = cell(a, dvpSort.mi).rank, rb = cell(b, dvpSort.mi).rank;
+      return (dvpSort.asc ? ra - rb : rb - ra) || a.localeCompare(b);
+    });
+    const head = DVP_COLS.map(([mi,lbl])=>
+      `<th data-mi="${mi}" class="${dvpSort.mi===mi?'sorted':''}" title="${INSIGHT_METRICS[mi].label} (last ${win===99?'season':win+' games'})">${lbl}${dvpSort.mi===mi?(dvpSort.asc?' ▲':' ▼'):''}</th>`).join('');
+    const rows = teams.map(t=>{
+      const sched = window.gwSchedule && window.gwSchedule[t];
+      const cells = DVP_COLS.map(([mi])=>{
+        const c = cell(t, mi);
+        const cls = c.rank <= 8 ? 'hot' : (c.rank >= 25 ? 'cold' : '');
+        return `<td class="dvp-cell ${cls}"><b>${Math.round(c.sum)}</b><small>#${c.rank}</small></td>`;
+      }).join('');
+      return `<tr class="dvp-row" data-team="${t}"><td><div class="dvp-team"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/${t.toLowerCase()}.png" alt="" onerror="this.style.display='none'">${t}</div></td>
+        <td>${sched ? (sched.home ? 'vs ' : '@ ') + sched.opponent : '—'}</td>${cells}</tr>`;
+    }).join('');
+    container.innerHTML = `<div class="dvp-wrap"><table class="dvp"><thead><tr><th>DEFENSE</th><th>THIS WK</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
+
+    container.querySelectorAll('th[data-mi]').forEach(th=> th.addEventListener('click', ()=>{
+      const mi = +th.dataset.mi;
+      dvpSort = { mi, asc: dvpSort.mi === mi ? !dvpSort.asc : true };
+      renderDvp();
+    }));
+    container.querySelectorAll('tr.dvp-row').forEach(tr=> tr.addEventListener('click', ()=>{
+      const next = tr.nextElementSibling;
+      const wasOpen = next && next.classList.contains('dvp-detail');
+      container.querySelectorAll('tr.dvp-detail').forEach(d=> d.remove());
+      container.querySelectorAll('tr.dvp-row.open').forEach(r=> r.classList.remove('open'));
+      if(wasOpen) return;
+      const def = tr.dataset.team;
+      const d = document.createElement('tr'); d.className = 'dvp-detail';
+      d.innerHTML = `<td colspan="${DVP_COLS.length + 2}">${dvpFacesHtml(def, mi=> cell(def, mi))}</td>`;
+      tr.after(d); tr.classList.add('open');
+    }));
+    $('#dvp-tag').textContent = 'premium · ' + (win===99 ? 'full season' : 'last ' + win + ' games') + ' · rank 1 = allows the most';
+  }
+
+  async function loadDvp(){
+    const btn = $('#dvp-load-btn');
+    const container = $('#dvp-results');
+    if(!rawPlayers){
+      container.innerHTML = '<div class="loading">Fetching the season\'s data…</div>';
+      try{ rawPlayers = await loadRawPlayers(); }
+      catch(err){
+        gwFeedback(btn, false);
+        showError(container, err.message === 'NO_LICENSE' ? 'Unlock with a valid license key above first.' : 'Could not load matchups (' + err.message + ').');
+        return;
+      }
+    }
+    renderDvp();
+    gwFeedback(btn, true);
+  }
+  $('#dvp-load-btn').addEventListener('click', loadDvp);
+  $('#dvp-window').addEventListener('change', ()=>{ if(rawPlayers) renderDvp(); });
+  // If the Vault already pulled the data this session, show the table as soon as the tab opens
+  document.querySelector('nav.tabs button[data-view="matchups"]').addEventListener('click', ()=>{ if(rawPlayers) renderDvp(); });
 
   /* ---- PARLAY ENGINE ---- */
   function renderParlays(){
