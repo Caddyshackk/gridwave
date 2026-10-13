@@ -353,7 +353,7 @@
   /* Player-card rows: headshot + chips + score pill */
   .edge-row.card-row{ grid-template-columns:2em 46px 1fr auto auto; gap:10px; }
   .avatar{ position:relative; width:44px; height:44px; flex:none; }
-  .avatar .ph{ width:44px; height:44px; border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:50% 12%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
+  .avatar .ph{ width:44px; height:44px; border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:50% 18%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
   .avatar .tm{ position:absolute; right:-6px; bottom:-4px; background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-display); font-size:.5rem; line-height:1; padding:2px 3px; border-radius:3px; }
   .avatar.lg, .avatar.lg .ph{ width:60px; height:60px; }
   .chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
@@ -875,7 +875,7 @@
   const SLEEPER_PLAYERS  = 'https://api.sleeper.app/v1/players/nfl';
   const SLEEPER_TREND_ADD  = 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=15';
   const SLEEPER_TREND_DROP = 'https://api.sleeper.app/v1/players/nfl/trending/drop?lookback_hours=24&limit=15';
-  const CACHE_KEY = 'gridwave_sleeper_players_v2'; // v2: now carries injury fields
+  const CACHE_KEY = 'gridwave_sleeper_players_v3'; // v3: now carries espn_id (headshots)
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let playersMap = null;
@@ -903,6 +903,7 @@
         const p = raw[id];
         if(!p || !p.full_name) return;
         trimmed[id] = { name: p.full_name, team: p.team, pos: p.position, status: p.status };
+        if(p.espn_id) trimmed[id].espn = String(p.espn_id);
         if(p.injury_status){ trimmed[id].inj = p.injury_status; if(p.injury_body_part) trimmed[id].part = p.injury_body_part; }
       });
       playersMap = trimmed;
@@ -951,6 +952,22 @@
     const arr = injuryIndex[normalizeName(name) + '|' + pos];
     if(!arr) return null;
     return arr.find(x=> x.team === team) || (arr.length === 1 ? arr[0] : null);
+  }
+  // ESPN headshot ids come from Sleeper's player DB (espn_id), matched by name + position (+ team).
+  let espnIndex = null;
+  function espnIdFor(name, pos, team){
+    if(!playersMap) return null;
+    if(!espnIndex){
+      espnIndex = {};
+      Object.values(playersMap).forEach(sp=>{
+        if(!sp.espn) return;
+        (espnIndex[normalizeName(sp.name) + '|' + sp.pos] = espnIndex[normalizeName(sp.name) + '|' + sp.pos] || []).push(sp);
+      });
+    }
+    const arr = espnIndex[normalizeName(name) + '|' + pos];
+    if(!arr) return null;
+    const hit = arr.find(x=> x.team === team) || (arr.length === 1 ? arr[0] : null);
+    return hit ? hit.espn : null;
   }
   function isOut(p){ return !!p.injStatus && OUT_STATUSES.includes(p.injStatus); }
   function injBadge(status){
@@ -1630,11 +1647,12 @@
     const raw = (typeof rawPlayers !== 'undefined' && rawPlayers) ? rawPlayers[p.id] : null;
     const url = raw && raw.headshot ? raw.headshot : '';
     const ini = initialsOf(p.name);
-    // nflverse's NFL.com URLs are Cloudinary links with only f_auto,q_auto. Ask for a sharper,
-    // 320px-wide, best-quality render; if that URL 404s, gwImgErr falls back to the original, then initials.
-    const hi = url.replace('/upload/f_auto,q_auto/', '/upload/f_auto,q_auto:best,w_320,c_scale/');
-    const img = url
-      ? `<img class="ph" src="${hi}" data-orig="${url}" data-ini="${ini}" alt="" decoding="async" onerror="gwImgErr(this)">`
+    // Preferred: ESPN's 350px headshot (id via Sleeper). NFL.com's nflverse image is small and soft,
+    // so it's only the fallback; gwImgErr then drops to initials if both fail.
+    const espn = espnIdFor(p.name, p.pos, p.team);
+    const src = espn ? `https://a.espncdn.com/i/headshots/nfl/players/full/${espn}.png` : url;
+    const img = src
+      ? `<img class="ph" src="${src}" data-orig="${url}" data-ini="${ini}" alt="" decoding="async" onerror="gwImgErr(this)">`
       : `<div class="ph">${ini}</div>`;
     return `<div class="avatar${large?' lg':''}">${img}<span class="tm">${p.team}</span></div>`;
   }
