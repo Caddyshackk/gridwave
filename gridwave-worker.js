@@ -102,7 +102,7 @@ const ALLOWED_NFLVERSE_PREFIXES = [
 const LICENSE_CACHE_TTL_SECONDS = 600;   // re-check with Whop every 10 min per key
 const LINE_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 10; // auto-forget a game's snapshots after 10 days
 const LINE_HISTORY_MAX_SNAPSHOTS = 200;  // plenty for a week of half-hourly polling
-const ACTIVE_STATUSES = ['active', 'trialing'];
+const ACTIVE_STATUSES = ['active', 'trialing', 'completed']; // completed = one-time purchase paid in full (Whop's own recommendation)
 
 function corsHeaders(request){
   const origin = request.headers.get('Origin');
@@ -185,18 +185,21 @@ async function checkLicense(licenseKey, env) {
       { headers: { Authorization: `Bearer ${env.WHOP_API_KEY}` } }
     );
     const bodyText = await resp.text();
-    console.log('WHOP DEBUG', resp.status, bodyText);
+    // Log the HTTP status only — the full membership body includes customer details (email,
+    // user info) and Cloudflare logs are not the place for those.
+    console.log('WHOP CHECK', resp.status);
     if (!resp.ok) {
       result = { valid: false, reason: 'not_found' };
     } else {
-      // Whop's current API doesn't return a `valid` field — only `status`. See the debug log
-      // above for the raw shape if this ever needs re-checking against a future API change.
+      // Whop's current API doesn't return a `valid` field — only `status`. If this ever needs
+      // re-checking against an API change, temporarily log Object.keys(data), not the whole body.
       const data = JSON.parse(bodyText);
       const valid = ACTIVE_STATUSES.includes(data.status);
+      console.log('WHOP STATUS', data.status);
       result = { valid, status: data.status };
     }
   } catch (e) {
-    console.log('WHOP DEBUG EXCEPTION', e.message);
+    console.log('WHOP CHECK EXCEPTION', e.message);
     result = { valid: false, reason: 'whop_unreachable' }; // fail closed, don't grant free access
   }
 
