@@ -163,6 +163,13 @@
   .license-status.ok{color:var(--win);}
   .license-status.bad{color:var(--loss);}
   .license-bar a{font-size:.72rem;color:var(--purple);white-space:nowrap;}
+  /* paywall card shown in premium tabs when there's no valid license */
+  .paywall{border:1px solid var(--amber);background:var(--bg-panel-2);padding:18px 20px;max-width:560px;}
+  .paywall .pw-title{font-family:var(--font-display);color:var(--amber);letter-spacing:.1em;font-size:.85rem;margin-bottom:6px;}
+  .paywall .pw-sub{font-size:.78rem;color:var(--text-mid);margin-bottom:8px;}
+  .paywall .pw-steps{margin:0 0 14px;padding-left:20px;font-size:.78rem;color:var(--text-hi);line-height:1.8;}
+  .paywall .pw-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .paywall a.action{display:inline-block;text-decoration:none;}
 
   main{max-width:1120px;margin:0 auto;padding:28px 18px 80px;}
   section.view{display:none;}
@@ -1188,7 +1195,35 @@
   /* ---------------- helpers ---------------- */
   const $ = sel => document.querySelector(sel);
   const el = (tag, cls, html) => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; };
-  const showError = (container, msg) => { container.innerHTML=''; container.appendChild(el('div','error', msg)); };
+  // Every premium tab reports "no license" with this exact message — showError swaps it for the
+  // paywall card (what Premium is + how to get a key) instead of a bare red error line.
+  const LOCKED_MSG = 'Unlock with a valid license key above first.';
+  const showError = (container, msg) => {
+    container.innerHTML='';
+    if(msg === LOCKED_MSG){ container.appendChild(paywallCard()); return; }
+    container.appendChild(el('div','error', msg));
+  };
+  function paywallCard(){
+    const card = el('div','paywall');
+    card.innerHTML = `
+      <div class="pw-title">PREMIUM FEATURE</div>
+      <div class="pw-sub">This tab is part of GRIDWAVE Premium. Getting in takes about a minute:</div>
+      <ol class="pw-steps">
+        <li>Get a GRIDWAVE license on Whop.</li>
+        <li>Copy your license key from your Whop orders.</li>
+        <li>Paste it into the <b>PREMIUM ACCESS</b> bar at the top and hit <b>UNLOCK</b>.</li>
+      </ol>
+      <div class="pw-actions">
+        <a class="action pw-buy" href="${WHOP_CHECKOUT_URL}" target="_blank" rel="noopener">GET A LICENSE →</a>
+        <button class="action pw-have" type="button">I HAVE A KEY</button>
+      </div>`;
+    card.querySelector('.pw-have').addEventListener('click', ()=>{
+      const input = $('#license-key');
+      input.scrollIntoView({ behavior:'smooth', block:'center' });
+      input.focus();
+    });
+    return card;
+  }
   // Shake on error, glow-pulse on success — brief, non-blocking feedback on an action button.
   const gwFeedback = (btn, ok) => {
     if(!btn) return;
