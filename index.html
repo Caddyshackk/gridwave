@@ -573,6 +573,67 @@
   @media (prefers-reduced-motion: reduce){
     .hero::before, .hero-title h1{animation:none;}
   }
+
+  /* ---------- research sub-nav + new tabs ---------- */
+  nav.tabs.subtabs{ position:static; background:rgba(13,11,26,.55); backdrop-filter:none; -webkit-backdrop-filter:none; padding:4px 12px; border-bottom:1px solid var(--grid-line); }
+  nav.tabs.subtabs button{ font-size:.66rem; padding:.5em .95em; letter-spacing:.06em; }
+  .gw-select{ background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-body); padding:.7em .9em; }
+  .wl-star{ background:none; border:0; color:var(--text-dim); cursor:pointer; font-size:1.05rem; padding:0 4px; line-height:1; vertical-align:middle; }
+  .wl-star:hover, .wl-star.on{ color:var(--amber); }
+  .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0; }
+  .stat-card{ border:1px solid var(--grid-line); border-radius:8px; padding:10px 12px; background:rgba(13,11,26,.55); }
+  .stat-card .big{ font-family:var(--font-display); font-size:1.5rem; color:var(--cyan); margin:2px 0; }
+  .stat-card .lbl{ font-size:.6rem; color:var(--text-dim); letter-spacing:.05em; text-transform:uppercase; }
+  .wl-row{ display:grid; grid-template-columns:auto minmax(150px,1fr) auto auto; gap:10px 14px; align-items:center; padding:10px 6px; border-bottom:1px solid var(--grid-line); }
+  .wl-row .avatar{ width:60px; height:60px; }
+  .wl-who .nm{ color:var(--text-hi); font-weight:700; font-size:.88rem; }
+  .wl-who .chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
+  .wl-stats{ display:flex; gap:10px; flex-wrap:wrap; }
+  .wl-stat{ min-width:84px; text-align:center; padding:4px 8px; border:1px solid var(--grid-line); border-radius:6px; }
+  .wl-stat .v{ font-family:var(--font-display); font-size:.82rem; color:var(--text-hi); }
+  .wl-stat .v.good{ color:var(--win); } .wl-stat .v.bad{ color:var(--loss); }
+  .wl-stat .l{ font-size:.54rem; color:var(--text-dim); letter-spacing:.05em; margin-top:2px; }
+  .wl-remove{ background:none; border:1px solid var(--grid-line); color:var(--text-dim); cursor:pointer; border-radius:50%; width:26px; height:26px; }
+  .wl-remove:hover{ color:var(--loss); border-color:var(--loss); }
+  #wl-suggest{ display:flex; flex-direction:column; margin-bottom:8px; }
+  .wl-sug{ text-align:left; background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); padding:.6em .8em; cursor:pointer; font-family:var(--font-body); }
+  .wl-sug span{ color:var(--text-dim); font-size:.7rem; margin-left:6px; }
+  .wl-sug:hover{ border-color:var(--cyan); }
+  .wl-sug-note{ color:var(--text-dim); font-size:.74rem; padding:.4em 0; }
+  .inj-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:12px; }
+  .inj-card{ border:1px solid var(--grid-line); border-radius:8px; padding:12px; background:rgba(13,11,26,.55); }
+  .inj-head{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .inj-head .avatar{ width:60px; height:60px; flex:none; }
+  .inj-head .who{ flex:1; min-width:0; }
+  .inj-head .nm, .inj-ben .nm{ color:var(--text-hi); font-weight:700; font-size:.84rem; }
+  .inj-head .sub, .inj-card .sub{ color:var(--text-dim); font-size:.64rem; margin-top:2px; }
+  .inj-vac{ flex-basis:100%; display:flex; gap:16px; font-size:.6rem; color:var(--text-dim); padding-top:6px; border-top:1px solid rgba(255,255,255,.05); }
+  .inj-vac b{ color:var(--amber); font-family:var(--font-display); font-size:.9rem; }
+  .inj-bens-title{ font-family:var(--font-display); font-size:.58rem; letter-spacing:.08em; color:var(--cyan); margin:12px 0 6px; }
+  .inj-ben{ padding:5px 0; border-top:1px solid rgba(255,255,255,.05); }
+  .inj-ben > div:nth-child(2){ flex:1; min-width:0; }
+  .inj-gain{ color:var(--win); font-size:.7rem; font-family:var(--font-display); text-align:right; }
+  .wx-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-top:10px; }
+  .wx-card{ border:1px solid var(--grid-line); border-radius:8px; padding:12px; background:rgba(13,11,26,.55); }
+  .wx-card.lvl1{ border-color:var(--amber); } .wx-card.lvl2{ border-color:var(--loss); }
+  .wx-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .wx-teams{ display:flex; align-items:center; gap:6px; font-family:var(--font-display); font-size:.82rem; color:var(--text-hi); }
+  .wx-teams img{ width:22px; height:22px; } .wx-teams span{ color:var(--text-dim); }
+  .wx-when{ font-size:.64rem; color:var(--text-dim); }
+  .wx-nums{ display:flex; gap:14px; margin:12px 0 8px; }
+  .wx-nums div{ display:flex; flex-direction:column; } .wx-nums b{ font-family:var(--font-display); font-size:1.15rem; color:var(--cyan); }
+  .wx-nums span{ font-size:.5rem; color:var(--text-dim); letter-spacing:.05em; }
+  .wx-tags{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; } .wx-note{ font-size:.7rem; color:var(--text-mid); margin-top:8px; }
+  .dvp-detail-in{ position:sticky; left:8px; width:max-content; max-width:min(100%, calc(100vw - 60px)); }
+  .rec-picks{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:6px; }
+  .rec-pick{ font-size:.76rem; color:var(--text-hi); padding:5px 8px; border:1px solid var(--grid-line); border-radius:6px; }
+  .rec-pick em{ color:var(--text-dim); font-style:normal; font-size:.62rem; margin-left:4px; }
+  .rec-pick.TD{ border-color:var(--win); } .rec-pick.TD span{ color:var(--win); } .rec-pick.no span{ color:var(--loss); }
+  @media (max-width:640px){
+    .wl-row{ grid-template-columns:auto 1fr auto; } .wl-stats{ grid-column:1 / -1; grid-row:2; } .wl-remove{ grid-column:3; grid-row:1; }
+    .inj-grid{ grid-template-columns:1fr; }
+    nav.tabs.subtabs{ padding:4px 8px; }
+  }
 </style>
 </head>
 <body>
@@ -591,12 +652,21 @@
 <nav class="tabs">
   <button data-view="teams" class="active">TEAMS</button>
   <button data-view="edge">VAULT</button>
-  <button data-view="matchups">MATCHUPS</button>
-  <button data-view="usage">USAGE</button>
-  <button data-view="tddebt">TD DEBT</button>
+  <button id="grp-research" type="button">RESEARCH</button>
+  <button data-view="mylist">MY LIST</button>
   <button data-view="players">PLAYERS</button>
   <button data-view="markets">MARKETS</button>
   <button data-view="metrics">METRICS</button>
+</nav>
+<nav class="tabs subtabs" id="subnav" style="display:none">
+  <button data-view="matchups">MATCHUPS</button>
+  <button data-view="usage">USAGE</button>
+  <button data-view="tddebt">TD DEBT</button>
+  <button data-view="redzone">RED ZONE</button>
+  <button data-view="pace">PACE</button>
+  <button data-view="injuries">INJURIES</button>
+  <button data-view="weather">WEATHER</button>
+  <button data-view="record">MODEL RECORD</button>
 </nav>
 
 <div class="license-bar">
@@ -724,6 +794,86 @@
     <div id="tdd-results"><div class="empty">Unlock with a license key above, then hit LOAD. This one needs the play-by-play file, so the first load takes a moment.</div></div>
   </section>
 
+  <!-- MY LIST -->
+  <section id="view-mylist" class="view">
+    <div class="panel-title"><h2>MY LIST</h2><div class="rule"></div><span class="tag" id="wl-tag">saved in this browser</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Your own short list. Tap the <b>☆</b> next to any player in the Vault, Usage, TD Debt, Red Zone or Injuries tabs, or search below. Each row shows his injury status, how his share of the offense is moving, his TD debt and how soft this week's matchup is. The list lives in this browser only.
+    </div>
+    <div class="search-row">
+      <input type="text" id="wl-search" placeholder="search a player to add" autocomplete="off">
+      <button class="action" id="wl-load-btn">LOAD</button>
+    </div>
+    <div id="wl-suggest"></div>
+    <div id="wl-results"><div class="empty">Your list is empty.</div></div>
+  </section>
+
+  <!-- RED ZONE -->
+  <section id="view-redzone" class="view">
+    <div class="panel-title"><h2>RED ZONE LEADERS</h2><div class="rule"></div><span class="tag" id="rz-tag">premium · who gets the ball near the goal line</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Every carry and target from inside the opponent's 20, straight from play-by-play. <b>Inside 5</b> is the goal line. <b>Team share</b> is his slice of all his team's red-zone plays. Switch to TEAMS to see which offenses live down there and whether they throw or run it in.
+    </div>
+    <div class="search-row">
+      <select id="rz-mode" class="gw-select"><option value="players">PLAYERS</option><option value="teams">TEAMS</option></select>
+      <select id="rz-pos" class="gw-select"><option value="ALL">ALL POSITIONS</option><option value="RB">RUNNING BACKS</option><option value="WR">WIDE RECEIVERS</option><option value="TE">TIGHT ENDS</option><option value="QB">QUARTERBACKS</option></select>
+      <select id="rz-scope" class="gw-select"><option value="season">SEASON</option><option value="last3">LAST 3 GAMES</option></select>
+      <button class="action" id="rz-load-btn">LOAD</button>
+      <label class="inj-toggle" id="rz-hide-wrap"><input type="checkbox" id="rz-hide" checked> HIDE OUT / IR / DOUBTFUL</label>
+    </div>
+    <div id="rz-results"><div class="empty">Unlock with a license key above, then hit LOAD. This one needs the play-by-play file, so the first load takes a moment.</div></div>
+  </section>
+
+  <!-- PACE -->
+  <section id="view-pace" class="view">
+    <div class="panel-title"><h2>PACE &amp; PASS RATE</h2><div class="rule"></div><span class="tag" id="pace-tag">premium · how teams really play</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      More plays means more chances for everyone. <b>Neutral pass %</b> only counts 1st and 2nd downs while the game is close (win chance 20-80%) and not at the end of a half, so it shows what a team does when it is choosing freely. <b>Pass over expected</b> compares that choice to what the situation usually calls for. Click a column to sort.
+    </div>
+    <div class="search-row">
+      <select id="pace-scope" class="gw-select"><option value="season">SEASON</option><option value="last3">LAST 3 GAMES</option></select>
+      <button class="action" id="pace-load-btn">LOAD</button>
+    </div>
+    <div id="pace-insights"></div>
+    <div id="pace-results"><div class="empty">Unlock with a license key above, then hit LOAD. This one needs the play-by-play file, so the first load takes a moment.</div></div>
+  </section>
+
+  <!-- INJURIES -->
+  <section id="view-injuries" class="view">
+    <div class="panel-title"><h2>INJURY IMPACT</h2><div class="rule"></div><span class="tag" id="inj-tag">free data · who is out and who benefits</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      When a runner or receiver with a real role is out, his work goes to teammates. Each card shows the share he leaves behind and an <b>estimate</b> of who absorbs it, split in proportion to what each teammate already does. It is a starting point, not a forecast: depth charts and game plans can move it.
+    </div>
+    <div class="search-row">
+      <button class="action" id="inj-load-btn">LOAD</button>
+      <label class="inj-toggle"><input type="checkbox" id="inj-q"> INCLUDE QUESTIONABLE</label>
+    </div>
+    <div id="inj-results"><div class="empty">Hit LOAD to see who is hurt and who benefits.</div></div>
+  </section>
+
+  <!-- WEATHER -->
+  <section id="view-weather" class="view">
+    <div class="panel-title"><h2>GAME WEATHER</h2><div class="rule"></div><span class="tag" id="wx-tag">free data · forecast at kickoff</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Forecast for the kickoff hour at every outdoor stadium this week. <span style="color:var(--amber)">Amber</span> = could trim passing, <span style="color:var(--loss)">red</span> = likely to. Domes and roofs are marked and ignored.
+    </div>
+    <div class="search-row"><button class="action" id="wx-load-btn">REFRESH</button></div>
+    <div id="wx-results"><div class="empty">Loading…</div></div>
+  </section>
+
+  <!-- MODEL RECORD -->
+  <section id="view-record" class="view">
+    <div class="panel-title"><h2>MODEL RECORD</h2><div class="rule"></div><span class="tag" id="rec-tag">premium · how the Any TD board actually did</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Each past week is rescored as if it were that Thursday: only games from <i>earlier</i> weeks are used, never the week being graded. Then we check who actually scored. The <b>baseline</b> is how often a typical player on the board scored that week, so a board only has value if it beats that number. Players who did not play are left out of the count. Click a week to see the top 10 picks.
+    </div>
+    <div class="search-row">
+      <select id="rec-start" class="gw-select"><option value="3">FROM WEEK 3</option><option value="4">FROM WEEK 4</option><option value="5">FROM WEEK 5</option><option value="2">FROM WEEK 2</option></select>
+      <button class="action" id="rec-load-btn">RUN</button>
+    </div>
+    <div id="rec-results"><div class="empty">Hit RUN to rescore every past week with only the information available before kickoff. It takes a few seconds.</div></div>
+  </section>
+
   <!-- PLAYERS -->
   <section id="view-players" class="view">
     <div class="panel-title"><h2>SEARCH A PLAYER</h2><div class="rule"></div><span class="tag">sleeper db</span></div>
@@ -847,6 +997,76 @@
           <li>Players need 3+ games and at least 1.0 expected TDs. Switch between the full season and the last 3 games.</li>
           <li>Click a player for his zone table (goal line, red zone, fringe, open field).</li>
           <li>Needs the play-by-play file, so the first load is slower than the other tabs.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Red Zone leaders</h3>
+        <p>Counts every carry and target a player gets inside the opponent's 20, from play-by-play. Sacks, kneels and spikes are ignored.</p>
+        <ul>
+          <li><b>Inside 5</b> is the goal line. <b>Inside 20</b> is the red zone, which includes the goal line.</li>
+          <li><b>Team share</b> = his red-zone touches divided by all his team's red-zone runs and passes (green at 25%+).</li>
+          <li><b>TD per touch</b> = TDs scored from inside the 20 divided by touches there.</li>
+          <li>TEAMS view: red-zone plays per game, how often they pass there, goal-line plays per game, how often they run at the goal line, and TDs per red-zone play.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Pace &amp; pass rate</h3>
+        <p>Team tendencies from play-by-play. Green means top 8 in the league for that column.</p>
+        <ul>
+          <li><b>Plays/G</b>: offensive snaps per game (runs, passes and sacks).</li>
+          <li><b>Pass %</b>: dropbacks divided by all plays.</li>
+          <li><b>Neutral pass %</b>: pass rate on 1st and 2nd down, win chance between 20% and 80%, outside the last 2 minutes of a half. This is the cleanest read on a coach's real plan.</li>
+          <li><b>Pass over expected</b>: average gap, in percentage points, between how often the team passed and how often a typical team passes in the same spot.</li>
+          <li><b>EPA/play</b>: expected points added per play, a quality measure of the offense.</li>
+          <li><b>Expected plays</b> this week = the average of the two teams' plays per game.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Injury impact</h3>
+        <p>Free data. Status comes from Sleeper, usage from nflverse.</p>
+        <ul>
+          <li><b>Share left behind</b>: his average share of team targets and carries over the last 4 games he played.</li>
+          <li><b>Who gets his work</b>: that share is split across healthy teammates in proportion to their own current share. Carries go to running backs, targets go to everyone. Shown as extra targets or carries per game.</li>
+          <li>This is an <b>estimate</b>. A new starter or a changed game plan can beat it.</li>
+          <li>Players who have missed 3 or more team games sit under <b>Out longer</b>, because the teammates' recent numbers already include the absence.</li>
+          <li>Questionable players are hidden unless you tick the box.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Game weather</h3>
+        <p>Free Open-Meteo forecast for the kickoff hour (the worst wind and rain over the first 3 hours).</p>
+        <ul>
+          <li><span class="flag-badge inj-q">WINDY</span> 15+ mph wind or 25+ mph gusts. <span class="flag-badge inj-out">STRONG WIND</span> 20+ mph or 30+ mph gusts.</li>
+          <li><span class="flag-badge inj-q">RAIN LIKELY</span> 60%+ chance or noticeable rain. <span class="flag-badge inj-out">HEAVY RAIN</span> / <span class="flag-badge inj-out">SNOW</span> are the harshest.</li>
+          <li>Freezing (25°F or lower) and hot (92°F or higher) games are flagged amber.</li>
+          <li>Domes and roofed stadiums are skipped. Neutral-site games are not mapped.</li>
+          <li>Wind and heavy precipitation tend to hurt passing and kicking, so they matter most for QB, WR and kicker props.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Model record</h3>
+        <p>An honest report card for the Any TD board.</p>
+        <ul>
+          <li>Each week is rescored using <b>only earlier weeks</b> of stats and play-by-play, then graded against who really scored a rushing or receiving TD that week.</li>
+          <li><b>Baseline</b> = the scoring rate of everyone on the board that week. A pick list is only useful if it beats it. <b>1.20x</b> means 20% better than a random player on the board.</li>
+          <li>Lists tested: Vault top 10, Vault top 25, TD Debt top 10 and Cheat Code players.</li>
+          <li>Players who did not play are removed from the count (you would check inactives before kickoff).</li>
+          <li>The scoring-environment piece uses a touchdowns-per-game stand-in for team points, because past standings are not stored.</li>
+          <li>A few weeks is a small sample. Expect wide swings until the season is well along.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>My List</h3>
+        <ul>
+          <li>Tap <b>☆</b> next to a player anywhere to save him. Tap <b>★</b> to remove.</li>
+          <li>Saved in this browser only, so it will not follow you to another phone or computer.</li>
+          <li>Each row: last-3-game workload, change in his share of the offense, TD debt, and how soft this week's matchup is (1 = most generous defense to that role).</li>
         </ul>
       </div>
 
@@ -1010,14 +1230,18 @@
       window.scrollTo({ top:0, behavior:'smooth' });
     }
   });
-  document.querySelectorAll('nav.tabs button').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
-      document.querySelectorAll('section.view').forEach(s=>s.classList.remove('active'));
-      btn.classList.add('active');
-      $('#view-'+btn.dataset.view).classList.add('active');
-    });
-  });
+  const RESEARCH_VIEWS = ['matchups','usage','tddebt','redzone','pace','injuries','weather','record'];
+  let lastResearch = 'matchups';
+  function showView(name){
+    document.querySelectorAll('nav.tabs button[data-view]').forEach(b=> b.classList.toggle('active', b.dataset.view === name));
+    const inRes = RESEARCH_VIEWS.includes(name);
+    $('#grp-research').classList.toggle('active', inRes);
+    $('#subnav').style.display = inRes ? '' : 'none';
+    document.querySelectorAll('section.view').forEach(sec=> sec.classList.toggle('active', sec.id === 'view-' + name));
+    if(inRes) lastResearch = name;
+  }
+  document.querySelectorAll('nav.tabs button[data-view]').forEach(btn=> btn.addEventListener('click', ()=> showView(btn.dataset.view)));
+  $('#grp-research').addEventListener('click', ()=>{ const b = document.querySelector('#subnav button[data-view="' + lastResearch + '"]'); if(b) b.click(); });
 
   /* ---------------- clock ---------------- */
   function tickClock(){
@@ -1585,12 +1809,16 @@
     const text = await res.text();
     const rows = parseCSV(text);
     return rows.map(r=> ({
-      week: +r.week, posteam: r.posteam, defteam: r.defteam,
+      week: +r.week, gameId: r.game_id, posteam: fixTeam(r.posteam), defteam: fixTeam(r.defteam),
       yardline100: r.yardline_100 === '' ? null : +r.yardline_100,
       rushAttempt: r.rush_attempt === '1', passAttempt: r.pass_attempt === '1',
       rushTd: r.rush_touchdown === '1', passTd: r.pass_touchdown === '1',
-      rusherId: r.rusher_player_id || null, receiverId: r.receiver_player_id || null
-    })).filter(r=> r.yardline100 !== null && (r.rushAttempt || r.passAttempt));
+      rusherId: r.rusher_player_id || null, receiverId: r.receiver_player_id || null,
+      // extra fields for Pace / Red Zone
+      sack: r.sack === '1', dropback: r.qb_dropback === '1', kneel: r.qb_kneel === '1', spike: r.qb_spike === '1',
+      down: r.down === '' ? 0 : +r.down, halfSecs: r.half_seconds_remaining === '' ? null : +r.half_seconds_remaining,
+      wp: r.wp === '' ? null : +r.wp, epa: r.epa === '' ? null : +r.epa, passOe: r.pass_oe === '' ? null : +r.pass_oe
+    })).filter(r=> r.yardline100 !== null && (r.rushAttempt || r.passAttempt || r.sack));
   }
 
   // Zone buckets, closest to the goal line first — mirrors how red-zone/goal-line splits are usually cut.
@@ -2038,7 +2266,7 @@
     return `
       <div class="rank">#${rank}</div>
       ${avatarHtml(p)}
-      <div class="who"><div class="name">${p.name}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}</div><div class="reason-line">${p.reason}</div></div>
+      <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}</div><div class="reason-line">${p.reason}</div></div>
       <div class="badges">${injBadge(p.injStatus)}${flagPart}${cheatCodeBadge(p)}</div>
       <div><div class="score">${scoreText}</div><div class="form-stat">${p.formStat}</div></div>
     `;
@@ -2678,7 +2906,7 @@
       const d = r.delta, cls = d >= 0.05 ? 'hot' : (d <= -0.05 ? 'cold' : '');
       const p = { id:r.pl.id, name:r.pl.name, pos:r.pl.pos, team:r.pl.team };
       const sp = injuryFor(p.name, p.pos, p.team);
-      return `<tr><td><div class="usage-who">${avatarHtml(p)}<div><div class="nm">${p.name} ${sp && sp.inj ? injBadge(sp.inj) : ''}</div><div class="sub">${p.pos} · ${p.team}</div></div></div></td>
+      return `<tr><td><div class="usage-who">${avatarHtml(p)}<div><div class="nm">${p.name} ${starHtml(p)} ${sp && sp.inj ? injBadge(sp.inj) : ''}</div><div class="sub">${p.pos} · ${p.team}</div></div></div></td>
         <td>${r.gp}</td><td>${(r.season*100).toFixed(1)}%</td><td>${(r.last3*100).toFixed(1)}%</td>
         <td class="dvp-cell ${cls}"><b>${d >= 0.005 ? '▲' : (d <= -0.005 ? '▼' : '')} ${pp(d)}</b></td>
         <td>${r.tpg.toFixed(1)}</td><td>${r.cpg.toFixed(1)}</td><td>${sparkSvg(r.spark)}</td></tr>`;
@@ -2714,7 +2942,7 @@
     return `
       <div class="rank">#${rank}</div>
       ${avatarHtml(p)}
-      <div class="who"><div class="name">${p.name}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${opp}</div>
+      <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${opp}</div>
         <div class="reason-line" style="${neg ? 'color:var(--loss)' : ''}">${p.xTD.toFixed(1)} expected · ${p.tdScored} scored · ${p.seasonGames} gm</div></div>
       <div class="badges">${injBadge(p.injStatus)}${cheatCodeBadge(p)}</div>
       <div><div class="score ${neg ? 'neg' : ''}">${neg ? '' : '+'}${p.tdDebt.toFixed(1)}</div><div class="form-stat">TD DEBT</div></div>`;
@@ -2762,6 +2990,508 @@
   $('#tdd-scope').addEventListener('change', ()=>{ clearDetails(); if(rawPlayers && pbpRows) renderTdDebt(); });
   $('#tdd-hide').addEventListener('change', ()=>{ clearDetails(); if(rawPlayers && pbpRows) renderTdDebt(); });
   document.querySelector('nav.tabs button[data-view="tddebt"]').addEventListener('click', ()=>{ clearDetails(); if(rawPlayers && pbpRows) renderTdDebt(); });
+
+  /* ================= RESEARCH GROUP + NEW TABS ================= */
+  const logoImg = t => `<img src="https://a.espncdn.com/i/teamlogos/nfl/500/${String(t).toLowerCase()}.png" alt="" onerror="this.style.display='none'">`;
+  const pct1 = v => (v*100).toFixed(1) + '%';
+  const sgn = (v, d) => (v >= 0 ? '+' : '') + v.toFixed(d);
+  const cellCls = (rank, n) => rank <= 8 ? 'hot' : (rank > n - 8 ? 'cold' : '');
+  // rank 1 = biggest value
+  function rankDesc(rows, f){
+    const sorted = rows.slice().sort((a,b)=> f(b) - f(a));
+    const m = new Map(); sorted.forEach((r,i)=> m.set(r, i+1)); return m;
+  }
+
+  // One wiring helper per data tab: LOAD button, auto-render when the tab is reopened, re-render on control change.
+  function wireTab(cfg){
+    const ready = ()=> !!(rawPlayers && (!cfg.needPbp || pbpRows));
+    async function load(){
+      const btn = $(cfg.btn), container = $(cfg.res);
+      if(!ready()){
+        container.innerHTML = '<div class="loading">' + (cfg.needPbp ? 'Fetching the season and play-by-play data (the play-by-play file is big, give it a moment)…' : 'Fetching the season\'s data…') + '</div>';
+        try{ await ensureVaultData(cfg.needPbp); }
+        catch(err){ gwFeedback(btn, false); showError(container, err.message === 'NO_LICENSE' ? 'Unlock with a valid license key above first.' : 'Could not load ' + cfg.name + ' (' + err.message + ').'); return; }
+      }
+      clearDetails(); cfg.render(); gwFeedback(btn, true);
+    }
+    $(cfg.btn).addEventListener('click', load);
+    const again = ()=>{ clearDetails(); if(ready()) cfg.render(); };
+    document.querySelector('nav.tabs button[data-view="' + cfg.view + '"]').addEventListener('click', again);
+    (cfg.controls || []).forEach(s=> $(s).addEventListener('change', again));
+    return load;
+  }
+
+  /* ---- MY LIST: browser-saved watchlist (stars appear next to players across the app) ---- */
+  const WL_KEY = 'gridwave_watchlist_v1';
+  let wlList = (()=>{ try{ const a = JSON.parse(localStorage.getItem(WL_KEY) || '[]'); return Array.isArray(a) ? a : []; }catch(_){ return []; } })();
+  function wlSave(){ try{ localStorage.setItem(WL_KEY, JSON.stringify(wlList)); }catch(_){ /* private mode: list lasts for this visit only */ } }
+  const wlHas = id => wlList.some(x=> x.id === id);
+  function starHtml(p){
+    const on = wlHas(p.id);
+    const d = encodeURIComponent(JSON.stringify({ id:p.id, name:p.name, pos:p.pos, team:p.team }));
+    return `<button type="button" class="wl-star${on ? ' on' : ''}" data-p="${d}" title="${on ? 'Remove from' : 'Add to'} My List">${on ? '★' : '☆'}</button>`;
+  }
+  // capture phase: the star must win over the row's own click (which opens the detail panel)
+  document.addEventListener('click', e=>{
+    const s = e.target.closest && e.target.closest('.wl-star'); if(!s) return;
+    e.stopPropagation(); e.preventDefault();
+    let p; try{ p = JSON.parse(decodeURIComponent(s.dataset.p)); }catch(_){ return; }
+    if(wlHas(p.id)) wlList = wlList.filter(x=> x.id !== p.id); else wlList.push(p);
+    wlSave();
+    const on = wlHas(p.id);
+    document.querySelectorAll('.wl-star').forEach(b=>{
+      try{ if(JSON.parse(decodeURIComponent(b.dataset.p)).id === p.id){ b.classList.toggle('on', on); b.textContent = on ? '★' : '☆'; } }catch(_){}
+    });
+    if($('#view-mylist').classList.contains('active')) renderWatchlist();
+  }, true);
+
+  const DVP_MI_BY_POS = { QB:7, RB:0, WR:3, TE:5 };
+  function renderWatchlist(){
+    const box = $('#wl-results');
+    $('#wl-tag').textContent = wlList.length ? wlList.length + ' player' + (wlList.length === 1 ? '' : 's') + ' · saved in this browser' : 'saved in this browser';
+    if(!wlList.length){ box.innerHTML = '<div class="empty">Your list is empty. Tap the ☆ next to any player in the Vault, Usage, TD Debt, Red Zone or Injuries tabs, or search above.</div>'; return; }
+    const live = !!(rawPlayers && pbpRows);
+    const scoreMap = {}, usageMap = {}; let dvp = null;
+    if(live){
+      try{ computeCategoryScores('anytd','season').forEach(p=> scoreMap[p.id] = p); }catch(_){}
+      ['RB','WR','TE'].forEach(pos=>{ try{ buildUsageRows(pos).forEach(r=> usageMap[r.pl.id] = r); }catch(_){} });
+      try{ dvp = buildDefenseInsights(5); }catch(_){}
+    }
+    const rows = wlList.map(entry=>{
+      const raw = rawPlayers ? rawPlayers[entry.id] : null;
+      const p = { id:entry.id, name:entry.name, pos:entry.pos, team: raw ? raw.team : entry.team };
+      const sp = injuryFor(p.name, p.pos, p.team);
+      const sched = window.gwSchedule && window.gwSchedule[p.team];
+      const opp = sched ? `<span class="chip">${sched.home ? 'vs' : '@'} ${sched.opponent}</span>` : '<span class="chip">no game / bye</span>';
+      const stat = (val, lbl, cls)=> `<div class="wl-stat"><div class="v ${cls || ''}">${val}</div><div class="l">${lbl}</div></div>`;
+      let stats = '';
+      if(live && raw){
+        const u = usageMap[p.id], sc = scoreMap[p.id];
+        const l3 = raw.weeks.slice(-3), n = Math.max(1, l3.length);
+        const sum = f=> l3.reduce((a,w)=> a + f(w), 0) / n;
+        const line = p.pos === 'QB' ? sum(w=>w.pass_yards).toFixed(0) + ' pass yds/g'
+          : (p.pos === 'RB' ? (sum(w=>w.carries) + sum(w=>w.targets)).toFixed(1) + ' touches/g' : sum(w=>w.targets).toFixed(1) + ' tgt/g');
+        stats += stat(line, 'LAST 3');
+        stats += u ? stat((u.delta >= 0.005 ? '▲ ' : (u.delta <= -0.005 ? '▼ ' : '')) + sgn(u.delta*100, 1) + ' pts', 'SHARE CHANGE', u.delta >= 0.05 ? 'good' : (u.delta <= -0.05 ? 'bad' : '')) : stat('—', 'SHARE CHANGE');
+        stats += sc && sc.tdDebt !== undefined ? stat(sgn(sc.tdDebt, 1), 'TD DEBT', sc.tdDebt > 1 ? 'good' : (sc.tdDebt < -1 ? 'bad' : '')) : stat('—', 'TD DEBT');
+        let mu = '—', mcls = '';
+        if(dvp && sched && dvp[sched.opponent]){
+          const c = dvp[sched.opponent].find(x=> x.mi === DVP_MI_BY_POS[p.pos]);
+          if(c){ mu = '#' + c.rank + ' vs ' + sched.opponent; mcls = c.rank <= 8 ? 'good' : (c.rank >= 25 ? 'bad' : ''); }
+        }
+        stats += stat(mu, 'MATCHUP (1 = SOFTEST)', mcls);
+      } else {
+        stats = '<div class="wl-stat wide"><div class="l">Hit LOAD for live numbers</div></div>';
+      }
+      return `<div class="wl-row">${avatarHtml(p)}
+        <div class="wl-who"><div class="nm">${p.name} ${injBadge(sp && sp.inj)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team || 'FA'}</span>${opp}</div></div>
+        <div class="wl-stats">${stats}</div>
+        <button type="button" class="wl-remove" data-id="${p.id}" title="Remove">✕</button></div>`;
+    }).join('');
+    box.innerHTML = rows;
+    box.querySelectorAll('.wl-remove').forEach(b=> b.addEventListener('click', ()=>{
+      wlList = wlList.filter(x=> x.id !== b.dataset.id); wlSave();
+      document.querySelectorAll('.wl-star').forEach(s=>{ try{ if(JSON.parse(decodeURIComponent(s.dataset.p)).id === b.dataset.id){ s.classList.remove('on'); s.textContent = '☆'; } }catch(_){} });
+      renderWatchlist();
+    }));
+  }
+  async function loadWatchlist(){
+    const btn = $('#wl-load-btn'), box = $('#wl-results');
+    if(!(rawPlayers && pbpRows)){
+      box.innerHTML = '<div class="loading">Fetching the season and play-by-play data…</div>';
+      try{ await ensureVaultData(true); }
+      catch(err){ gwFeedback(btn, false); showError(box, err.message === 'NO_LICENSE' ? 'Unlock with a valid license key above first.' : 'Could not load your list (' + err.message + ').'); return; }
+    }
+    renderWatchlist(); gwFeedback(btn, true);
+  }
+  $('#wl-load-btn').addEventListener('click', loadWatchlist);
+  document.querySelector('nav.tabs button[data-view="mylist"]').addEventListener('click', renderWatchlist);
+  $('#wl-search').addEventListener('input', ()=>{
+    const q = normalizeName($('#wl-search').value), sug = $('#wl-suggest');
+    if(q.length < 2){ sug.innerHTML = ''; return; }
+    if(!rawPlayers){ sug.innerHTML = '<div class="wl-sug-note">Hit LOAD first so I can search the player pool.</div>'; return; }
+    const hits = Object.values(rawPlayers).filter(pl=> normalizeName(pl.name).includes(q))
+      .sort((a,b)=> b.weeks.length - a.weeks.length).slice(0, 8);
+    sug.innerHTML = hits.length ? hits.map(pl=> `<button type="button" class="wl-sug" data-id="${pl.id}">${pl.name} <span>${pl.pos} · ${pl.team}</span></button>`).join('') : '<div class="wl-sug-note">No match.</div>';
+    sug.querySelectorAll('.wl-sug').forEach(b=> b.addEventListener('click', ()=>{
+      const pl = rawPlayers[b.dataset.id];
+      if(pl && !wlHas(pl.id)){ wlList.push({ id:pl.id, name:pl.name, pos:pl.pos, team:pl.team }); wlSave(); }
+      $('#wl-search').value = ''; sug.innerHTML = ''; renderWatchlist();
+    }));
+  });
+
+  /* ---- RED ZONE LEADERS ---- */
+  let rzSort = { key:'rz', asc:false };
+  function rzCompute(scope){
+    const maxWeek = weeksOfFilmAvailable();
+    const minWeek = scope === 'last3' ? maxWeek - 2 : 0;
+    const pl = {}, tm = {};
+    pbpRows.forEach(r=>{
+      if(r.week < minWeek || r.kneel || r.spike || !r.posteam) return;
+      const T = tm[r.posteam] || (tm[r.posteam] = { team:r.posteam, games:new Set(), rzPlays:0, rzPass:0, rzRush:0, glPlays:0, glRush:0, rzTd:0 });
+      T.games.add(r.gameId || r.week);
+      if(r.yardline100 > 20 || !(r.rushAttempt || r.passAttempt)) return;
+      const gl = r.yardline100 <= 5;
+      T.rzPlays++; if(r.rushAttempt) T.rzRush++; else T.rzPass++;
+      if(gl){ T.glPlays++; if(r.rushAttempt) T.glRush++; }
+      if(r.rushTd || r.passTd) T.rzTd++;
+      const P = id=> pl[id] || (pl[id] = { id, team:r.posteam, rz:0, gl:0, car:0, tgt:0, td:0 });
+      if(r.rushAttempt && r.rusherId){ const p = P(r.rusherId); p.team = r.posteam; p.rz++; p.car++; if(gl) p.gl++; if(r.rushTd) p.td++; }
+      if(r.passAttempt && r.receiverId){ const p = P(r.receiverId); p.team = r.posteam; p.rz++; p.tgt++; if(gl) p.gl++; if(r.passTd) p.td++; }
+    });
+    return { pl, tm };
+  }
+  function renderRedZone(){
+    const box = $('#rz-results');
+    const scope = $('#rz-scope').value, mode = $('#rz-mode').value, posF = $('#rz-pos').value;
+    $('#rz-pos').style.display = mode === 'players' ? '' : 'none';
+    $('#rz-hide-wrap').style.display = mode === 'players' ? '' : 'none';
+    const { pl, tm } = rzCompute(scope);
+    const scopeTxt = scope === 'last3' ? 'last 3 games' : 'full season';
+    if(mode === 'teams'){
+      const rows = Object.values(tm).map(t=>{
+        const g = Math.max(1, t.games.size);
+        return { t, plays: t.rzPlays/g, passPct: t.rzPlays ? t.rzPass/t.rzPlays : 0, gl: t.glPlays/g, glRush: t.glPlays ? t.glRush/t.glPlays : 0, tdRate: t.rzPlays ? t.rzTd/t.rzPlays : 0 };
+      });
+      const keys = { team:r=>r.t.team, plays:r=>r.plays, pass:r=>r.passPct, gl:r=>r.gl, glrush:r=>r.glRush, td:r=>r.tdRate };
+      const rk = { plays:rankDesc(rows, keys.plays), pass:rankDesc(rows, keys.pass), gl:rankDesc(rows, keys.gl), glrush:rankDesc(rows, keys.glrush), td:rankDesc(rows, keys.td) };
+      const f = keys[rzSort.key] || keys.plays;
+      rows.sort((a,b)=>{ const x = f(a), y = f(b); const c = typeof x === 'string' ? x.localeCompare(y) : x - y; return rzSort.asc ? c : -c; });
+      const cols = [['team','TEAM'],['plays','RZ PLAYS/G'],['pass','RZ PASS %'],['gl','GOAL-LINE PLAYS/G'],['glrush','GOAL-LINE RUSH %'],['td','TD PER RZ PLAY']];
+      const head = cols.map(([k,l])=> `<th data-k="${k}" class="${rzSort.key===k?'sorted':''}">${l}${rzSort.key===k?(rzSort.asc?' ▲':' ▼'):''}</th>`).join('');
+      const cell = (txt, r, k)=> `<td class="dvp-cell ${cellCls(rk[k].get(r), rows.length)}"><b>${txt}</b><small>#${rk[k].get(r)}</small></td>`;
+      box.innerHTML = `<div class="dvp-wrap"><table class="dvp"><thead><tr>${head}<th style="cursor:default">THIS WK</th></tr></thead><tbody>${rows.map(r=>{
+        const sc = window.gwSchedule && window.gwSchedule[r.t.team];
+        return `<tr><td><div class="dvp-team">${logoImg(r.t.team)}${r.t.team}</div></td>${cell(r.plays.toFixed(1), r, 'plays')}${cell(pct1(r.passPct), r, 'pass')}${cell(r.gl.toFixed(1), r, 'gl')}${cell(pct1(r.glRush), r, 'glrush')}${cell(pct1(r.tdRate), r, 'td')}<td>${sc ? (sc.home ? 'vs ' : '@ ') + sc.opponent : '—'}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+      box.querySelectorAll('th[data-k]').forEach(th=> th.addEventListener('click', ()=>{ const k = th.dataset.k; rzSort = { key:k, asc: rzSort.key === k ? !rzSort.asc : k === 'team' }; renderRedZone(); }));
+      $('#rz-tag').textContent = 'premium · team red-zone trends · ' + scopeTxt;
+      return;
+    }
+    // players
+    const minOpps = scope === 'last3' ? 2 : 4;
+    let rows = Object.values(pl).map(p=>{
+      const raw = rawPlayers[p.id]; if(!raw) return null;
+      if(posF !== 'ALL' && raw.pos !== posF) return null;
+      if(p.rz < minOpps) return null;
+      const T = tm[p.team];
+      return { p, raw, share: T && T.rzPlays ? p.rz / T.rzPlays : 0, conv: p.rz ? p.td / p.rz : 0 };
+    }).filter(Boolean);
+    if($('#rz-hide').checked) rows = rows.filter(r=> !flagOut(r.raw.name, r.raw.pos, r.raw.team));
+    if(!rows.length){ box.innerHTML = '<div class="empty">No players with enough red-zone touches yet.</div>'; return; }
+    const keys = { name:r=>r.raw.name, gl:r=>r.p.gl, rz:r=>r.p.rz, share:r=>r.share, car:r=>r.p.car, tgt:r=>r.p.tgt, td:r=>r.p.td, conv:r=>r.conv };
+    const f = keys[rzSort.key] || keys.rz;
+    rows.sort((a,b)=>{ const x = f(a), y = f(b); const c = typeof x === 'string' ? x.localeCompare(y) : x - y; return (rzSort.asc ? c : -c) || (b.p.rz - a.p.rz); });
+    rows = rows.slice(0, 60);
+    const cols = [['name','PLAYER'],['gl','INSIDE 5'],['rz','INSIDE 20'],['share','TEAM SHARE'],['car','CARRIES'],['tgt','TARGETS'],['td','TDs'],['conv','TD PER TOUCH']];
+    const head = cols.map(([k,l])=> `<th data-k="${k}" class="${rzSort.key===k?'sorted':''}">${l}${rzSort.key===k?(rzSort.asc?' ▲':' ▼'):''}</th>`).join('');
+    box.innerHTML = `<div class="dvp-wrap"><table class="dvp usage"><thead><tr>${head}</tr></thead><tbody>${rows.map(r=>{
+      const p = { id:r.raw.id, name:r.raw.name, pos:r.raw.pos, team:r.raw.team };
+      const sp = injuryFor(p.name, p.pos, p.team);
+      return `<tr><td><div class="usage-who">${avatarHtml(p)}<div><div class="nm">${p.name} ${starHtml(p)} ${sp && sp.inj ? injBadge(sp.inj) : ''}</div><div class="sub">${p.pos} · ${p.team}</div></div></div></td>
+        <td>${r.p.gl}</td><td><b>${r.p.rz}</b></td><td class="dvp-cell ${r.share >= 0.25 ? 'hot' : ''}"><b>${pct1(r.share)}</b></td>
+        <td>${r.p.car}</td><td>${r.p.tgt}</td><td>${r.p.td}</td><td>${pct1(r.conv)}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+    box.querySelectorAll('th[data-k]').forEach(th=> th.addEventListener('click', ()=>{ const k = th.dataset.k; rzSort = { key:k, asc: rzSort.key === k ? !rzSort.asc : k === 'name' }; renderRedZone(); }));
+    $('#rz-tag').textContent = 'premium · opportunities inside the 20 · ' + scopeTxt;
+  }
+  $('#rz-mode').addEventListener('change', ()=>{ rzSort = { key: $('#rz-mode').value === 'teams' ? 'plays' : 'rz', asc:false }; });
+  wireTab({ view:'redzone', btn:'#rz-load-btn', res:'#rz-results', needPbp:true, name:'Red Zone', render:renderRedZone, controls:['#rz-mode','#rz-pos','#rz-scope','#rz-hide'] });
+
+  /* ---- PACE & PASS RATE ---- */
+  let paceSort = { key:'plays', asc:false };
+  function paceCompute(scope){
+    const maxWeek = weeksOfFilmAvailable();
+    const minWeek = scope === 'last3' ? maxWeek - 2 : 0;
+    const T = {};
+    pbpRows.forEach(r=>{
+      if(r.week < minWeek || r.kneel || r.spike || !r.posteam) return;
+      const t = T[r.posteam] || (T[r.posteam] = { team:r.posteam, games:new Set(), plays:0, pass:0, nPlays:0, nPass:0, oe:0, oeN:0, epa:0, epaN:0 });
+      t.games.add(r.gameId || r.week);
+      const isPass = r.dropback || r.passAttempt || r.sack;
+      t.plays++; if(isPass) t.pass++;
+      if((r.down === 1 || r.down === 2) && r.wp !== null && r.wp >= 0.2 && r.wp <= 0.8 && r.halfSecs !== null && r.halfSecs > 120){ t.nPlays++; if(isPass) t.nPass++; }
+      if(r.passOe !== null){ t.oe += r.passOe; t.oeN++; }
+      if(r.epa !== null){ t.epa += r.epa; t.epaN++; }
+    });
+    return Object.values(T).map(t=>{
+      const g = Math.max(1, t.games.size);
+      return { t, g, plays: t.plays/g, pass: t.plays ? t.pass/t.plays : 0, neutral: t.nPlays ? t.nPass/t.nPlays : 0, proe: t.oeN ? t.oe/t.oeN : 0, epa: t.epaN ? t.epa/t.epaN : 0 };
+    });
+  }
+  function renderPace(){
+    const box = $('#pace-results');
+    const scope = $('#pace-scope').value;
+    const rows = paceCompute(scope);
+    if(!rows.length){ box.innerHTML = '<div class="empty">No play-by-play yet.</div>'; return; }
+    const byTeam = {}; rows.forEach(r=> byTeam[r.t.team] = r);
+    const keys = { team:r=>r.t.team, plays:r=>r.plays, pass:r=>r.pass, neutral:r=>r.neutral, proe:r=>r.proe, epa:r=>r.epa, game:r=>gamePace(r) };
+    function gamePace(r){ const sc = window.gwSchedule && window.gwSchedule[r.t.team]; const o = sc && byTeam[sc.opponent]; return o ? (r.plays + o.plays) / 2 : -1; }
+    const rk = {}; ['plays','pass','neutral','proe','epa'].forEach(k=> rk[k] = rankDesc(rows, keys[k]));
+    const f = keys[paceSort.key] || keys.plays;
+    const view = rows.slice().sort((a,b)=>{ const x = f(a), y = f(b); const c = typeof x === 'string' ? x.localeCompare(y) : x - y; return (paceSort.asc ? c : -c) || a.t.team.localeCompare(b.t.team); });
+    const top = (k, n, fmt)=> rows.slice().sort((a,b)=> keys[k](b) - keys[k](a)).slice(0, n).map(r=> `<b>${r.t.team}</b> ${fmt(keys[k](r))}`).join(' · ');
+    const bot = (k, n, fmt)=> rows.slice().sort((a,b)=> keys[k](a) - keys[k](b)).slice(0, n).map(r=> `<b>${r.t.team}</b> ${fmt(keys[k](r))}`).join(' · ');
+    $('#pace-insights').innerHTML =
+      `<div class="gv-insight"><span style="color:var(--win)">⚡ Fastest</span> (plays/game) — ${top('plays', 5, v=> v.toFixed(1))}</div>` +
+      `<div class="gv-insight"><span style="color:var(--cyan)">✈ Most pass-heavy</span> (pass rate over expected) — ${top('proe', 5, v=> sgn(v,1) + ' pts')}</div>` +
+      `<div class="gv-insight"><span style="color:var(--loss)">▣ Most run-heavy</span> (pass rate over expected) — ${bot('proe', 5, v=> sgn(v,1) + ' pts')}</div>`;
+    const cols = [['team','TEAM'],['plays','PLAYS/G'],['pass','PASS %'],['neutral','NEUTRAL PASS %'],['proe','PASS OVER EXPECTED'],['epa','EPA/PLAY']];
+    const head = cols.map(([k,l])=> `<th data-k="${k}" class="${paceSort.key===k?'sorted':''}">${l}${paceSort.key===k?(paceSort.asc?' ▲':' ▼'):''}</th>`).join('') +
+      `<th data-k="game" class="${paceSort.key==='game'?'sorted':''}">THIS WK · EXPECTED PLAYS${paceSort.key==='game'?(paceSort.asc?' ▲':' ▼'):''}</th>`;
+    const cell = (txt, r, k)=> `<td class="dvp-cell ${cellCls(rk[k].get(r), rows.length)}"><b>${txt}</b><small>#${rk[k].get(r)}</small></td>`;
+    box.innerHTML = `<div class="dvp-wrap"><table class="dvp"><thead><tr>${head}</tr></thead><tbody>${view.map(r=>{
+      const sc = window.gwSchedule && window.gwSchedule[r.t.team], gp = gamePace(r);
+      return `<tr><td><div class="dvp-team">${logoImg(r.t.team)}${r.t.team}</div></td>${cell(r.plays.toFixed(1), r, 'plays')}${cell(pct1(r.pass), r, 'pass')}${cell(pct1(r.neutral), r, 'neutral')}${cell(sgn(r.proe,1), r, 'proe')}${cell(sgn(r.epa,2), r, 'epa')}
+        <td>${sc ? (sc.home ? 'vs ' : '@ ') + sc.opponent + (gp > 0 ? ' · ' + gp.toFixed(1) : '') : '—'}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+    box.querySelectorAll('th[data-k]').forEach(th=> th.addEventListener('click', ()=>{ const k = th.dataset.k; paceSort = { key:k, asc: paceSort.key === k ? !paceSort.asc : k === 'team' }; renderPace(); }));
+    $('#pace-tag').textContent = 'premium · ' + (scope === 'last3' ? 'last 3 games' : 'full season') + ' · green = top 8 in the league';
+  }
+  wireTab({ view:'pace', btn:'#pace-load-btn', res:'#pace-results', needPbp:true, name:'Pace', render:renderPace, controls:['#pace-scope'] });
+
+  /* ---- INJURY IMPACT ---- */
+  function buildInjuryImpact(includeQ){
+    if(!injuryIndex || !rawPlayers) return { fresh:[], older:[] };
+    const tt = {}, teamLast = {};
+    Object.values(rawPlayers).forEach(pl=> pl.weeks.forEach(w=>{
+      const k = w.team + '|' + w.week, t = tt[k] || (tt[k] = { tgt:0, car:0 });
+      t.tgt += w.targets; t.car += w.carries;
+      teamLast[w.team] = Math.max(teamLast[w.team] || 0, w.week);
+    }));
+    const teamPG = (team, key)=>{
+      const vals = []; for(let w = teamLast[team] || 0; w >= 1 && vals.length < 4; w--){ const t = tt[team + '|' + w]; if(t) vals.push(t[key]); }
+      return vals.length ? vals.reduce((a,b)=> a + b, 0) / vals.length : 0;
+    };
+    const byTeam = {}, byNP = {};
+    Object.values(rawPlayers).forEach(pl=>{
+      if(pl.pos === 'QB' || !pl.weeks.length) return;
+      const ws = pl.weeks.slice(-4); let ts = 0, cs = 0, tg = 0, ca = 0;
+      ws.forEach(w=>{ const t = tt[w.team + '|' + w.week] || { tgt:0, car:0 }; ts += t.tgt ? w.targets / t.tgt : 0; cs += t.car ? w.carries / t.car : 0; tg += w.targets; ca += w.carries; });
+      const n = ws.length;
+      const r = { pl, tShare: ts/n, cShare: cs/n, tpg: tg/n, cpg: ca/n, last: pl.weeks[pl.weeks.length-1].week };
+      (byTeam[pl.team] = byTeam[pl.team] || []).push(r);
+      const k = normalizeName(pl.name) + '|' + pl.pos; (byNP[k] = byNP[k] || []).push(r);
+    });
+    const injured = [], seen = new Set();
+    Object.values(injuryIndex).forEach(arr=> arr.forEach(sp=>{
+      if(!sp.inj || !['RB','WR','TE'].includes(sp.pos)) return;
+      if(!OUT_STATUSES.includes(sp.inj) && !(includeQ && sp.inj === 'Questionable')) return;
+      const c = byNP[normalizeName(sp.name) + '|' + sp.pos]; if(!c) return;
+      const r = c.find(x=> x.pl.team === fixTeam(sp.team)) || (c.length === 1 ? c[0] : null);
+      if(!r || seen.has(r.pl.id)) return;
+      if(r.tShare < 0.06 && r.cShare < 0.12) return; // not enough role to move anyone else's numbers
+      seen.add(r.pl.id); injured.push({ r, sp });
+    }));
+    const out = injured.map(({ r, sp })=>{
+      const team = r.pl.team, missed = (teamLast[team] || r.last) - r.last;
+      let bens = [];
+      if(missed <= 2){
+        const pool = (byTeam[team] || []).filter(x=> x.pl.id !== r.pl.id && !flagOut(x.pl.name, x.pl.pos, x.pl.team) && x.last >= (teamLast[team] || 0) - 2);
+        const tW = pool.reduce((s,x)=> s + x.tShare, 0), cW = pool.filter(x=> x.pl.pos === 'RB').reduce((s,x)=> s + x.cShare, 0);
+        const ttg = teamPG(team, 'tgt'), tcar = teamPG(team, 'car');
+        bens = pool.map(x=>{
+          const gt = tW > 0 ? r.tShare * x.tShare / tW * ttg : 0;
+          const gc = (x.pl.pos === 'RB' && cW > 0) ? r.cShare * x.cShare / cW * tcar : 0;
+          return { x, gt, gc };
+        }).filter(b=> b.gt >= 0.15 || b.gc >= 0.5).sort((a,b)=> (b.gt + b.gc*0.7) - (a.gt + a.gc*0.7)).slice(0, 4);
+      }
+      return { r, sp, missed, bens, vac: r.tpg + r.cpg*0.7 };
+    });
+    out.sort((a,b)=> b.vac - a.vac);
+    return { fresh: out.filter(o=> o.missed <= 2), older: out.filter(o=> o.missed > 2) };
+  }
+  function renderInjuries(){
+    const box = $('#inj-results');
+    if(!injuryIndex){ box.innerHTML = '<div class="empty">Injury data did not load (Sleeper). Try LOAD again in a minute.</div>'; return; }
+    const { fresh, older } = buildInjuryImpact($('#inj-q').checked);
+    const card = (o, showBens)=>{
+      const r = o.r, p = { id:r.pl.id, name:r.pl.name, pos:r.pl.pos, team:r.pl.team };
+      const sc = window.gwSchedule && window.gwSchedule[p.team];
+      const opp = sc ? `${sc.home ? 'vs' : '@'} ${sc.opponent}` : 'no game this week';
+      const status = o.missed <= 0 ? 'played in his team\'s last game' : (o.missed <= 2 ? 'missed ' + o.missed + ' game' + (o.missed === 1 ? '' : 's') : 'out ' + o.missed + '+ games');
+      const bens = showBens
+        ? (o.bens.length ? o.bens.map(b=>{
+            const bp = { id:b.x.pl.id, name:b.x.pl.name, pos:b.x.pl.pos, team:b.x.pl.team };
+            const parts = []; if(b.gt >= 0.15) parts.push('+' + b.gt.toFixed(1) + ' tgt/g'); if(b.gc >= 0.5) parts.push('+' + b.gc.toFixed(1) + ' car/g');
+            return `<div class="usage-who inj-ben">${avatarHtml(bp)}<div><div class="nm">${bp.name} ${starHtml(bp)}</div><div class="sub">${bp.pos} · ${bp.team}</div></div><div class="inj-gain">${parts.join(' · ')}</div></div>`;
+          }).join('') : '<div class="sub">No clear single beneficiary — the work spreads thin.</div>')
+        : '<div class="sub">Already out several games, so his teammates\' recent usage already reflects it.</div>';
+      return `<div class="inj-card"><div class="inj-head">${avatarHtml(p)}
+        <div class="who"><div class="nm">${p.name} ${starHtml(p)} ${injBadge(o.sp.inj)}</div>
+          <div class="sub">${p.pos} · ${p.team}${o.sp.part ? ' · ' + o.sp.part : ''} · ${opp}</div><div class="sub">${status}</div></div>
+        <div class="inj-vac"><div><b>${(r.tShare*100).toFixed(0)}%</b> of team targets</div><div><b>${(r.cShare*100).toFixed(0)}%</b> of team carries</div></div></div>
+        <div class="inj-bens-title">${showBens ? 'WHO GETS HIS WORK (estimate)' : 'LONGER-TERM ABSENCE'}</div>${bens}</div>`;
+    };
+    let html = '';
+    html += '<div class="panel-title" style="margin-top:6px"><h2>NEW &amp; RECENT</h2><div class="rule"></div><span class="tag">' + fresh.length + ' players</span></div>';
+    html += fresh.length ? '<div class="inj-grid">' + fresh.slice(0, 30).map(o=> card(o, true)).join('') + '</div>' : '<div class="empty">No injured players with a real role right now.</div>';
+    if(older.length){
+      html += '<div class="panel-title" style="margin-top:22px"><h2>OUT LONGER</h2><div class="rule"></div><span class="tag">' + older.length + ' players</span></div>';
+      html += '<div class="inj-grid">' + older.slice(0, 20).map(o=> card(o, false)).join('') + '</div>';
+    }
+    box.innerHTML = html;
+    $('#inj-tag').textContent = 'free data · status from Sleeper · shares from the last 4 games he played';
+  }
+  wireTab({ view:'injuries', btn:'#inj-load-btn', res:'#inj-results', needPbp:false, name:'Injuries', render:renderInjuries, controls:['#inj-q'] });
+
+  /* ---- WEATHER (free Open-Meteo forecast at each game's kickoff hour) ---- */
+  let wxDone = false;
+  function wxImpact(w){
+    const tags = []; let level = 0;
+    if(w.wind >= 20 || w.gust >= 30){ tags.push('STRONG WIND'); level = 2; }
+    else if(w.wind >= 15 || w.gust >= 25){ tags.push('WINDY'); level = Math.max(level, 1); }
+    if(w.snow >= 0.1){ tags.push('SNOW'); level = 2; }
+    else if(w.precip >= 0.25){ tags.push('HEAVY RAIN'); level = 2; }
+    else if(w.precip >= 0.05 || w.pprob >= 60){ tags.push('RAIN LIKELY'); level = Math.max(level, 1); }
+    if(w.temp <= 25){ tags.push('FREEZING'); level = Math.max(level, 1); }
+    else if(w.temp >= 92){ tags.push('HOT'); level = Math.max(level, 1); }
+    return { tags, level };
+  }
+  async function wxFor(g){
+    const st = STADIUMS[fixTeam(g.home)];
+    if(g.neutral || !st) return { kind:'unknown' };
+    if(st.dome) return { kind:'dome' };
+    const ko = new Date(g.date), d0 = new Date(ko.getTime() - 86400000), d1 = new Date(ko.getTime() + 86400000);
+    const iso = d=> d.toISOString().slice(0,10);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${st.lat}&longitude=${st.lon}&hourly=temperature_2m,wind_speed_10m,wind_gusts_10m,precipitation_probability,precipitation,snowfall&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=UTC&start_date=${iso(d0)}&end_date=${iso(d1)}`;
+    try{
+      const res = await fetch(url); if(!res.ok) return { kind:'error' };
+      const h = (await res.json()).hourly; if(!h || !h.time) return { kind:'error' };
+      const base = Math.floor(ko.getTime() / 3600000) * 3600000;
+      const idx = [0,1,2,3].map(i=> h.time.indexOf(new Date(base + i*3600000).toISOString().slice(0,13) + ':00')).filter(i=> i >= 0);
+      if(!idx.length) return { kind:'error' };
+      const mx = k=> Math.max(...idx.map(i=> +h[k][i] || 0)), sm = k=> idx.reduce((a,i)=> a + (+h[k][i] || 0), 0);
+      return { kind:'ok', temp:+h.temperature_2m[idx[0]], wind:mx('wind_speed_10m'), gust:mx('wind_gusts_10m'), pprob:mx('precipitation_probability'), precip:sm('precipitation'), snow:sm('snowfall') };
+    }catch(_){ return { kind:'error' }; }
+  }
+  async function loadWeather(){
+    const box = $('#wx-results'), btn = $('#wx-load-btn');
+    const events = window.gwWeekEvents || [];
+    if(!events.length){ box.innerHTML = '<div class="empty">The weekly schedule has not loaded yet. Give it a few seconds, then hit REFRESH.</div>'; return; }
+    box.innerHTML = '<div class="loading">Pulling kickoff forecasts…</div>';
+    const games = events.map(ev=>{
+      const comp = ev.competitions && ev.competitions[0]; if(!comp) return null;
+      const h = comp.competitors.find(c=> c.homeAway === 'home'), a = comp.competitors.find(c=> c.homeAway === 'away');
+      if(!h || !a) return null;
+      return { id:ev.id, date:ev.date, home:h.team.abbreviation, away:a.team.abbreviation, neutral:!!comp.neutralSite, venue:(comp.venue && comp.venue.fullName) || '' };
+    }).filter(Boolean).sort((a,b)=> new Date(a.date) - new Date(b.date));
+    const wx = await Promise.all(games.map(wxFor));
+    const items = games.map((g,i)=> ({ g, w: wx[i] }));
+    items.forEach(it=>{ it.imp = it.w.kind === 'ok' ? wxImpact(it.w) : { tags:[], level:0 }; });
+    const flagged = items.filter(it=> it.imp.level >= 1).sort((a,b)=> b.imp.level - a.imp.level);
+    const when = d=> new Date(d).toLocaleString('en-US', { weekday:'short', hour:'numeric', minute:'2-digit' });
+    const card = it=>{
+      const g = it.g, w = it.w;
+      let body;
+      if(w.kind === 'dome') body = '<div class="wx-note">Dome / roof — weather is not a factor.</div>';
+      else if(w.kind === 'unknown') body = '<div class="wx-note">Neutral-site game — stadium not mapped, check the local forecast.</div>';
+      else if(w.kind === 'error') body = '<div class="wx-note">Forecast unavailable right now.</div>';
+      else body = `<div class="wx-nums"><div><b>${Math.round(w.temp)}°F</b><span>TEMP</span></div><div><b>${Math.round(w.wind)}</b><span>WIND MPH${w.gust > w.wind + 4 ? ' (gusts ' + Math.round(w.gust) + ')' : ''}</span></div><div><b>${Math.round(w.pprob)}%</b><span>PRECIP CHANCE</span></div></div>` +
+        (it.imp.tags.length ? `<div class="wx-tags">${it.imp.tags.map(t=> `<span class="flag-badge ${it.imp.level >= 2 ? 'inj-out' : 'inj-q'}">${t}</span>`).join('')}</div><div class="wx-note">${it.imp.level >= 2 ? 'Likely to suppress passing and kicking. Lean run game and unders.' : 'Could trim passing a little. Worth a look before you lock a QB or WR prop.'}</div>` : '<div class="wx-note">Clean conditions.</div>');
+      return `<div class="wx-card lvl${it.imp.level}"><div class="wx-top"><div class="wx-teams">${logoImg(g.away)}${g.away} <span>@</span> ${logoImg(g.home)}${g.home}</div><div class="wx-when">${when(g.date)}</div></div>${body}</div>`;
+    };
+    box.innerHTML =
+      (flagged.length ? `<div class="gv-insight"><span style="color:var(--loss)">⚠ Weather games</span> — ${flagged.map(it=> `<b>${it.g.away}@${it.g.home}</b> ${it.imp.tags.join(' + ')}`).join(' · ')}</div>` : '<div class="gv-insight"><span style="color:var(--win)">✓</span> No game has weather that should move passing or kicking.</div>') +
+      '<div class="wx-grid">' + items.map(card).join('') + '</div>';
+    $('#wx-tag').textContent = 'free data · Open-Meteo forecast at kickoff · ' + games.length + ' games';
+    wxDone = true; gwFeedback(btn, true);
+  }
+  $('#wx-load-btn').addEventListener('click', loadWeather);
+  document.querySelector('nav.tabs button[data-view="weather"]').addEventListener('click', ()=>{ if(!wxDone) loadWeather(); });
+
+  /* ---- MODEL RECORD: honest weekly backtest of the Any TD board ---- */
+  const REC_STRATS = [
+    ['top10', 'VAULT TOP 10', pool=> pool.slice(0, 10)],
+    ['top25', 'VAULT TOP 25', pool=> pool.slice(0, 25)],
+    ['debt10', 'TD DEBT TOP 10', pool=> pool.filter(p=> p.tdDebt !== undefined && p.seasonGames >= 3 && p.xTD >= 1.0).sort((a,b)=> b.tdDebt - a.tdDebt).slice(0, 10)],
+    ['cheat', 'CHEAT CODE', pool=> pool.filter(p=> p.cheatCodeCount > 0).slice(0, 15)]
+  ];
+  let recData = null;
+  async function runRecord(){
+    const btn = $('#rec-load-btn'), box = $('#rec-results');
+    if(!(rawPlayers && pbpRows)){
+      box.innerHTML = '<div class="loading">Fetching the season and play-by-play data…</div>';
+      try{ await ensureVaultData(true); }
+      catch(err){ gwFeedback(btn, false); showError(box, err.message === 'NO_LICENSE' ? 'Unlock with a valid license key above first.' : 'Could not load the record (' + err.message + ').'); return; }
+    }
+    const maxWeek = weeksOfFilmAvailable(), start = +$('#rec-start').value || 3;
+    if(maxWeek < start){ box.innerHTML = '<div class="empty">Not enough weeks played yet. The backtest starts at week ' + start + '.</div>'; return; }
+    const saved = { rp:rawPlayers, aw:allWeekRows, pb:pbpRows, sch:window.gwSchedule, ppg:window.gwTeamPPG, dr:window.gwDefenseRank };
+    const weeks = [];
+    try{
+      for(let W = start; W <= maxWeek; W++){
+        box.innerHTML = `<div class="loading">Rescoring week ${W} of ${maxWeek} using only what was known before kickoff…</div>`;
+        await new Promise(r=> setTimeout(r, 15));
+        // everything the board is allowed to see: weeks BEFORE W only
+        const rp = {};
+        Object.values(saved.rp).forEach(pl=>{
+          const wk = pl.weeks.filter(w=> w.week < W); if(!wk.length) return;
+          rp[pl.id] = Object.assign({}, pl, { weeks:wk, team: wk[wk.length-1].team });
+        });
+        rawPlayers = rp; allWeekRows = saved.aw.filter(w=> w.week < W); pbpRows = saved.pb.filter(r=> r.week < W);
+        const sch = {}; saved.aw.filter(w=> w.week === W).forEach(w=>{ sch[w.team] = { opponent:w.opponent_team, home:null, venue:'' }; });
+        // scoring-environment proxy from prior play-by-play (touchdowns x 7 per game)
+        const gs = {}, tdf = {}, tda = {}, gsd = {};
+        pbpRows.forEach(r=>{
+          (gs[r.posteam] = gs[r.posteam] || new Set()).add(r.gameId); (gsd[r.defteam] = gsd[r.defteam] || new Set()).add(r.gameId);
+          if(r.rushTd || r.passTd){ tdf[r.posteam] = (tdf[r.posteam] || 0) + 1; tda[r.defteam] = (tda[r.defteam] || 0) + 1; }
+        });
+        const ppg = {}, dr = {};
+        Object.keys(gs).forEach(t=> ppg[t] = (tdf[t] || 0) * 7 / gs[t].size);
+        Object.keys(gsd).forEach(t=> dr[t] = { paPerGame:(tda[t] || 0) * 7 / gsd[t].size, rank:0 });
+        window.gwSchedule = sch; window.gwTeamPPG = ppg; window.gwDefenseRank = dr;
+        let list;
+        try{ list = computeCategoryScores('anytd', 'season'); }
+        finally { rawPlayers = saved.rp; allWeekRows = saved.aw; pbpRows = saved.pb; window.gwSchedule = saved.sch; window.gwTeamPPG = saved.ppg; window.gwDefenseRank = saved.dr; }
+        // what actually happened in week W
+        const actual = {};
+        Object.values(saved.rp).forEach(pl=>{ const w = pl.weeks.find(x=> x.week === W); if(w) actual[pl.id] = (w.rec_td + w.rush_td) > 0; });
+        const pool = list.filter(p=> p.seasonGames >= 2);
+        const played = pool.filter(p=> actual[p.id] !== undefined);
+        const row = { W, pool: played.length, base: played.filter(p=> actual[p.id]).length, strats:{} };
+        REC_STRATS.forEach(([k,,pick])=>{
+          const picks = pick(pool), pl = picks.filter(p=> actual[p.id] !== undefined);
+          row.strats[k] = { n: picks.length, played: pl.length, hits: pl.filter(p=> actual[p.id]).length,
+            picks: picks.map(p=> ({ p:{ id:p.id, name:p.name, pos:p.pos, team:p.team }, res: actual[p.id] === undefined ? 'DNP' : (actual[p.id] ? 'TD' : 'no') })) };
+        });
+        weeks.push(row);
+      }
+    }catch(err){
+      rawPlayers = saved.rp; allWeekRows = saved.aw; pbpRows = saved.pb; window.gwSchedule = saved.sch; window.gwTeamPPG = saved.ppg; window.gwDefenseRank = saved.dr;
+      gwFeedback(btn, false); showError(box, 'Backtest failed (' + err.message + ').'); return;
+    }
+    recData = weeks; renderRecord(); gwFeedback(btn, true);
+  }
+  function renderRecord(){
+    const box = $('#rec-results');
+    if(!recData){ box.innerHTML = '<div class="empty">Hit RUN to rescore every past week with only the information available before kickoff.</div>'; return; }
+    const tot = { pool:0, base:0 }; REC_STRATS.forEach(([k])=> tot[k] = { played:0, hits:0 });
+    recData.forEach(w=>{ tot.pool += w.pool; tot.base += w.base; REC_STRATS.forEach(([k])=>{ tot[k].played += w.strats[k].played; tot[k].hits += w.strats[k].hits; }); });
+    const baseRate = tot.pool ? tot.base / tot.pool : 0;
+    const card = ([k,label])=>{
+      const t = tot[k], rate = t.played ? t.hits / t.played : 0, lift = baseRate > 0 && t.played ? rate / baseRate : 0;
+      return `<div class="stat-card"><div class="lbl">${label}</div><div class="big">${t.played ? pct1(rate) : '—'}</div><div class="lbl">${t.hits} of ${t.played} scored${lift ? ' · ' + lift.toFixed(2) + 'x baseline' : ''}</div></div>`;
+    };
+    const cells = (w, k)=>{ const s = w.strats[k]; if(!s.played) return '<td>—</td>'; const r = s.hits / s.played, b = w.pool ? w.base / w.pool : 0; return `<td class="dvp-cell ${r > b + 0.05 ? 'hot' : (r < b - 0.05 ? 'cold' : '')}"><b>${s.hits}/${s.played}</b><small>${pct1(r)}</small></td>`; };
+    box.innerHTML =
+      `<div class="stat-cards"><div class="stat-card"><div class="lbl">EVERYONE ON THE BOARD (BASELINE)</div><div class="big">${pct1(baseRate)}</div><div class="lbl">${tot.base} of ${tot.pool} player-games scored</div></div>${REC_STRATS.map(card).join('')}</div>` +
+      `<div class="dvp-wrap"><table class="dvp"><thead><tr><th>WEEK</th><th>BOARD</th><th>BASELINE</th>${REC_STRATS.map(([,l])=> `<th style="cursor:default">${l}</th>`).join('')}</tr></thead><tbody>${recData.map(w=>
+        `<tr class="dvp-row rec-row" data-w="${w.W}"><td><b>WK ${w.W}</b></td><td>${w.pool}</td><td>${w.pool ? pct1(w.base / w.pool) : '—'}</td>${REC_STRATS.map(([k])=> cells(w, k)).join('')}</tr>`).join('')}</tbody></table></div>`;
+    box.querySelectorAll('tr.rec-row').forEach(tr=> tr.addEventListener('click', ()=>{
+      const next = tr.nextElementSibling, was = next && next.classList.contains('dvp-detail');
+      box.querySelectorAll('tr.dvp-detail').forEach(d=> d.remove()); box.querySelectorAll('tr.rec-row.open').forEach(r=> r.classList.remove('open'));
+      if(was) return;
+      const w = recData.find(x=> x.W === +tr.dataset.w);
+      const list = w.strats.top10.picks.map(pk=> `<div class="rec-pick ${pk.res}"><span>${pk.res === 'TD' ? '✓' : (pk.res === 'DNP' ? '–' : '✗')}</span> ${pk.p.name} <em>${pk.p.pos} · ${pk.p.team}</em></div>`).join('');
+      const d = document.createElement('tr'); d.className = 'dvp-detail';
+      d.innerHTML = `<td colspan="${3 + REC_STRATS.length}"><div class="dvp-detail-in"><div class="sub" style="margin-bottom:8px;color:var(--text-dim);font-size:.7rem;">Week ${w.W} Vault top 10, scored from weeks 1–${w.W - 1} only. ✓ scored a rushing or receiving TD, ✗ did not, – did not play.</div><div class="rec-picks">${list}</div></div></td>`;
+      tr.after(d); tr.classList.add('open');
+    }));
+    $('#rec-tag').textContent = 'premium · Any TD board · weeks ' + recData[0].W + '–' + recData[recData.length-1].W;
+  }
+  $('#rec-load-btn').addEventListener('click', runRecord);
+  document.querySelector('nav.tabs button[data-view="record"]').addEventListener('click', renderRecord);
 
   /* ---- PARLAY ENGINE ---- */
   function renderParlays(){
