@@ -354,16 +354,35 @@
   /* Player-card rows: headshot + chips + score pill */
   .edge-row.card-row{ grid-template-columns:2em 82px 1fr auto auto; gap:14px; }
   .avatar{ position:relative; width:80px; height:80px; flex:none; }
-  .avatar .ph{ width:80px; height:80px; object-view-box:inset(0 12% 26% 12%); box-sizing:border-box; image-rendering:auto; transform:translateZ(0); border-radius:50%; background:#0d0b1a; border:2px solid var(--cyan); object-fit:cover; object-position:50% 18%; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.8rem; color:var(--cyan); overflow:hidden; }
+  /* The circle is a clipping wrapper; the photo inside is sized by layout (not transform / object-view-box)
+     so the browser resamples it cleanly. ESPN's 350x254 shot is enlarged to 170% so the face fills the circle. */
+  .avatar .circ{ position:relative; width:100%; height:100%; box-sizing:border-box; border-radius:50%; border:2px solid var(--cyan); background:#0d0b1a; overflow:hidden; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:.9rem; color:var(--cyan); }
+  .avatar .circ img{ position:absolute; top:0; left:-35%; width:170%; max-width:none; height:auto; }
+  .avatar .circ img.fb{ left:0; top:0; width:100%; height:100%; object-fit:cover; object-position:50% 15%; }
   .avatar .tm{ position:absolute; right:-8px; bottom:-4px; z-index:1; background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-display); font-size:.5rem; line-height:1; padding:2px 3px; border-radius:3px; }
-  .avatar.lg, .avatar.lg .ph{ width:96px; height:96px; }
+  .avatar.lg{ width:96px; height:96px; }
   .chips{ display:flex; gap:5px; flex-wrap:wrap; margin-top:3px; }
   .chip{ font-family:var(--font-display); font-size:.58rem; letter-spacing:.05em; padding:1px 6px; border-radius:999px; border:1px solid var(--grid-line); color:var(--text-mid); }
   .chip.pos{ color:var(--cyan); border-color:rgba(0,240,255,.4); }
   .edge-row.card-row .score{ display:inline-block; min-width:0; padding:2px 10px; border-radius:999px; background:rgba(0,255,150,.12); border:1px solid var(--win); color:var(--win); font-size:1rem; }
   .edge-row.card-row > div:last-child{ text-align:right; }
   .edge-row .badges{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
-  @media (max-width:560px){ .edge-row.card-row .avatar, .edge-row.card-row .avatar .ph{ width:56px; height:56px; } .edge-row.card-row{ grid-template-columns:1.6em 58px 1fr auto; } .edge-row.card-row .badges{ display:none; } }
+  @media (max-width:640px){
+    .edge-row.card-row .avatar{ width:60px; height:60px; }
+    .edge-row.card-row{ grid-template-columns:1.5em 62px 1fr auto; gap:8px 10px; padding:10px 6px; }
+    .edge-row.card-row > :nth-child(5){ grid-column:4; grid-row:1; }
+    .edge-row.card-row > :nth-child(4){ grid-column:2 / -1; grid-row:2; }
+    .edge-row.card-row .badges{ flex-direction:row; flex-wrap:wrap; align-items:flex-start; justify-content:flex-start; }
+    .edge-row.card-row .badges:empty{ display:none; }
+    .avatar.lg{ width:72px; height:72px; }
+    main{ padding:16px 10px 60px; }
+    .edge-detail-card{ padding:12px; }
+    details.gw-sec > .gw-sec-body{ padding:2px 8px 10px; }
+    nav.tabs{ flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; padding:6px 8px; gap:0; scrollbar-width:none; }
+    nav.tabs::-webkit-scrollbar{ display:none; }
+    nav.tabs button{ flex:none; white-space:nowrap; padding:.6em .85em; font-size:.7rem; letter-spacing:.05em; }
+    .license-bar{ margin:10px 8px 0; padding:10px; }
+  }
   /* Collapsible framed detail sections */
   details.gw-sec{ margin-top:12px; border:1px solid var(--grid-line); border-radius:6px; background:rgba(13,11,26,.55); }
   details.gw-sec > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:9px 12px; font-family:var(--font-display); font-size:.7rem; letter-spacing:.08em; color:var(--text-hi); user-select:none; }
@@ -392,7 +411,7 @@
   tr.dvp-detail > td{ text-align:left !important; white-space:normal; padding:10px 12px 14px; background:rgba(13,11,26,.5); }
   .dvp-faces{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:10px; }
   .dvp-face{ display:flex; align-items:center; gap:12px; border:1px solid var(--grid-line); border-radius:8px; padding:10px; }
-  .dvp-face .avatar, .dvp-face .avatar .ph{ width:56px; height:56px; }
+  .dvp-face .avatar{ width:56px; height:56px; }
   .dvp-face .nm{ color:var(--text-hi); font-weight:700; font-size:.8rem; }
   .dvp-face .sub{ color:var(--text-dim); font-size:.66rem; margin-top:2px; }
   .dvp-face .rk{ font-family:var(--font-display); font-size:.62rem; margin-top:4px; }
@@ -1119,7 +1138,7 @@
   const SLEEPER_PLAYERS  = 'https://api.sleeper.app/v1/players/nfl';
   const SLEEPER_TREND_ADD  = 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=15';
   const SLEEPER_TREND_DROP = 'https://api.sleeper.app/v1/players/nfl/trending/drop?lookback_hours=24&limit=15';
-  const CACHE_KEY = 'gridwave_sleeper_players_v3'; // v3: now carries espn_id (headshots)
+  const CACHE_KEY = 'gridwave_sleeper_players_v4'; // v4: trimmed to rostered/popular players, carries espn_id
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let playersMap = null;
@@ -1146,6 +1165,9 @@
       Object.keys(raw).forEach(id=>{
         const p = raw[id];
         if(!p || !p.full_name) return;
+        // Sleeper's file lists ~20k players, mostly retired. Keep rostered players and popular free agents so the
+        // cache fits phone storage (the full list blew the quota, forcing a re-download on every visit).
+        if(!p.team && !(p.search_rank && p.search_rank <= 1500)) return;
         trimmed[id] = { name: p.full_name, team: p.team, pos: p.position, status: p.status };
         if(p.espn_id) trimmed[id].espn = String(p.espn_id);
         if(p.injury_status){ trimmed[id].inj = p.injury_status; if(p.injury_body_part) trimmed[id].part = p.injury_body_part; }
@@ -1918,28 +1940,26 @@
     const raw = (typeof rawPlayers !== 'undefined' && rawPlayers) ? rawPlayers[p.id] : null;
     const url = raw && raw.headshot ? raw.headshot : '';
     const ini = initialsOf(p.name);
-    // Source order: (1) ESPN combiner, server-resampled to ~2x the displayed size so the browser never
-    // has to shrink a big photo (that downscale is what looks soft); (2) ESPN's plain 350px file;
-    // (3) nflverse's NFL.com photo; (4) initials. gwImgErr walks this list on each load error.
+    // Source order: (1) ESPN's plain 350x254 headshot (the one that renders sharp); (2) NFL.com's photo
+    // resized small, so a phone isn't pulling 25 full-size originals; (3) NFL.com's original; (4) initials.
+    // gwImgErr walks the list on each load error.
     const espn = espnIdFor(p.name, p.pos, p.team);
     const srcs = [];
-    if(espn){
-      const h = large ? 192 : 160, w = Math.round(h * 1.378);
-      const file = `/i/headshots/nfl/players/full/${espn}.png`;
-      srcs.push(`https://a.espncdn.com/combiner/i?img=${file}&w=${w}&h=${h}`);
-      srcs.push(`https://a.espncdn.com/i${file.slice(2)}`);
+    if(espn) srcs.push(`https://a.espncdn.com/i/headshots/nfl/players/full/${espn}.png`);
+    if(url){
+      srcs.push(url.replace('/upload/f_auto,q_auto/', '/upload/f_auto,q_auto,w_240,c_limit/'));
+      srcs.push(url);
     }
-    if(url) srcs.push(url);
-    const img = srcs.length
-      ? `<img class="ph" src="${srcs[0]}" data-fb="${srcs.slice(1).join('|')}" data-ini="${ini}" alt="" decoding="async" onerror="gwImgErr(this)">`
-      : `<div class="ph">${ini}</div>`;
-    return `<div class="avatar${large?' lg':''}">${img}<span class="tm">${p.team}</span></div>`;
+    const first = srcs[0];
+    const inner = first
+      ? `<img ${espn ? '' : 'class="fb" '}src="${first}" data-fb="${srcs.slice(1).filter(u=>u!==first).join('|')}" data-ini="${ini}" alt="" loading="lazy" decoding="async" onerror="gwImgErr(this)">`
+      : ini;
+    return `<div class="avatar${large?' lg':''}"><div class="circ">${inner}</div><span class="tm">${p.team}</span></div>`;
   }
   window.gwImgErr = function(img){
     const rest = (img.dataset.fb || '').split('|').filter(Boolean);
-    if(rest.length){ img.dataset.fb = rest.slice(1).join('|'); img.src = rest[0]; return; }
-    const d = document.createElement('div'); d.className = 'ph'; d.textContent = img.dataset.ini || '?';
-    img.replaceWith(d);
+    if(rest.length){ img.classList.add('fb'); img.dataset.fb = rest.slice(1).join('|'); img.src = rest[0]; return; }
+    const c = img.parentElement; if(c) c.textContent = img.dataset.ini || '?';
   };
   // One shared card-row builder for Rankings and Game Vault
   function cardRowHtml(p, rank, scoreText, flagPart, extraMeta){
