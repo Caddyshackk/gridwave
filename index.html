@@ -392,6 +392,15 @@
   details.gw-sec > summary .tag{ font-size:.58rem; color:var(--text-dim); letter-spacing:0; }
   details.gw-sec > .gw-sec-body{ padding:2px 12px 12px; }
   .edge-detail-head{ display:flex; gap:12px; align-items:center; }
+  table.dvp.usage th:nth-child(2), table.dvp.usage td:nth-child(2){ text-align:right; }
+  .usage-who{ display:flex; align-items:center; gap:12px; }
+  .usage-who .avatar{ width:48px; height:48px; flex:none; }
+  .usage-who .nm{ color:var(--text-hi); font-weight:700; font-size:.8rem; }
+  .usage-who .sub{ color:var(--text-dim); font-size:.64rem; margin-top:2px; }
+  .usage-spark{ display:block; }
+  #usage-movers{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+  .edge-row.card-row .score.neg{ background:rgba(255,35,88,.12); border-color:var(--loss); color:var(--loss); }
+  .tdd-zone-note{ font-size:.7rem; color:var(--text-dim); margin:8px 0 4px; }
   .dvp-wrap{ overflow-x:auto; border:1px solid var(--grid-line); border-radius:8px; }
   table.dvp{ width:100%; border-collapse:collapse; font-size:.74rem; min-width:860px; }
   table.dvp th{ position:sticky; top:0; background:var(--bg-panel); color:var(--text-dim); font-family:var(--font-display); font-size:.6rem; letter-spacing:.05em; text-align:right; padding:9px 8px; cursor:pointer; white-space:nowrap; border-bottom:1px solid var(--grid-line); user-select:none; }
@@ -583,6 +592,8 @@
   <button data-view="teams" class="active">TEAMS</button>
   <button data-view="edge">VAULT</button>
   <button data-view="matchups">MATCHUPS</button>
+  <button data-view="usage">USAGE</button>
+  <button data-view="tddebt">TD DEBT</button>
   <button data-view="players">PLAYERS</button>
   <button data-view="markets">MARKETS</button>
   <button data-view="metrics">METRICS</button>
@@ -673,6 +684,44 @@
       <button class="action" id="dvp-load-btn">LOAD</button>
     </div>
     <div id="dvp-results"><div class="empty">Unlock with a license key above, then hit LOAD.</div></div>
+  </section>
+
+  <!-- USAGE -->
+  <section id="view-usage" class="view">
+    <div class="panel-title"><h2>USAGE TRENDS</h2><div class="rule"></div><span class="tag" id="usage-tag">premium · who is gaining or losing opportunity</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Each player's share of his team's opportunity, this season versus his last 3 games played. A rising share usually shows up in the box score a week or two later.
+      <span style="color:var(--win)">Green</span> = share up 5+ points, <span style="color:var(--loss)">red</span> = down 5+. Click a column to sort.
+    </div>
+    <div class="search-row">
+      <select id="usage-pos" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
+        <option value="WR">WIDE RECEIVERS</option>
+        <option value="TE">TIGHT ENDS</option>
+        <option value="RB">RUNNING BACKS</option>
+      </select>
+      <button class="action" id="usage-load-btn">LOAD</button>
+      <label class="inj-toggle"><input type="checkbox" id="usage-hide" checked> HIDE OUT / IR / DOUBTFUL</label>
+    </div>
+    <div id="usage-movers"></div>
+    <div id="usage-results"><div class="empty">Unlock with a license key above, then hit LOAD.</div></div>
+  </section>
+
+  <!-- TD DEBT -->
+  <section id="view-tddebt" class="view">
+    <div class="panel-title"><h2>TD DEBT BOARD</h2><div class="rule"></div><span class="tag" id="tdd-tag">premium · expected TDs vs TDs scored</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Every touch is priced by where it happened. <b>TD Debt</b> = expected TDs minus TDs actually scored. Big positive: the ball keeps finding him in scoring spots and the TDs are due.
+      Big negative: he has scored more than his touches support, so expect regression. Click a player for the zone-by-zone breakdown.
+    </div>
+    <div class="search-row">
+      <select id="tdd-scope" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
+        <option value="season">SEASON</option>
+        <option value="last3">LAST 3 GAMES</option>
+      </select>
+      <button class="action" id="tdd-load-btn">LOAD</button>
+      <label class="inj-toggle"><input type="checkbox" id="tdd-hide" checked> HIDE OUT / IR / DOUBTFUL</label>
+    </div>
+    <div id="tdd-results"><div class="empty">Unlock with a license key above, then hit LOAD. This one needs the play-by-play file, so the first load takes a moment.</div></div>
   </section>
 
   <!-- PLAYERS -->
@@ -775,6 +824,29 @@
           <li><span style="color:var(--win)">Green</span> = top 8 most generous, <span style="color:var(--loss)">red</span> = bottom 8 (stingiest). Click any header to sort.</li>
           <li>Click a defense to see this week's opposing QB, lead back, top two wideouts and top tight end, each with how that defense ranks against his role.</li>
           <li>Roles are inferred from usage, same as the game insights.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Usage tab</h3>
+        <p>Who is gaining or losing opportunity on their team.</p>
+        <ul>
+          <li><b>Target share</b> (WR, TE) = his targets divided by his team's targets in each game. <b>Touch share</b> (RB) = his carries plus targets divided by the team's.</li>
+          <li><b>Season</b> is the average across all his games. <b>Last 3</b> is his last three games played.</li>
+          <li><b>Change</b> = last 3 minus season, in percentage points. Green is up 5+, red is down 5+.</li>
+          <li>The trend line is his share game by game, ending at the yellow dot. Players need 3+ games and a minimum number of targets (15) or touches (40) to appear.</li>
+          <li>The Rising and Falling strips above the table show the five biggest movers each way.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>TD Debt tab</h3>
+        <p>The Cheat Code math as a ranked board instead of a per-player panel.</p>
+        <ul>
+          <li><b>Due for TDs</b>: the 15 players with the most expected TDs above TDs scored. <b>Regression risk</b>: the 15 who have scored furthest above what their touches support.</li>
+          <li>Players need 3+ games and at least 1.0 expected TDs. Switch between the full season and the last 3 games.</li>
+          <li>Click a player for his zone table (goal line, red zone, fringe, open field).</li>
+          <li>Needs the play-by-play file, so the first load is slower than the other tabs.</li>
         </ul>
       </div>
 
@@ -2532,6 +2604,164 @@
   $('#dvp-window').addEventListener('change', ()=>{ if(rawPlayers) renderDvp(); });
   // If the Vault already pulled the data this session, show the table as soon as the tab opens
   document.querySelector('nav.tabs button[data-view="matchups"]').addEventListener('click', ()=>{ if(rawPlayers) renderDvp(); });
+
+  /* ---- shared loader for the Usage and TD Debt tabs ---- */
+  async function ensureVaultData(needPbp){
+    if(!rawPlayers) rawPlayers = await loadRawPlayers();
+    try{ await loadPlayers(); buildInjuryIndex(); }catch(_){ /* injuries/photos just won't show */ }
+    if(needPbp && !pbpRows) pbpRows = await loadPBP();
+  }
+  const flagOut = (name, pos, team)=>{ const sp = injuryFor(name, pos, team); return !!(sp && sp.inj && OUT_STATUSES.includes(sp.inj)); };
+
+  /* ---- USAGE TAB ---- */
+  let usageSort = { key:'delta', asc:false };
+
+  function sparkSvg(vals){
+    const w = 84, h = 26, n = vals.length, max = Math.max(...vals, 0.01);
+    const pt = (v,i)=> [ n > 1 ? i/(n-1)*(w-6)+3 : w/2, h - 3 - (v/max)*(h-6) ];
+    const pts = vals.map((v,i)=> pt(v,i).map(x=> x.toFixed(1)).join(',')).join(' ');
+    const [lx, ly] = pt(vals[n-1], n-1);
+    return `<svg class="usage-spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" style="stroke:var(--cyan)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.4" style="fill:var(--amber)"/></svg>`;
+  }
+
+  function buildUsageRows(pos){
+    // team-week totals of targets and carries = the denominator for every share
+    const tt = {};
+    Object.values(rawPlayers).forEach(pl=> pl.weeks.forEach(w=>{
+      const t = tt[w.team + '|' + w.week] || (tt[w.team + '|' + w.week] = { tgt:0, car:0 });
+      t.tgt += w.targets; t.car += w.carries;
+    }));
+    const mean = a=> a.reduce((s,v)=> s+v, 0) / a.length;
+    const rows = [];
+    Object.values(rawPlayers).forEach(pl=>{
+      if(pl.pos !== pos || pl.weeks.length < 3) return;
+      const tgt = pl.weeks.reduce((a,w)=> a + w.targets, 0), car = pl.weeks.reduce((a,w)=> a + w.carries, 0);
+      if(pos === 'RB' ? (tgt + car) < 40 : tgt < 15) return; // too small a sample to read
+      const shareOf = w=>{
+        const t = tt[w.team + '|' + w.week]; if(!t) return 0;
+        if(pos === 'RB'){ const d = t.tgt + t.car; return d ? (w.targets + w.carries) / d : 0; }
+        return t.tgt ? w.targets / t.tgt : 0;
+      };
+      const vals = pl.weeks.map(shareOf);
+      const season = mean(vals), last3 = mean(vals.slice(-3));
+      rows.push({ pl, gp: pl.weeks.length, season, last3, delta: last3 - season, tpg: tgt / pl.weeks.length, cpg: car / pl.weeks.length, spark: vals });
+    });
+    return rows;
+  }
+
+  function renderUsage(){
+    const container = $('#usage-results');
+    if(!rawPlayers){ container.innerHTML = '<div class="empty">Hit LOAD to pull the season data.</div>'; return; }
+    const pos = $('#usage-pos').value;
+    const label = pos === 'RB' ? 'TOUCH SHARE' : 'TARGET SHARE';
+    let rows = buildUsageRows(pos);
+    if($('#usage-hide').checked) rows = rows.filter(r=> !flagOut(r.pl.name, r.pl.pos, r.pl.team));
+    if(!rows.length){ container.innerHTML = '<div class="empty">No players with enough games yet.</div>'; $('#usage-movers').innerHTML = ''; return; }
+
+    const byDelta = rows.slice().sort((a,b)=> b.delta - a.delta);
+    const pp = d=> (d >= 0 ? '+' : '') + (d*100).toFixed(1);
+    const chips = (arr)=> arr.map(r=> `<b>${r.pl.name}</b> ${pp(r.delta)}`).join(' · ');
+    $('#usage-movers').innerHTML =
+      `<div class="gv-insight"><span style="color:var(--win)">▲ Rising</span> — ${chips(byDelta.slice(0,5))}</div>` +
+      `<div class="gv-insight"><span style="color:var(--loss)">▼ Falling</span> — ${chips(byDelta.slice(-5).reverse())}</div>`;
+
+    const val = { name: r=> r.pl.name, gp: r=> r.gp, season: r=> r.season, last3: r=> r.last3, delta: r=> r.delta, tpg: r=> r.tpg, cpg: r=> r.cpg };
+    rows.sort((a,b)=>{
+      const f = val[usageSort.key];
+      const x = f(a), y = f(b);
+      const c = typeof x === 'string' ? x.localeCompare(y) : x - y;
+      return (usageSort.asc ? c : -c) || a.pl.name.localeCompare(b.pl.name);
+    });
+    const cols = [['name','PLAYER'],['gp','GP'],['season',label + ' · SEASON'],['last3','LAST 3'],['delta','CHANGE'],['tpg','TGT/G'],['cpg','CAR/G']];
+    const head = cols.map(([k,l])=> `<th data-k="${k}" class="${usageSort.key===k?'sorted':''}">${l}${usageSort.key===k?(usageSort.asc?' ▲':' ▼'):''}</th>`).join('') + '<th style="cursor:default">TREND</th>';
+    const body = rows.map(r=>{
+      const d = r.delta, cls = d >= 0.05 ? 'hot' : (d <= -0.05 ? 'cold' : '');
+      const p = { id:r.pl.id, name:r.pl.name, pos:r.pl.pos, team:r.pl.team };
+      const sp = injuryFor(p.name, p.pos, p.team);
+      return `<tr><td><div class="usage-who">${avatarHtml(p)}<div><div class="nm">${p.name} ${sp && sp.inj ? injBadge(sp.inj) : ''}</div><div class="sub">${p.pos} · ${p.team}</div></div></div></td>
+        <td>${r.gp}</td><td>${(r.season*100).toFixed(1)}%</td><td>${(r.last3*100).toFixed(1)}%</td>
+        <td class="dvp-cell ${cls}"><b>${d >= 0.005 ? '▲' : (d <= -0.005 ? '▼' : '')} ${pp(d)}</b></td>
+        <td>${r.tpg.toFixed(1)}</td><td>${r.cpg.toFixed(1)}</td><td>${sparkSvg(r.spark)}</td></tr>`;
+    }).join('');
+    container.innerHTML = `<div class="dvp-wrap"><table class="dvp usage"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    container.querySelectorAll('th[data-k]').forEach(th=> th.addEventListener('click', ()=>{
+      const k = th.dataset.k;
+      usageSort = { key:k, asc: usageSort.key === k ? !usageSort.asc : (k === 'name') };
+      renderUsage();
+    }));
+    $('#usage-tag').textContent = `premium · ${label.toLowerCase()} · last 3 games played vs season`;
+  }
+
+  async function loadUsage(){
+    const btn = $('#usage-load-btn'), container = $('#usage-results');
+    if(!rawPlayers){
+      container.innerHTML = '<div class="loading">Fetching the season\'s data…</div>';
+      try{ await ensureVaultData(false); }
+      catch(err){ gwFeedback(btn, false); showError(container, err.message === 'NO_LICENSE' ? 'Unlock with a valid license key above first.' : 'Could not load usage (' + err.message + ').'); return; }
+    }
+    renderUsage(); gwFeedback(btn, true);
+  }
+  $('#usage-load-btn').addEventListener('click', loadUsage);
+  $('#usage-pos').addEventListener('change', ()=>{ if(rawPlayers){ usageSort = { key:'delta', asc:false }; renderUsage(); } });
+  $('#usage-hide').addEventListener('change', ()=>{ if(rawPlayers) renderUsage(); });
+  document.querySelector('nav.tabs button[data-view="usage"]').addEventListener('click', ()=>{ if(rawPlayers) renderUsage(); });
+
+  /* ---- TD DEBT TAB ---- */
+  function tddRowHtml(p, rank){
+    const sched = window.gwSchedule && window.gwSchedule[p.team];
+    const opp = sched ? `<span class="chip">${sched.home ? 'vs' : '@'} ${sched.opponent}</span>` : '';
+    const neg = p.tdDebt < 0;
+    return `
+      <div class="rank">#${rank}</div>
+      ${avatarHtml(p)}
+      <div class="who"><div class="name">${p.name}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${opp}</div>
+        <div class="reason-line" style="${neg ? 'color:var(--loss)' : ''}">${p.xTD.toFixed(1)} expected · ${p.tdScored} scored · ${p.seasonGames} gm</div></div>
+      <div class="badges">${injBadge(p.injStatus)}${cheatCodeBadge(p)}</div>
+      <div><div class="score ${neg ? 'neg' : ''}">${neg ? '' : '+'}${p.tdDebt.toFixed(1)}</div><div class="form-stat">TD DEBT</div></div>`;
+  }
+  function tddZoneHtml(p){
+    return `<div class="edge-detail-card"><h3>${p.name} — where the touches happened</h3>
+      <div class="sub">${p.team} · ${p.pos} · ${p.xTD.toFixed(1)} expected TDs · ${p.tdScored} scored</div>
+      <table class="zone-table"><thead><tr><th>ZONE</th><th style="text-align:right">CARRIES</th><th style="text-align:right">TARGETS</th><th style="text-align:right">xTD</th></tr></thead>
+        <tbody>${p.zoneBreakdown.map(z=> `<tr><td>${z.label}</td><td class="num">${z.carries || '—'}</td><td class="num">${z.targets || '—'}</td><td class="num pos">${z.xtd.toFixed(2)}</td></tr>`).join('')}</tbody></table>
+      <div class="tdd-zone-note">Each touch is priced at the league's real TD rate from that spot on the field.</div></div>`;
+  }
+  function renderTdDebt(){
+    const container = $('#tdd-results');
+    if(!rawPlayers || !pbpRows){ container.innerHTML = '<div class="empty">Hit LOAD to pull the season and play-by-play data.</div>'; return; }
+    const scope = $('#tdd-scope').value;
+    let list = computeCategoryScores('anytd', scope).filter(p=> p.tdDebt !== undefined && p.seasonGames >= 3 && p.xTD >= 1.0);
+    if($('#tdd-hide').checked) list = list.filter(p=> !isOut(p));
+    if(!list.length){ container.innerHTML = '<div class="empty">No qualifying players yet.</div>'; return; }
+    const due = list.slice().sort((a,b)=> b.tdDebt - a.tdDebt).slice(0, 15);
+    const reg = list.slice().sort((a,b)=> a.tdDebt - b.tdDebt).slice(0, 15);
+    container.innerHTML = '';
+    const section = (title, tag, arr)=>{
+      const t = el('div','panel-title', `<h2>${title}</h2><div class="rule"></div><span class="tag">${tag}</span>`);
+      t.style.marginTop = '18px'; container.appendChild(t);
+      arr.forEach((p,i)=>{
+        const row = el('div','edge-row card-row'); row.innerHTML = tddRowHtml(p, i+1);
+        row.addEventListener('click', ()=> toggleInline(row, b=>{ b.innerHTML = tddZoneHtml(p); }));
+        container.appendChild(row);
+      });
+    };
+    section('DUE FOR TDS', 'expected TDs well above TDs scored', due);
+    section('REGRESSION RISK', 'scored well above what his touches support', reg);
+    $('#tdd-tag').textContent = 'premium · ' + (scope === 'last3' ? 'last 3 games' : 'season') + ' · expected TDs minus TDs scored';
+  }
+  async function loadTdDebt(){
+    const btn = $('#tdd-load-btn'), container = $('#tdd-results');
+    if(!rawPlayers || !pbpRows){
+      container.innerHTML = '<div class="loading">Fetching the season and play-by-play data (the play-by-play file is big, give it a moment)…</div>';
+      try{ await ensureVaultData(true); }
+      catch(err){ gwFeedback(btn, false); showError(container, err.message === 'NO_LICENSE' ? 'Unlock with a valid license key above first.' : 'Could not load TD Debt (' + err.message + ').'); return; }
+    }
+    renderTdDebt(); gwFeedback(btn, true);
+  }
+  $('#tdd-load-btn').addEventListener('click', loadTdDebt);
+  $('#tdd-scope').addEventListener('change', ()=>{ clearDetails(); if(rawPlayers && pbpRows) renderTdDebt(); });
+  $('#tdd-hide').addEventListener('change', ()=>{ clearDetails(); if(rawPlayers && pbpRows) renderTdDebt(); });
+  document.querySelector('nav.tabs button[data-view="tddebt"]').addEventListener('click', ()=>{ clearDetails(); if(rawPlayers && pbpRows) renderTdDebt(); });
 
   /* ---- PARLAY ENGINE ---- */
   function renderParlays(){
