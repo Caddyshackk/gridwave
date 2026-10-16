@@ -939,13 +939,37 @@
     <div class="metric-grid">
       <div class="metric-card">
         <h3>VAULT Score</h3>
-        <p>The 0–100 number on every card. It ranks a player against everyone at the same positions for the prop category you picked.</p>
-        <div class="metric-formula">score = average of the 4 component percentiles</div>
+        <p>The 0–100 number on every card. <b>Any TD</b> is built from a touchdown probability (see the next card). Every other category ranks a player against everyone at the same positions.</p>
+        <div class="metric-formula">Any TD: score = 1.3 × TD% + 2 per tag + 2 if DUE (max 99.9)<br>Other categories: score = average of the 4 component percentiles</div>
         <ul>
-          <li>Each category has its own 4 components (listed below), all weighted equally at 25%.</li>
-          <li>A component is a percentile: 90 means better than 90% of comparable players.</li>
+          <li>Each category has its own 4 components (listed below). Outside Any TD they're weighted equally at 25%.</li>
+          <li>A component bar is a percentile: 90 means better than 90% of comparable players. The number beside it is the raw stat, e.g. "53.2% · 92nd pctl".</li>
           <li><b>Season</b> uses every game played. <b>Last 3</b> uses only the most recent three.</li>
-          <li>Before every team has 3 weeks of film, boards switch to a per-game <b>Matchups</b> view and each game's top score is re-scaled to 100.</li>
+          <li>Before every team has 3 weeks of film, boards switch to a per-game <b>Matchups</b> view and each game's top score is re-scaled to 100 (except Any TD, which is already on a probability scale).</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Any TD probability</h3>
+        <p>The "% TD" on every Any TD card is the model's chance he scores a rushing or receiving TD <b>this week</b>.</p>
+        <div class="metric-formula">expected TDs = usage × game script × matchup<br>TD% = 1 − e<sup>−expected TDs</sup></div>
+        <ul>
+          <li><b>Usage</b>: expected TDs per game from where his touches happen (priced by field zone), blended 75/25 with his actual TDs per game and pulled toward the average for his role so a 2-game hot streak can't run away with it.</li>
+          <li><b>Game script</b>: his team's Vegas implied points ÷ the league average (falls back to points per game when no line is posted).</li>
+          <li><b>Matchup</b>: TDs this defense allows to his role (lead back, WR1, TE1…), pulled toward league average.</li>
+          <li>Backtested on 2026 games before launch. The Model Record tab shows how it's doing week by week.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Any TD tags</h3>
+        <p>Five checks shown on every Any TD card (lit = fired, struck through = didn't). Each one that fires adds 2 to the score. "Why the tags fired" shows the numbers.</p>
+        <ul>
+          <li><b>RZ SHARE TOP 10</b>: his share of his team's inside-20 touches ranks top 10 at his position.</li>
+          <li><b>FAVORED</b>: his team is favored by the spread.</li>
+          <li><b>LIGHT BOX DIET</b> (RBs): at least 5 points more of his carries came against 6 or fewer defenders in the box than the league average. <b>TARGET HOG</b> (WR/TE): target share of 22%+ (WR) or 18%+ (TE).</li>
+          <li><b>DEF BOTTOM 8 VS [ROLE]</b>: his opponent ranks in the bottom 8 for TDs allowed to his role.</li>
+          <li><b>ACTIVE LEAK</b>: his opponent gave up 2+ TDs to his role in its last 3 games.</li>
         </ul>
       </div>
 
@@ -953,8 +977,8 @@
         <h3>Reason line &amp; form stat</h3>
         <p>The small text under a player's name and under his score.</p>
         <ul>
-          <li><b>Reason line</b> (yellow): his two highest-ranked components, i.e. what is driving the score, such as "Volume + Explosiveness".</li>
-          <li><b>Form stat</b> under the score: a quick production read for the category, such as "60% TD" (share of games with a rush or receiving TD) or "74.5 YDS/GM".</li>
+          <li><b>Reason line</b> (yellow): what's driving the score. For Any TD, up to three of: Elite Red Zone Role, High Volume, Shootout Script, Soft Matchup, Due For TD. For other categories, his two highest-ranked components, such as "Carry Share + Ground Form".</li>
+          <li><b>Form stat</b> under the score: for Any TD, his TD probability this week (e.g. "51% TD"). For other categories, a production read such as "74.5 YDS/GM".</li>
         </ul>
       </div>
 
@@ -1078,7 +1102,7 @@
         <h3>Model record</h3>
         <p>An honest report card for the Any TD board.</p>
         <ul>
-          <li>Each week is rescored using <b>only earlier weeks</b> of stats and play-by-play, then graded against who really scored a rushing or receiving TD that week.</li>
+          <li>Each week is rescored using <b>only earlier weeks</b> of stats and play-by-play, plus that week's own Vegas spread and total, then graded against who really scored a rushing or receiving TD that week.</li>
           <li><b>Baseline</b> = the scoring rate of everyone on the board that week. A pick list is only useful if it beats it. <b>1.20x</b> means 20% better than a random player on the board.</li>
           <li>Lists tested: Vault top 10, Vault top 25, TD Debt top 10 and Cheat Code players.</li>
           <li>Players who did not play are removed from the count (you would check inactives before kickoff).</li>
@@ -1112,11 +1136,12 @@
       <div class="metric-card">
         <h3>ANY TD <span class="chip">RB · WR · TE</span></h3>
         <ul>
-          <li><b>Volume</b> — opportunities in the window (RB: carries + ½ targets; WR/TE: targets).</li>
-          <li><b>Red Zone Role</b> — TDs per opportunity (scoring efficiency). Actual red-zone share is in Cheat Code.</li>
-          <li><b>Explosiveness</b> — 20+ and 40+ yard plays per game.</li>
-          <li><b>Shootout Script</b> — his team's points per game plus the opponent's points allowed per game.</li>
+          <li><b>Opportunities / Game</b> — carries + targets per game.</li>
+          <li><b>Red Zone Share</b> — his share of his team's touches inside the 20.</li>
+          <li><b>Goal Line Opps / Game</b> — carries + targets inside the 5 per game.</li>
+          <li><b>Implied Team Total</b> — his team's Vegas implied points this week.</li>
         </ul>
+        <p style="margin-top:8px">These bars show the inputs. The Any TD score itself comes from the TD probability and tags above.</p>
         <p style="margin-top:8px">QBs are left out on purpose: a TD pass isn't "scoring" in this market.</p>
       </div>
       <div class="metric-card">
@@ -3793,6 +3818,25 @@
     ['cheat', 'CHEAT CODE', pool=> pool.filter(p=> p.cheatCodeCount > 0).slice(0, 15)]
   ];
   let recData = null;
+  // Past weeks must be graded with THAT week's Vegas lines, not this week's. nflverse's schedule
+  // file carries each game's spread and total; fetched once through the worker and cached.
+  let recHistLines = null;
+  async function loadHistLines(){
+    if(recHistLines) return recHistLines;
+    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent('https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv'));
+    const rows = parseCSV(await res.text());
+    const now = new Date(), season = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+    const out = {};
+    rows.forEach(g=>{
+      if(+g.season !== season || g.game_type !== 'REG' || g.spread_line === '' || g.total_line === '') return;
+      const W = +g.week, home = fixTeam(g.home_team), away = fixTeam(g.away_team);
+      const hs = -(+g.spread_line), total = +g.total_line; // nflverse spread_line: positive = home favored
+      const L = (out[W] = out[W] || {});
+      L[home] = { spread: hs,  total, implied: total/2 - hs/2 };
+      L[away] = { spread: -hs, total, implied: total/2 + hs/2 };
+    });
+    return (recHistLines = out);
+  }
   async function runRecord(){
     const btn = $('#rec-load-btn'), box = $('#rec-results');
     if(!(rawPlayers && pbpRows)){
@@ -3802,7 +3846,8 @@
     }
     const maxWeek = weeksOfFilmAvailable(), start = +$('#rec-start').value || 3;
     if(maxWeek < start){ box.innerHTML = '<div class="empty">Not enough weeks played yet. The backtest starts at week ' + start + '.</div>'; return; }
-    const saved = { rp:rawPlayers, aw:allWeekRows, pb:pbpRows, sch:window.gwSchedule, ppg:window.gwTeamPPG, dr:window.gwDefenseRank };
+    const saved = { rp:rawPlayers, aw:allWeekRows, pb:pbpRows, sch:window.gwSchedule, ppg:window.gwTeamPPG, dr:window.gwDefenseRank, ln:window.gwLines };
+    const histLines = await loadHistLines().catch(()=> ({})); // no lines → model falls back to points per game
     const weeks = [];
     try{
       for(let W = start; W <= maxWeek; W++){
@@ -3825,10 +3870,10 @@
         const ppg = {}, dr = {};
         Object.keys(gs).forEach(t=> ppg[t] = (tdf[t] || 0) * 7 / gs[t].size);
         Object.keys(gsd).forEach(t=> dr[t] = { paPerGame:(tda[t] || 0) * 7 / gsd[t].size, rank:0 });
-        window.gwSchedule = sch; window.gwTeamPPG = ppg; window.gwDefenseRank = dr;
+        window.gwSchedule = sch; window.gwTeamPPG = ppg; window.gwDefenseRank = dr; window.gwLines = histLines[W] || {};
         let list;
         try{ list = computeCategoryScores('anytd', 'season'); }
-        finally { rawPlayers = saved.rp; allWeekRows = saved.aw; pbpRows = saved.pb; window.gwSchedule = saved.sch; window.gwTeamPPG = saved.ppg; window.gwDefenseRank = saved.dr; }
+        finally { rawPlayers = saved.rp; allWeekRows = saved.aw; pbpRows = saved.pb; window.gwSchedule = saved.sch; window.gwTeamPPG = saved.ppg; window.gwDefenseRank = saved.dr; window.gwLines = saved.ln; }
         // what actually happened in week W
         const actual = {};
         Object.values(saved.rp).forEach(pl=>{ const w = pl.weeks.find(x=> x.week === W); if(w) actual[pl.id] = (w.rec_td + w.rush_td) > 0; });
@@ -3843,7 +3888,7 @@
         weeks.push(row);
       }
     }catch(err){
-      rawPlayers = saved.rp; allWeekRows = saved.aw; pbpRows = saved.pb; window.gwSchedule = saved.sch; window.gwTeamPPG = saved.ppg; window.gwDefenseRank = saved.dr;
+      rawPlayers = saved.rp; allWeekRows = saved.aw; pbpRows = saved.pb; window.gwSchedule = saved.sch; window.gwTeamPPG = saved.ppg; window.gwDefenseRank = saved.dr; window.gwLines = saved.ln;
       gwFeedback(btn, false); showError(box, 'Backtest failed (' + err.message + ').'); return;
     }
     recData = weeks; renderRecord(); gwFeedback(btn, true);
