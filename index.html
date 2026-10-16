@@ -163,6 +163,24 @@
   .license-status.ok{color:var(--win);}
   .license-status.bad{color:var(--loss);}
   .license-bar a{font-size:.72rem;color:var(--purple);white-space:nowrap;}
+  /* strength of schedule: chip on player rows/cards + tiles in detail panels */
+  .sos-chip{font-family:var(--font-display);font-size:.58rem;letter-spacing:.05em;padding:.15em .5em;border:1px solid;margin-left:6px;white-space:nowrap;vertical-align:middle;}
+  .sos-chip.easy{color:var(--win);border-color:var(--win);}
+  .sos-chip.avg{color:var(--text-dim);border-color:var(--grid-line);}
+  .sos-chip.hard{color:var(--loss);border-color:var(--loss);}
+  .sos-chip.locked{color:var(--text-dim);border-color:var(--grid-line);border-style:dashed;}
+  .sos-chip.pending{display:none;}
+  .sos-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 10px;}
+  .sos-tile{border:1px solid var(--grid-line);background:var(--bg-panel-2);padding:8px 4px;text-align:center;font-family:var(--font-display);}
+  .sos-tile .wk{font-size:.58rem;color:var(--text-dim);letter-spacing:.05em;}
+  .sos-tile .opp{font-size:.95rem;color:var(--text-hi);margin:2px 0;}
+  .sos-tile .pct{font-size:.66rem;}
+  .sos-tile.easy{border-color:var(--win);} .sos-tile.easy .pct{color:var(--win);}
+  .sos-tile.hard{border-color:var(--loss);} .sos-tile.hard .pct{color:var(--loss);}
+  .sos-tile.avg .pct{color:var(--amber);}
+  .sos-tile.bye .opp{color:var(--text-dim);}
+  .sos-tile.played{opacity:.5;}
+  .sos-note{font-size:.72rem;color:var(--text-mid);line-height:1.6;}
   /* paywall card shown in premium tabs when there's no valid license */
   .paywall{border:1px solid var(--amber);background:var(--bg-panel-2);padding:18px 20px;max-width:560px;}
   .paywall .pw-title{font-family:var(--font-display);color:var(--amber);letter-spacing:.1em;font-size:.85rem;margin-bottom:6px;}
@@ -974,6 +992,16 @@
       </div>
 
       <div class="metric-card">
+        <h3>Strength of schedule</h3>
+        <p>The <b>SOS</b> chip on RB / WR / TE rows, graded on his next 4 games.</p>
+        <ul>
+          <li>Each upcoming defense is graded on what it allows to <b>his role</b> (lead back, WR1, TE1…): yards × 0.1 + TDs × 6 per game, pulled toward league average early in the season.</li>
+          <li>Teams are ranked 1–32 on their next 4 games. <span style="color:var(--win)">EASY</span> = top third, <span style="color:var(--loss)">HARD</span> = bottom third, AVG in between.</li>
+          <li>The player panel shows the 4 weeks as tiles (with byes), each opponent's +/- vs average, and a rest-of-season rank.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
         <h3>Reason line &amp; form stat</h3>
         <p>The small text under a player's name and under his score.</p>
         <ul>
@@ -1557,10 +1585,162 @@
     return playersLoadingPromise;
   }
 
+  /* ---- STRENGTH OF SCHEDULE (premium) ----
+     A player's next 4 games, graded by how much each upcoming defense gives up to HIS role
+     (lead back, WR1, TE1…): points allowed to that role per game (yards × 0.1 + TDs × 6), shrunk
+     toward league average so a 3-game sample can't swing it. Needs the season schedule (nflverse
+     games.csv, through the worker) plus the Vault's weekly stats, so it's Premium — free users
+     see a locked chip. Ranks are 1 = easiest. */
+  const SOS_GAMES_CSV = 'https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv';
+  const SOS_POSITIONS = ['RB','WR','TE'];
+  const SOS_LOCKED_HTML = '<span class="sos-chip locked" title="Premium: strength of schedule for his next 4 games">SOS 🔒</span>';
+  let sosSchedule = null;   // team -> [{ week, opp, home, played }] for the regular season
+  let sosCache = null;      // { key, table } — rebuilt when the weekly data changes
+  let sosLoading = null;
+  let sosLocked = false;    // the worker said this browser has no valid license
+
+  async function loadSosSchedule(){
+    if(sosSchedule) return sosSchedule;
+    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(SOS_GAMES_CSV));
+    const rows = parseCSV(await res.text());
+    const now = new Date(), season = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+    const out = {};
+    rows.forEach(g=>{
+      if(+g.season !== season || g.game_type !== 'REG') return;
+      const played = g.result !== '' && g.result != null;
+      const home = fixTeam(g.home_team), away = fixTeam(g.away_team), week = +g.week;
+      (out[home] = out[home] || []).push({ week, opp: away, home: true, played });
+      (out[away] = out[away] || []).push({ week, opp: home, home: false, played });
+    });
+    Object.values(out).forEach(a=> a.sort((x,y)=> x.week - y.week));
+    return (sosSchedule = out);
+  }
+
+  function sosTable(){
+    if(!sosSchedule || !allWeekRows || !allWeekRows.length) return null;
+    const key = allWeekRows.length + '|' + Object.keys(sosSchedule).length;
+    if(sosCache && sosCache.key === key) return sosCache.table;
+    const splits = buildRoleSplits();
+    const maxWeek = weeksOfFilmAvailable();
+    const roles = Object.keys(ROLE_LABELS), K = 3;
+    const ease = {}; // role -> defense -> ratio vs league average (1.2 = gives up 20% more)
+    roles.forEach(role=>{
+      let pts = 0, gms = 0;
+      Object.values(splits.def).forEach(d=>{ const r = d[role]; if(r){ pts += r.yards*0.1 + r.tds*6; gms += r.games; } });
+      const lg = gms ? pts / gms : 0;
+      ease[role] = {};
+      Object.keys(splits.def).forEach(t=>{
+        const r = splits.def[t][role];
+        ease[role][t] = (r && lg) ? ((r.yards*0.1 + r.tds*6) + lg*K) / ((r.games + K) * lg) : 1;
+      });
+    });
+    // unplayed games after the last week of stats on file
+    const upcoming = t => (sosSchedule[t] || []).filter(g=> !g.played && g.week > maxWeek);
+    // the week the tiles start on = the earliest unplayed week league-wide (this week)
+    const firstWeek = Math.min(...Object.keys(sosSchedule).map(t=> (upcoming(t)[0] || { week: 99 }).week));
+    const avgEase = (role, games) => games.length ? games.reduce((sum,g)=> sum + (ease[role][g.opp] ?? 1), 0) / games.length : null;
+    const rank = {};
+    roles.forEach(role=>{
+      ['next4','ros'].forEach(win=>{
+        const vals = Object.keys(sosSchedule)
+          .map(t=> [t, avgEase(role, win === 'next4' ? upcoming(t).slice(0, 4) : upcoming(t))])
+          .filter(x=> x[1] != null)
+          .sort((a,b)=> b[1] - a[1]);
+        vals.forEach(([t,v],i)=> rank[role + '|' + win + '|' + t] = { rank: i+1, of: vals.length, value: v });
+      });
+    });
+    const table = { ease, rank, upcoming, splits, maxWeek, firstWeek };
+    sosCache = { key, table };
+    return table;
+  }
+
+  // His role from his most recent games; players with no Vault match (rookies, deep backups)
+  // are graded as the position's top role.
+  function sosRoleFor(name, pos, T){
+    const raw = rawPlayers ? Object.values(rawPlayers).find(r=> r.pos === pos && normalizeName(r.name) === normalizeName(name)) : null;
+    return (raw && currentRoleOf(raw, T.splits)) || (pos + '1');
+  }
+
+  function sosInfo(name, pos, team){
+    if(!SOS_POSITIONS.includes(pos) || !team) return null;
+    const T = sosTable(); if(!T) return null;
+    const t = fixTeam(team), role = sosRoleFor(name, pos, T);
+    const r4 = T.rank[role + '|next4|' + t], rr = T.rank[role + '|ros|' + t];
+    if(!r4) return null;
+    const grade = r4.rank <= Math.round(r4.of / 3) ? 'easy' : (r4.rank > Math.round(r4.of * 2 / 3) ? 'hard' : 'avg');
+    return { role, team: t, grade, r4, rr, T };
+  }
+
+  // "3rd easiest of 32" for the top half, "2nd toughest of 32" for the bottom half
+  function sosRankText(r){
+    return r.rank <= r.of / 2 ? `${ordinal(r.rank)} easiest of ${r.of}` : `${ordinal(r.of - r.rank + 1)} toughest of ${r.of}`;
+  }
+
+  function sosChipHtml(name, pos, team){
+    if(!SOS_POSITIONS.includes(pos) || !team) return '';
+    if(sosLocked || !getLicenseKey()) return SOS_LOCKED_HTML;
+    const s = sosInfo(name, pos, team);
+    if(!s) return `<span class="sos-chip pending" data-sos="${encodeURIComponent(JSON.stringify([name, pos, team]))}"></span>`;
+    return `<span class="sos-chip ${s.grade}" title="Next 4 games: ${sosRankText(s.r4)} for ${ROLE_LABELS[s.role]}">SOS · ${s.grade.toUpperCase()}</span>`;
+  }
+
+  // Fill every placeholder chip once the schedule + weekly stats are in memory.
+  function paintSos(){
+    document.querySelectorAll('.sos-chip.pending').forEach(c=>{
+      let a; try{ a = JSON.parse(decodeURIComponent(c.dataset.sos)); }catch(_){ c.remove(); return; }
+      const html = sosChipHtml(a[0], a[1], a[2]);
+      if(html.includes('pending')) c.remove(); else c.outerHTML = html;
+    });
+  }
+
+  function ensureSos(){
+    if(sosSchedule && allWeekRows){ paintSos(); return Promise.resolve(); }
+    if(sosLoading) return sosLoading;
+    if(!getLicenseKey()) return Promise.resolve();
+    sosLoading = (async ()=>{
+      try{
+        if(!rawPlayers) rawPlayers = await loadRawPlayers();
+        await loadSosSchedule();
+        paintSos();
+      }catch(e){
+        if(e.message === 'NO_LICENSE') sosLocked = true;
+        document.querySelectorAll('.sos-chip.pending').forEach(c=> c.outerHTML = sosLocked ? SOS_LOCKED_HTML : '');
+      }finally{ sosLoading = null; }
+    })();
+    return sosLoading;
+  }
+
+  // Detail-panel section: next 4 weeks as tiles (BYE included), plus next-4 and rest-of-season ranks.
+  function sosSectionHtml(name, pos, team){
+    if(!SOS_POSITIONS.includes(pos) || !team) return '';
+    if(sosLocked || !getLicenseKey()){
+      return gwSection('STRENGTH OF SCHEDULE', `<div class="sos-note">🔒 His next 4 opponents, graded against his role, are part of GRIDWAVE Premium.</div>`);
+    }
+    const s = sosInfo(name, pos, team);
+    if(!s) return '';
+    const sched = sosSchedule[s.team] || [];
+    const tiles = [0,1,2,3].map(i=>{
+      const w = s.T.firstWeek + i, g = sched.find(x=> x.week === w);
+      if(!g) return `<div class="sos-tile bye"><div class="wk">WK ${w}</div><div class="opp">BYE</div><div class="pct">&nbsp;</div></div>`;
+      const e = s.T.ease[s.role][g.opp] ?? 1;
+      const cls = e >= 1.1 ? 'easy' : (e <= 0.9 ? 'hard' : 'avg');
+      const pct = Math.round((e - 1) * 100);
+      return `<div class="sos-tile ${cls}${g.played ? ' played' : ''}"><div class="wk">WK ${w}${g.played ? ' · FINAL' : ''}</div><div class="opp">${g.home ? '' : '@'}${g.opp}</div><div class="pct">${pct >= 0 ? '+' : ''}${pct}%</div></div>`;
+    }).join('');
+    const body = `
+      <div class="sos-tiles">${tiles}</div>
+      <div class="sos-note">
+        <b>Next 4 games:</b> <span class="sos-chip ${s.grade}">${s.grade.toUpperCase()}</span> ${sosRankText(s.r4)} for ${ROLE_LABELS[s.role]}.
+        ${s.rr ? `<b>Rest of season:</b> ${sosRankText(s.rr)}.` : ''}<br>
+        % = how much more (green) or less (red) that defense has given up to ${ROLE_LABELS[s.role]} than the league average.
+      </div>`;
+    return gwSection('STRENGTH OF SCHEDULE', body, { tag: 'vs ' + ROLE_SHORT[s.role] });
+  }
+
   function renderPlayerRow(container, p, badge){
     const row = el('div','player-row');
     const left = el('div');
-    left.innerHTML = `<div class="name">${p.name} ${injBadge(p.inj)}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'}</div>`;
+    left.innerHTML = `<div class="name">${p.name} ${injBadge(p.inj)}</div><div class="meta">${p.team || 'FA'} · ${p.pos || '—'} ${sosChipHtml(p.name, p.pos, p.team)}</div>`;
     row.appendChild(left);
     if(badge) row.appendChild(el('span','trend-badge ' + badge.cls, badge.text));
     row.addEventListener('click', ()=> toggleInline(row, box=> renderPlayerDetail(p, box)));
@@ -1620,8 +1800,12 @@
   // Free-tier detail panel. If Vault's premium player data is already loaded this session
   // (rawPlayers), real season stats show up here automatically via a name match — no separate
   // premium call needed. If Vault hasn't been loaded yet, it degrades to bio info only.
-  function renderPlayerDetail(p, container){
+  function renderPlayerDetail(p, container, sosTried){
     container = container || $('#player-detail');
+    // Premium users: pull the schedule on first open, then redraw this panel once it's in.
+    if(!sosTried && getLicenseKey() && !sosLocked && SOS_POSITIONS.includes(p.pos) && !sosInfo(p.name, p.pos, p.team)){
+      ensureSos().then(()=>{ if(container.isConnected) renderPlayerDetail(p, container, true); });
+    }
     let statsHtml;
 
     const pool = (typeof rawPlayers !== 'undefined' && rawPlayers) ? Object.values(rawPlayers) : null;
@@ -1652,6 +1836,7 @@
         <h3>${p.name} ${injBadge(p.inj)}</h3>
         <div class="sub">${p.team || 'FA'} · ${p.pos || '—'}${p.status ? ' · ' + p.status : ''}${p.inj ? ' · ' + p.inj + (p.part ? ' (' + p.part + ')' : '') : ''}</div>
         ${statsHtml}
+        ${sosSectionHtml(p.name, p.pos, p.team)}
       </div>
     `;
   }
@@ -1692,6 +1877,9 @@
       })
       .catch(err=> showError(container, 'Could not load trends (' + err.message + ').'));
   }
+
+  document.querySelector('nav.tabs button[data-view="players"]').addEventListener('click', ()=> ensureSos());
+  $('#player-search-btn').addEventListener('click', ()=> ensureSos());
 
   renderTrending('#trend-add', SLEEPER_TREND_ADD, 'add', '▲');
   renderTrending('#trend-drop', SLEEPER_TREND_DROP, 'drop', '▼');
@@ -2632,7 +2820,7 @@
     return `
       <div class="rank">#${rank}</div>
       ${avatarHtml(p)}
-      <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}</div><div class="reason-line">${p.reason}</div></div>
+      <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}${sosChipHtml(p.name, p.pos, p.team)}</div><div class="reason-line">${p.reason}</div></div>
       <div class="badges">${injBadge(p.injStatus)}${flagPart}${cheatCodeBadge(p)}</div>
       <div><div class="score">${scoreText}</div><div class="form-stat">${p.formStat}</div></div>
     `;
@@ -3007,6 +3195,8 @@
           ${advancedSec}
           ${researchHtml}
           ${gameLogHtml}
+
+          ${sosSectionHtml(p.name, p.pos, p.team)}
 
           ${cheatCodeHtml}
 
@@ -4010,12 +4200,14 @@
       // Any TD scores need play-by-play (red-zone share, goal-line work, TD debt, tags). Scoring
       // without it and re-scoring a few seconds later made every number jump on first load, so the
       // board waits for it and is drawn once, with final numbers.
+      const sosP = loadSosSchedule().catch(()=> null); // strength-of-schedule chips; optional
       if(!pbpRows){
         ['#gamevault-results', '#edge-results'].forEach(id=>{
           const c = $(id); if(c){ c.innerHTML = ''; c.appendChild(el('div','loading','Loading play-by-play (red-zone + goal-line data)…')); }
         });
         try{ pbpRows = await loadPBP(); }catch(e){ /* falls back to box-score scoring; Cheat Code won't show */ }
       }
+      await sosP;
       rebuildScores();
       refreshCurrentSubtab();
       gwFeedback(btn, true);
