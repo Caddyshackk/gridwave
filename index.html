@@ -4007,35 +4007,18 @@
       if(!rawPlayers) rawPlayers = await loadRawPlayers();
       try{ await loadPlayers(); buildInjuryIndex(); }catch(e){ /* injuries just won't show */ }
       await loadGameLines(); // spread/total/implied for the Any TD model — never throws, falls back to ESPN odds
+      // Any TD scores need play-by-play (red-zone share, goal-line work, TD debt, tags). Scoring
+      // without it and re-scoring a few seconds later made every number jump on first load, so the
+      // board waits for it and is drawn once, with final numbers.
+      if(!pbpRows){
+        ['#gamevault-results', '#edge-results'].forEach(id=>{
+          const c = $(id); if(c){ c.innerHTML = ''; c.appendChild(el('div','loading','Loading play-by-play (red-zone + goal-line data)…')); }
+        });
+        try{ pbpRows = await loadPBP(); }catch(e){ /* falls back to box-score scoring; Cheat Code won't show */ }
+      }
       rebuildScores();
       refreshCurrentSubtab();
       gwFeedback(btn, true);
-
-      // Play-by-play (powers NFL Cheat Code / TD Debt) is a much bigger file — load it in the
-      // background and quietly re-render once it lands, rather than blocking the whole Vault on it.
-      if(!pbpRows){
-        loadPBP().then(rows=>{
-          pbpRows = rows;
-          // refreshCurrentSubtab() rebuilds every row, which destroys the inline panel the user has
-          // open (that was the "collapse" on first open). Remember who was open, rebuild, then
-          // re-open the same player's panel under their new row with no entrance animation.
-          const openId = currentDetailPlayer ? currentDetailPlayer.id : null;
-          rebuildScores();
-          refreshCurrentSubtab();
-          if(openId){
-            const refreshed = edgeFlat.find(p=> p.id === openId);
-            const row = document.querySelector(`.edge-row[data-pid="${openId}"]`);
-            if(refreshed && row){
-              clearDetails();
-              const box = document.createElement('div');
-              box.className = 'inline-detail no-anim';
-              row.after(box);
-              row.classList.add('row-open');
-              renderEdgeDetail(refreshed, box);
-            }
-          }
-        }).catch(()=>{ /* Cheat Code just won't be available this session — everything else still works */ });
-      }
     }catch(err){
       gwFeedback(btn, false);
       if(err.message === 'NO_LICENSE'){
