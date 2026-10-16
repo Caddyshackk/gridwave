@@ -1671,9 +1671,14 @@
     return { role, team: t, grade, r4, rr, T };
   }
 
-  // "3rd easiest of 32" for the top half, "2nd toughest of 32" for the bottom half
+  // Same thirds as the EASY / AVG / HARD chip: "3rd easiest of 32", "2nd toughest of 32", or for
+  // the middle third just the plain rank ("16th of 32"), since "16th easiest" and "16th toughest"
+  // are the same spot counted from opposite ends.
   function sosRankText(r){
-    return r.rank <= r.of / 2 ? `${ordinal(r.rank)} easiest of ${r.of}` : `${ordinal(r.of - r.rank + 1)} toughest of ${r.of}`;
+    const third = Math.round(r.of / 3);
+    if(r.rank <= third) return `${ordinal(r.rank)} easiest of ${r.of}`;
+    if(r.rank > r.of - third) return `${ordinal(r.of - r.rank + 1)} toughest of ${r.of}`;
+    return `${ordinal(r.rank)} of ${r.of}, middle of the pack`;
   }
 
   function sosChipHtml(name, pos, team){
