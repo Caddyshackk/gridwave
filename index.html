@@ -986,7 +986,7 @@
           <li><b>RZ SHARE TOP 10</b>: his share of his team's inside-20 touches ranks top 10 at his position.</li>
           <li><b>FAVORED</b>: his team is favored by the spread.</li>
           <li><b>LIGHT BOX DIET</b> (RBs): at least 5 points more of his carries came against 6 or fewer defenders in the box than the league average. <b>TARGET HOG</b> (WR/TE): target share of 22%+ (WR) or 18%+ (TE).</li>
-          <li><b>DEF BOTTOM 8 VS [ROLE]</b>: his opponent ranks in the bottom 8 for TDs allowed to his role.</li>
+          <li><b>DEF BOTTOM 8 VS [ROLE]</b>: his opponent ranks in the bottom 8 for red-zone touches (carries + targets inside the 20) allowed to his role per game.</li>
           <li><b>ACTIVE LEAK</b>: his opponent gave up 2+ TDs to his role in its last 3 games.</li>
         </ul>
       </div>
@@ -2241,13 +2241,30 @@
         roleOf[w.pid + '|' + w.week] = role;
         if(!w.opponent_team || w.week <= maxWeek - 8) return;
         const d = (def[w.opponent_team] = def[w.opponent_team] || {});
-        const r = (d[role] = d[role] || { tds:0, yards:0, targets:0, recentTds:0 });
+        const r = (d[role] = d[role] || { tds:0, yards:0, targets:0, recentTds:0, rz:0 });
         r.tds += w.rush_td + w.rec_td;
         r.yards += w.rush_yards + w.rec_yards;
         r.targets += w.targets;
         if(w.week > maxWeek - 3) r.recentTds += w.rush_td + w.rec_td;
       });
     });
+
+    // Red-zone touches each defense allowed to each role (carries + targets inside its 20, from
+    // play-by-play). Steadier week to week than TDs, so it's what the BOTTOM 8 tag ranks on.
+    const haveRz = !!(pbpRows && pbpRows.length);
+    if(haveRz){
+      pbpRows.forEach(r=>{
+        if(r.yardline100 > 20 || r.week <= maxWeek - 8 || !r.defteam) return;
+        const add = pid=>{
+          const role = pid && roleOf[pid + '|' + r.week]; if(!role) return;
+          const d = (def[r.defteam] = def[r.defteam] || {});
+          const x = (d[role] = d[role] || { tds:0, yards:0, targets:0, recentTds:0, rz:0 });
+          x.rz++;
+        };
+        if(r.rushAttempt) add(r.rusherId);
+        if(r.passAttempt) add(r.receiverId);
+      });
+    }
 
     // per-game rates, league average, and a rank per role (1 = allowed the most)
     const leagueTdPG = {};
@@ -2256,17 +2273,23 @@
       let tds = 0, games = 0;
       teams.forEach(t=>{
         def[t] = def[t] || {};
-        const r = def[t][role] = def[t][role] || { tds:0, yards:0, targets:0, recentTds:0 };
+        const r = def[t][role] = def[t][role] || { tds:0, yards:0, targets:0, recentTds:0, rz:0 };
         r.games = defGames[t].size;
         r.tdPG = r.tds / Math.max(1, r.games);
         r.yardsPG = r.yards / Math.max(1, r.games);
+        r.rzPG = r.rz / Math.max(1, r.games);
         tds += r.tds; games += r.games;
       });
       leagueTdPG[role] = games ? tds / games : 0;
-      teams.slice().sort((a,b)=> (def[b][role].tdPG - def[a][role].tdPG) || (def[b][role].yardsPG - def[a][role].yardsPG))
+      // rank 1 = allowed the most. By red-zone touches when play-by-play is loaded (TDs as the
+      // tiebreak), otherwise by TDs with yards as the tiebreak.
+      const byRz = haveRz && (typeof ANYTD_PARAMS === 'undefined' || ANYTD_PARAMS.weakBy !== 'td');
+      teams.slice().sort((a,b)=> byRz
+          ? ((def[b][role].rzPG - def[a][role].rzPG) || (def[b][role].tdPG - def[a][role].tdPG))
+          : ((def[b][role].tdPG - def[a][role].tdPG) || (def[b][role].yardsPG - def[a][role].yardsPG)))
         .forEach((t,i)=> def[t][role].rank = i + 1);
     });
-    return { roleOf, def, leagueTdPG, teamCount: Object.keys(defGames).length };
+    return { roleOf, def, leagueTdPG, teamCount: Object.keys(defGames).length, rankedByRz: haveRz };
   }
 
   // A player's current role = his role in his most recent game (null if he was outside the top 2/3).
@@ -2766,7 +2789,9 @@
       const roleName = role ? ROLE_LABELS[role] : null;
       tags.push({ key:'weak', label: role ? `DEF BOTTOM 8 VS ${ROLE_SHORT[role]}` : 'DEF BOTTOM 8 VS ROLE',
         on: !!d && d.rank <= 8,
-        why: d ? `${p.opponent} has allowed ${d.tds} TDs and ${Math.round(d.yards)} yards to ${roleName} in its last ${d.games} games — ${ordinal(d.rank)} most of ${splits.teamCount}.`
+        why: d ? (splits.rankedByRz
+                 ? `${p.opponent} has allowed ${d.rzPG.toFixed(1)} red-zone touches per game to ${roleName} in its last ${d.games} games (${d.tds} TDs) — ${ordinal(d.rank)} most of ${splits.teamCount}.`
+                 : `${p.opponent} has allowed ${d.tds} TDs and ${Math.round(d.yards)} yards to ${roleName} in its last ${d.games} games — ${ordinal(d.rank)} most of ${splits.teamCount}.`)
                : (role ? 'No opponent on this week\'s board.' : 'Not a top-2 back / top-3 receiver / top-2 TE on his team lately.') });
 
       tags.push({ key:'leak', label:'ACTIVE LEAK', on: !!d && d.recentTds >= 2,
