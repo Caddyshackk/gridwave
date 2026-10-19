@@ -4167,7 +4167,10 @@
     combos.sort((a,b)=> b.score-a.score);
     const top2leg = combos.slice(0,4);
 
-    const combos3 = [];
+    // 3-legs are built by adding a third player to each top pair, so the same three players can
+    // come out of different pairs (A+B then C, A+C then B…). Key each trio by its sorted player
+    // ids and keep it only once.
+    const combos3 = [], seen3 = new Set();
     for(let i=0;i<top2leg.length;i++){
       for(let k=0;k<candidates.length;k++){
         const c = candidates[k];
@@ -4175,7 +4178,10 @@
         const usedEvents = top2leg[i].legs.map(l=> window.gwSchedule?.[l.team]?.eventId);
         const cEvent = window.gwSchedule?.[c.team]?.eventId;
         if(usedEvents.includes(cEvent)) continue;
-        const legs3 = [...top2leg[i].legs, c];
+        const legs3 = [...top2leg[i].legs, c].sort((a,b)=> b.score - a.score);
+        const key = legs3.map(l=> l.id).sort().join('|');
+        if(seen3.has(key)) continue;
+        seen3.add(key);
         combos3.push({ legs: legs3, score: legs3.reduce((s,l)=>s+l.score,0)/legs3.length });
       }
     }
