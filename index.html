@@ -5046,10 +5046,28 @@
     if (teams.some(t => t.abbr === keep)) sel.value = keep;
   }
 
+  // Same look as the NFL cards: ESPN's 350x254 headshot, cropped to the face by the shared
+  // `.avatar .circ img` rule (no `fb` class; `fb` shrinks the whole wide photo into the circle).
+  // Source order: (1) ESPN's resized 350x254 (sharp, light on phones); (2) the full-size original;
+  // (3) initials. gwNbaImgErr walks the list on each load error.
   function avatar(r){
-    const head = r.a.head || (r.a.id ? `https://a.espncdn.com/i/headshots/nba/players/full/${r.a.id}.png` : '');
-    return `<div class="avatar"><div class="circ">${esc(initials(r.a.name))}${head ? `<img class="fb" src="${esc(head)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div><span class="tm">${esc(r.team.abbr)}</span></div>`;
+    const ini = initials(r.a.name);
+    const srcs = [];
+    if (r.a.id) {
+      srcs.push(`https://a.espncdn.com/combiner/i?img=/i/headshots/nba/players/full/${r.a.id}.png&w=350&h=254`);
+      srcs.push(`https://a.espncdn.com/i/headshots/nba/players/full/${r.a.id}.png`);
+    }
+    if (r.a.head && !srcs.includes(r.a.head)) srcs.push(r.a.head);
+    const inner = srcs.length
+      ? `<img src="${esc(srcs[0])}" data-fb="${esc(srcs.slice(1).join('|'))}" data-ini="${esc(ini)}" alt="" loading="lazy" decoding="async" onerror="gwNbaImgErr(this)">`
+      : esc(ini);
+    return `<div class="avatar"><div class="circ">${inner}</div><span class="tm">${esc(r.team.abbr)}</span></div>`;
   }
+  window.gwNbaImgErr = function(img){
+    const rest = (img.dataset.fb || '').split('|').filter(Boolean);
+    if (rest.length) { img.dataset.fb = rest.slice(1).join('|'); img.src = rest[0]; return; }
+    const c = img.parentElement; if (c) c.textContent = img.dataset.ini || '?';
+  };
 
   function chipsFor(r){
     const c = confidence(r.m.n, r.m.rookie);
