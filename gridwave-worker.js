@@ -48,6 +48,8 @@
  *   /nba/props   ?event=<odds event id> player props (points/rebounds/assists/threes).
  *                Costs 4 credits per real upstream call, edge-cached NBA_PROPS_CACHE_TTL_SECONDS
  *                per game, and only ids present in /nba/events are accepted.
+ *   /nba/espn-props ?event=<ESPN event id> FREE DraftKings player props from ESPN's core API.
+ *                The frontend tries this first and only falls back to /nba/props if it's empty.
  *   /hoopr       ?url=<sportsdataverse release asset> last-season NBA box scores (the
  *                prior the NBA projections blend with this season's games).
  *
@@ -130,6 +132,8 @@ const NBA_EVENTS_CACHE_TTL_SECONDS = 600;   // event list is free; 10 min keeps 
 const NBA_PROPS_CACHE_TTL_SECONDS = 1800;   // 4 credits per real call, per game, so 30 min per game
 const NBA_PROPS_MARKETS = 'player_points,player_rebounds,player_assists,player_threes';
 const HOOPR_CACHE_TTL_SECONDS = 21600;      // last season's box scores never change; 6h is plenty
+const ESPN_PROPS_CACHE_TTL_SECONDS = 600;   // free upstream; 10 min keeps lines fresh without hammering ESPN
+const ESPN_PROPS_PROVIDER = 100;            // DraftKings on ESPN's odds feed
 const ALLOWED_HOOPR_PREFIXES = [
   'https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_nba_player_boxscores/',
   'https://github.com/sportsdataverse/hoopR-nba-data/releases/download/'
@@ -387,7 +391,7 @@ export default {
     // layer below ever touches KV. Public *.workers.dev URLs get scanned by bots around the clock
     // hitting random paths (/.env, /wp-admin, etc.) — without this guard, every one of those scans
     // still cost a real KV operation even though they have nothing to do with the app.
-    const KNOWN_ROUTES = ['/usage', '/odds', '/line-history', '/nflverse', '/nba/events', '/nba/props', '/hoopr', '/admin/ips'];
+    const KNOWN_ROUTES = ['/usage', '/odds', '/line-history', '/nflverse', '/nba/events', '/nba/props', '/nba/espn-props', '/hoopr', '/admin/ips'];
     if (!KNOWN_ROUTES.includes(url.pathname)) {
       return new Response('Not found', { status: 404, headers: cors });
     }
@@ -562,6 +566,24 @@ export default {
       );
       if (!hit) await recordOddsUsage(env, response.headers);
       return new Response(await response.clone().text(), {
+        status: response.status, headers: { ...cors, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ---- NBA: FREE player props (DraftKings lines on ESPN's core API, 0 credits) ----
+    // Proxied (not called from the browser) because ESPN's core API isn't guaranteed to send CORS
+    // headers, and edge caching means every visitor shares one upstream call per game per 10 min.
+    if (url.pathname === '/nba/espn-props') {
+      const ev = url.searchParams.get('event') || '';
+      if (!/^\d{6,12}$/.test(ev)) {
+        return new Response(JSON.stringify({ error: 'bad event id' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
+      const { response } = await cachedFetch(
+        `${url.origin}/nba/espn-props?event=${ev}`,
+        `https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events/${ev}/competitions/${ev}/odds/${ESPN_PROPS_PROVIDER}/propBets?limit=1000`,
+        ESPN_PROPS_CACHE_TTL_SECONDS
+      );
+      return new Response(response.body, {
         status: response.status, headers: { ...cors, 'Content-Type': 'application/json' }
       });
     }

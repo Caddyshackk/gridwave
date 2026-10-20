@@ -714,10 +714,21 @@
   .nba-inj-team{ background:var(--bg-panel); border:1px solid var(--grid-line); padding:10px 12px; }
   .nba-inj-team h3{ font-size:.78rem; margin:0 0 6px; display:flex; align-items:center; gap:8px; color:var(--text-hi); }
   .nba-inj-team h3 img{ width:20px; height:20px; object-fit:contain; }
-  .nba-inj-row{ display:flex; justify-content:space-between; gap:8px; font-size:.72rem; padding:4px 0; border-bottom:1px solid rgba(124,92,255,.1); color:var(--text-mid); }
+  .nba-inj-row{ display:flex; align-items:center; gap:10px; font-size:.72rem; padding:7px 0; border-bottom:1px solid rgba(124,92,255,.1); color:var(--text-mid); }
   .nba-inj-row:last-child{ border-bottom:0; }
-  .nba-inj-row .who{ color:var(--text-hi); }
-  .nba-inj-row .what{ color:var(--text-dim); font-size:.66rem; }
+  .nba-inj-row .txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .nba-inj-row .who{ color:var(--text-hi); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .nba-inj-row .who .pos{ color:var(--text-dim); font-weight:400; font-size:.64rem; margin-left:6px; }
+  .nba-inj-row .what{ color:var(--text-dim); font-size:.64rem; line-height:1.4; }
+  /* status tag: fixed width, one line, square-cut like the NFL flag badges, so a long status
+     (DAY-TO-DAY) can't wrap and balloon into a circle */
+  .inj-tag{ flex:none; min-width:48px; text-align:center; white-space:nowrap; font-family:var(--font-display); font-size:.6rem; font-weight:700; letter-spacing:.06em; line-height:1; padding:5px 7px; border:1px solid; }
+  .inj-tag.out{ color:var(--loss); border-color:var(--loss); background:rgba(255,35,88,.10); }
+  .inj-tag.doubt{ color:#ff8a3d; border-color:#ff8a3d; background:rgba(255,138,61,.10); }
+  .inj-tag.q{ color:var(--amber); border-color:var(--amber); background:rgba(252,238,10,.08); }
+  .inj-tag.prob{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
+  .nba-inj-legend{ font-size:.64rem; color:var(--text-dim); margin:-4px 0 10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .nba-inj-legend .inj-tag{ min-width:0; }
   .nba-controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
   .nba-controls select{ background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-body); padding:.6em .8em; font-size:.8rem; }
   .nba-status{ font-size:.72rem; color:var(--text-dim); margin:0 0 12px; line-height:1.6; }
@@ -4966,15 +4977,28 @@
     teams.forEach(t => {
       const list = inj.byTeam[t.name] || [];
       const card = document.createElement('div'); card.className = 'nba-inj-team';
-      const rows = list.length ? list.map(x => {
-        const s = String(x.status || '').toLowerCase();
-        const cls = OUT_STATUSES.includes(s) ? 'inj-out' : 'inj-q';
-        return `<div class="nba-inj-row"><span><span class="who">${esc(x.name)}</span> <span class="what">${esc(x.pos || '')}${x.what ? ' · ' + esc(x.what) : ''}</span></span><span class="chip ${cls}">${esc(String(x.status || '').toUpperCase())}</span></div>`;
+      const rows = list.length ? list.slice().sort((a, b) => injTag(a.status).rank - injTag(b.status).rank).map(x => {
+        const t = injTag(x.status);
+        const ret = x.ret ? 'est. return ' + new Date(x.ret).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        const detail = [x.what, ret].filter(Boolean).join(' · ');
+        return `<div class="nba-inj-row"><div class="txt"><span class="who">${esc(x.name)}<span class="pos">${esc(x.pos || '')}</span></span>${detail ? `<span class="what">${esc(detail)}</span>` : ''}</div><span class="inj-tag ${t.cls}" title="${esc(x.status || '')}">${t.txt}</span></div>`;
       }).join('') : '<div class="nba-inj-row"><span class="what">Nothing listed.</span></div>';
       card.innerHTML = `<h3>${t.logo ? `<img src="${esc(t.logo)}" alt="">` : ''}${esc(t.name || t.abbr)}</h3>${rows}`;
       grid.appendChild(card);
     });
-    box.innerHTML = ''; box.appendChild(grid);
+    box.innerHTML = '<div class="nba-inj-legend"><span><span class="inj-tag out">OUT</span> out</span><span><span class="inj-tag doubt">D</span> doubtful</span><span><span class="inj-tag q">Q</span> questionable</span><span><span class="inj-tag q">DTD</span> day-to-day</span><span><span class="inj-tag prob">P</span> probable</span></div>';
+    box.appendChild(grid);
+  }
+
+  // ESPN's status text → a short, fixed-width tag. Full text stays in the tooltip.
+  function injTag(status){
+    const s = String(status || '').toLowerCase();
+    if (s.includes('out') || s.includes('susp') || s.includes('injured reserve')) return { txt: s.includes('susp') ? 'SUSP' : 'OUT', cls: 'out', rank: 0 };
+    if (s.includes('doubt')) return { txt: 'D', cls: 'doubt', rank: 1 };
+    if (s.includes('question')) return { txt: 'Q', cls: 'q', rank: 2 };
+    if (s.includes('day')) return { txt: 'DTD', cls: 'q', rank: 3 };
+    if (s.includes('prob')) return { txt: 'P', cls: 'prob', rank: 4 };
+    return { txt: (String(status || '?').toUpperCase().slice(0, 4)), cls: 'q', rank: 5 };
   }
 
   async function refreshTonight(){
