@@ -39,6 +39,17 @@
  *   7. wrangler deploy
  *   8. Paste the resulting *.workers.dev URL into WORKER_BASE in gridwave.html,
  *      and your Whop checkout link into WHOP_CHECKOUT_URL there too.
+ *   9. (optional) wrangler secret put IP_HASH_SALT
+ *      → any random string; salts the IP hashes used by the license-sharing check.
+ *
+ * NBA routes (all premium, same license + rate limits as NFL):
+ *   /nba/events  Odds API event list for the NBA (free, 0 credits), used to match a
+ *                game on ESPN's scoreboard to its Odds API event id.
+ *   /nba/props   ?event=<odds event id> player props (points/rebounds/assists/threes).
+ *                Costs 4 credits per real upstream call, edge-cached NBA_PROPS_CACHE_TTL_SECONDS
+ *                per game, and only ids present in /nba/events are accepted.
+ *   /hoopr       ?url=<sportsdataverse release asset> last-season NBA box scores (the
+ *                prior the NBA projections blend with this season's games).
  *
  * Checking usage: visit https://your-worker.workers.dev/usage?admin_key=YOUR_ADMIN_KEY
  * any time. It reports { remaining, used, lastCallCost, checkedAt } straight from
@@ -77,6 +88,21 @@
  *    call every five minutes; everyone else in between gets served instantly
  *    from Cloudflare's edge, which costs you nothing.
  *
+ * 5. License-sharing check (LICENSE_SHARING). A paid key is meant for one
+ *    person, so each key may be used from at most LICENSE_SHARING.maxNetworks
+ *    different networks in any rolling LICENSE_SHARING.windowHours. Past that,
+ *    the worker answers 403 { reason: 'license_shared' } until older networks
+ *    age out of the window. Raw IPs are never stored, only a salted SHA-256
+ *    hash. IPv6 is bucketed by its /64 network, because phones and laptops
+ *    rotate the last half of an IPv6 address on their own through the day.
+ *    Reset one customer's list (e.g. after they email you) with:
+ *      GET /admin/ips?admin_key=YOUR_ADMIN_KEY&license=THEIR_KEY&reset=1
+ *    or view it (counts + last-seen times only) without &reset=1.
+ *
+ * Cache keys are canonical (built from the route + the params that matter,
+ * never the raw request URL), so a valid key can't bust the edge cache and
+ * burn Odds API credits by appending ?anything=123 to a request.
+ *
  * None of this requires the paid Workers plan — it's all built from KV
  * (already in use) and the standard Cache API. If you outgrow it, Cloudflare's
  * native Rate Limiting bindings (Workers Paid, $5/mo) do the same job with
@@ -98,6 +124,23 @@ const ALLOWED_NFLVERSE_PREFIXES = [
   'https://github.com/nflverse/nflverse-data/releases/download/',
   'https://raw.githubusercontent.com/nflverse/'
 ];
+
+// ---- NBA ----
+const NBA_EVENTS_CACHE_TTL_SECONDS = 600;   // event list is free; 10 min keeps tip-off times current
+const NBA_PROPS_CACHE_TTL_SECONDS = 1800;   // 4 credits per real call, per game, so 30 min per game
+const NBA_PROPS_MARKETS = 'player_points,player_rebounds,player_assists,player_threes';
+const HOOPR_CACHE_TTL_SECONDS = 21600;      // last season's box scores never change; 6h is plenty
+const ALLOWED_HOOPR_PREFIXES = [
+  'https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_nba_player_boxscores/',
+  'https://github.com/sportsdataverse/hoopR-nba-data/releases/download/'
+];
+
+// ---- license sharing (Layer 5) ----
+const LICENSE_SHARING = {
+  maxNetworks: 5,         // home wifi, phone (cell), work, a friend's place, travel: generous on purpose
+  windowHours: 24,        // a network drops off the list 24h after it was last seen
+  touchEveryMinutes: 60   // only re-write a known network's last-seen time hourly (saves KV writes)
+};
 
 const LICENSE_CACHE_TTL_SECONDS = 600;   // re-check with Whop every 10 min per key
 const LINE_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 10; // auto-forget a game's snapshots after 10 days
@@ -151,21 +194,76 @@ async function rateLimited(env, bucket, limit){
   }
 }
 
-// Edge-caches an upstream GET using Cloudflare's Cache API, keyed by the worker's own request URL
-// (so /nflverse?url=A and /nflverse?url=B cache separately, and /odds — always the same URL — caches
-// as one shared entry for everyone). This is what caps upstream cost regardless of visitor volume.
-async function cachedFetch(request, upstreamUrl, ttlSeconds, upstreamInit){
+// Edge-caches an upstream GET using Cloudflare's Cache API. The cache key is a canonical URL the
+// caller builds from only the params that matter (e.g. `${origin}/odds`, or /nflverse plus its url
+// param), NOT the raw request URL; otherwise /odds?x=1, /odds?x=2 ... would each miss the cache and
+// each cost real Odds API credits. This is what caps upstream cost regardless of visitor volume.
+async function cachedFetch(cacheKeyUrl, upstreamUrl, ttlSeconds, upstreamInit){
   const cache = caches.default;
-  const cacheKey = new Request(new URL(request.url).toString(), { method: 'GET' });
+  const cacheKey = new Request(cacheKeyUrl, { method: 'GET' });
   let response = await cache.match(cacheKey);
   if (response) return { response, hit: true };
 
   const upstream = await fetch(upstreamUrl, upstreamInit);
+  // Never cache a failure (an Odds API 429, a GitHub 404 for a season file that isn't posted yet):
+  // the next request should try again, not get served the error for the whole TTL.
+  if (!upstream.ok) return { response: upstream, hit: false };
   const toCache = new Response(upstream.body, upstream);
   toCache.headers.set('Cache-Control', `public, max-age=${ttlSeconds}`);
   toCache.headers.delete('Set-Cookie'); // never cache anything with a cookie, out of caution
   await cache.put(cacheKey, toCache.clone());
   return { response: toCache, hit: false };
+}
+
+async function sha256Hex(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Groups an IP into "one network". IPv4: the address itself. IPv6: the first 64 bits, since
+// devices rotate the last 64 bits (privacy addresses) many times a day on the same network.
+function networkOf(ip){
+  if (!ip.includes(':')) return ip;
+  const [head, tail] = ip.split('::');
+  const h = head ? head.split(':') : [];
+  let groups = h;
+  if (tail !== undefined) {
+    const t = tail ? tail.split(':') : [];
+    groups = [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t];
+  }
+  return groups.slice(0, 4).map(g => (g || '0').toLowerCase().replace(/^0+(?=.)/, '')).join(':') + '::/64';
+}
+
+// Layer 5: how many different networks has this license been used from lately? Stored per key as
+// { <hashed network>: lastSeenMs }. Fails open on any KV error: this is anti-sharing, not core
+// functionality, and a KV quota hiccup must never lock out a paying customer.
+async function checkLicenseSharing(env, licenseKey, ip){
+  if (!ip) return { ok: true };
+  try {
+    const now = Date.now();
+    const windowMs = LICENSE_SHARING.windowHours * 3600 * 1000;
+    const kvKey = `ips:${licenseKey}`;
+    const seen = (await env.LICENSES.get(kvKey, 'json')) || {};
+    for (const h of Object.keys(seen)) if (now - seen[h] > windowMs) delete seen[h];
+
+    const net = (await sha256Hex(`${env.IP_HASH_SALT || 'gridwave'}|${networkOf(ip)}`)).slice(0, 16);
+    if (seen[net] !== undefined) {
+      if (now - seen[net] > LICENSE_SHARING.touchEveryMinutes * 60000) {
+        seen[net] = now;
+        await env.LICENSES.put(kvKey, JSON.stringify(seen), { expirationTtl: LICENSE_SHARING.windowHours * 3600 * 2 });
+      }
+      return { ok: true };
+    }
+    if (Object.keys(seen).length >= LICENSE_SHARING.maxNetworks) {
+      return { ok: false, networks: Object.keys(seen).length };
+    }
+    seen[net] = now;
+    await env.LICENSES.put(kvKey, JSON.stringify(seen), { expirationTtl: LICENSE_SHARING.windowHours * 3600 * 2 });
+    return { ok: true };
+  } catch (e) {
+    console.log('LICENSE SHARING KV ERROR (failing open)', e.message);
+    return { ok: true };
+  }
 }
 
 async function checkLicense(licenseKey, env) {
@@ -268,6 +366,14 @@ async function snapshotLines(env) {
   }
 }
 
+async function fetchNbaEvents(url, env){
+  return cachedFetch(
+    `${url.origin}/nba/events`,
+    `https://api.the-odds-api.com/v4/sports/basketball_nba/events?apiKey=${env.ODDS_API_KEY}`,
+    NBA_EVENTS_CACHE_TTL_SECONDS
+  );
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -281,7 +387,7 @@ export default {
     // layer below ever touches KV. Public *.workers.dev URLs get scanned by bots around the clock
     // hitting random paths (/.env, /wp-admin, etc.) — without this guard, every one of those scans
     // still cost a real KV operation even though they have nothing to do with the app.
-    const KNOWN_ROUTES = ['/usage', '/odds', '/line-history', '/nflverse'];
+    const KNOWN_ROUTES = ['/usage', '/odds', '/line-history', '/nflverse', '/nba/events', '/nba/props', '/hoopr', '/admin/ips'];
     if (!KNOWN_ROUTES.includes(url.pathname)) {
       return new Response('Not found', { status: 404, headers: cors });
     }
@@ -296,6 +402,26 @@ export default {
       }
       const odds = (await env.LICENSES.get('usage:odds', 'json')) || null;
       return new Response(JSON.stringify({ odds }, null, 2), {
+        headers: { ...cors, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ---- ADMIN: view or reset one license's network list (yours, not customer-facing) ----
+    if (url.pathname === '/admin/ips') {
+      const adminKey = url.searchParams.get('admin_key');
+      const target = url.searchParams.get('license');
+      if (!env.ADMIN_KEY || adminKey !== env.ADMIN_KEY || !target) {
+        return new Response(JSON.stringify({ error: 'forbidden' }), {
+          status: 403, headers: { ...cors, 'Content-Type': 'application/json' }
+        });
+      }
+      if (url.searchParams.get('reset') === '1') {
+        await env.LICENSES.delete(`ips:${target}`);
+        return new Response(JSON.stringify({ reset: true }), { headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
+      const seen = (await env.LICENSES.get(`ips:${target}`, 'json')) || {};
+      const networks = Object.values(seen).sort((a, b) => b - a).map(t => new Date(t).toISOString());
+      return new Response(JSON.stringify({ count: networks.length, limit: LICENSE_SHARING.maxNetworks, lastSeen: networks }, null, 2), {
         headers: { ...cors, 'Content-Type': 'application/json' }
       });
     }
@@ -332,6 +458,15 @@ export default {
       });
     }
 
+    // Layer 5: one key, one person. Block a key that's being used from too many networks at once.
+    const sharing = await checkLicenseSharing(env, licenseKey, request.headers.get('CF-Connecting-IP'));
+    if (!sharing.ok) {
+      return new Response(JSON.stringify({
+        error: 'This license is in use on too many networks right now. Licenses are for one person. If this is you, it clears within 24 hours, or contact support.',
+        reason: 'license_shared'
+      }), { status: 403, headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
+
     // Layer 3: throttle a valid key's real usage. Runs for every route below this point.
     if (await rateLimited(env, `license:${licenseKey}`, RATE_LIMITS.perLicensePerMinute)) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded for this license. Try again shortly.' }), {
@@ -352,7 +487,7 @@ export default {
       }
 
       const { response, hit } = await cachedFetch(
-        request,
+        `${url.origin}/odds`,
         `https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/?regions=us&markets=h2h,spreads,totals&oddsFormat=american&apiKey=${env.ODDS_API_KEY}`,
         ODDS_CACHE_TTL_SECONDS
       );
@@ -385,13 +520,65 @@ export default {
       if (!target || !ALLOWED_NFLVERSE_PREFIXES.some(p => target.startsWith(p))) {
         return new Response('Not allowed', { status: 403, headers: cors });
       }
-      const { response } = await cachedFetch(request, target, NFLVERSE_CACHE_TTL_SECONDS);
+      const { response } = await cachedFetch(`${url.origin}/nflverse?url=${encodeURIComponent(target)}`, target, NFLVERSE_CACHE_TTL_SECONDS);
       return new Response(response.body, {
         status: response.status,
         headers: {
           ...cors,
           'Content-Type': response.headers.get('content-type') || 'text/csv',
           'Cache-Control': `public, max-age=${NFLVERSE_CACHE_TTL_SECONDS}`
+        }
+      });
+    }
+
+    // ---- NBA: Odds API event list (free, 0 credits) ----
+    if (url.pathname === '/nba/events') {
+      const { response } = await fetchNbaEvents(url, env);
+      return new Response(await response.clone().text(), {
+        status: response.status, headers: { ...cors, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ---- NBA: player props for ONE game, only for ids that are on the real event list ----
+    if (url.pathname === '/nba/props') {
+      const eventId = url.searchParams.get('event') || '';
+      if (!/^[a-f0-9]{32}$/.test(eventId)) {
+        return new Response(JSON.stringify({ error: 'bad event id' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
+      // Made-up ids would each be a cache miss and a real 4-credit call, so check against the list first.
+      let known = false;
+      try {
+        const { response: evResp } = await fetchNbaEvents(url, env);
+        const events = await evResp.clone().json();
+        known = Array.isArray(events) && events.some(e => e.id === eventId);
+      } catch (e) { known = false; }
+      if (!known) {
+        return new Response(JSON.stringify({ error: 'unknown event' }), { status: 404, headers: { ...cors, 'Content-Type': 'application/json' } });
+      }
+      const { response, hit } = await cachedFetch(
+        `${url.origin}/nba/props?event=${eventId}`,
+        `https://api.the-odds-api.com/v4/sports/basketball_nba/events/${eventId}/odds?regions=us&markets=${NBA_PROPS_MARKETS}&oddsFormat=american&apiKey=${env.ODDS_API_KEY}`,
+        NBA_PROPS_CACHE_TTL_SECONDS
+      );
+      if (!hit) await recordOddsUsage(env, response.headers);
+      return new Response(await response.clone().text(), {
+        status: response.status, headers: { ...cors, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ---- NBA: last-season box scores (sportsdataverse release assets, no CORS upstream) ----
+    if (url.pathname === '/hoopr') {
+      const target = url.searchParams.get('url');
+      if (!target || !ALLOWED_HOOPR_PREFIXES.some(p => target.startsWith(p))) {
+        return new Response('Not allowed', { status: 403, headers: cors });
+      }
+      const { response } = await cachedFetch(`${url.origin}/hoopr?url=${encodeURIComponent(target)}`, target, HOOPR_CACHE_TTL_SECONDS);
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          ...cors,
+          'Content-Type': response.headers.get('content-type') || 'text/csv',
+          'Cache-Control': `public, max-age=${HOOPR_CACHE_TTL_SECONDS}`
         }
       });
     }
