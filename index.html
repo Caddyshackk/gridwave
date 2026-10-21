@@ -729,6 +729,27 @@
   .inj-tag.prob{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
   .nba-inj-legend{ font-size:.64rem; color:var(--text-dim); margin:-4px 0 10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
   .nba-inj-legend .inj-tag{ min-width:0; }
+  /* situation grades */
+  .nba-grade{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; padding:4px 6px; border:1px solid; font-family:var(--font-display); line-height:1; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
+  .nba-grade .l{ font-size:1rem; font-weight:700; }
+  .nba-grade .n{ font-size:.52rem; opacity:.8; margin-top:3px; letter-spacing:.04em; }
+  .nba-grade.g-a{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
+  .nba-grade.g-b{ color:var(--cyan); border-color:rgba(0,240,255,.5); background:rgba(0,240,255,.06); }
+  .nba-grade.g-c{ color:var(--amber); border-color:var(--amber); background:rgba(252,238,10,.05); }
+  .nba-grade.g-d{ color:var(--loss); border-color:var(--loss); background:rgba(255,35,88,.06); }
+  .nba-grade.sm{ min-width:34px; padding:3px 5px; } .nba-grade.sm .l{ font-size:.8rem; } .nba-grade.sm .n{ display:none; }
+  .gr-bars{ display:flex; flex-direction:column; gap:7px; }
+  .gr-bar{ display:grid; grid-template-columns:130px 1fr 44px; gap:10px; align-items:center; font-size:.7rem; }
+  .gr-bar .lbl{ color:var(--text-hi); font-family:var(--font-display); letter-spacing:.04em; font-size:.64rem; }
+  .gr-bar .lbl small{ display:block; color:var(--text-dim); font-family:var(--font-body); letter-spacing:0; font-size:.6rem; margin-top:2px; }
+  .gr-bar .track{ height:8px; background:rgba(124,92,255,.12); border-radius:4px; overflow:hidden; }
+  .gr-bar .fill{ height:100%; border-radius:4px; }
+  .gr-bar .pct{ text-align:right; font-family:var(--font-display); color:var(--text-mid); }
+  .gr-bar.off{ opacity:.45; }
+  @media (max-width:700px){ .gr-bar{ grid-template-columns:100px 1fr 36px; } }
+  .nba-leg-dir{ font-family:var(--font-display); font-weight:700; letter-spacing:.04em; }
+  .nba-leg-dir.over{ color:var(--win); } .nba-leg-dir.under{ color:var(--loss); }
+  .parlay-leg .nba-grade{ vertical-align:middle; margin-left:4px; }
   /* matchups */
   .nba-subtab{ opacity:.55; transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy); }
   .nba-subtab.active{ opacity:1; background:rgba(0,240,255,.1); }
@@ -1373,7 +1394,9 @@
     <div class="panel-title"><h2>PROJECTIONS</h2><div class="rule"></div><span class="tag">premium · last season blended with this season</span></div>
     <div class="nba-controls">
       <button class="action nba-subtab active" type="button" data-nba-sub="players">PLAYERS</button>
+      <button class="action nba-subtab" type="button" data-nba-sub="rankings">RANKINGS</button>
       <button class="action nba-subtab" type="button" data-nba-sub="matchups">MATCHUPS</button>
+      <button class="action nba-subtab" type="button" data-nba-sub="parlays">PARLAYS</button>
     </div>
     <div class="nba-controls">
       <select id="nba-stat">
@@ -1385,6 +1408,7 @@
         <option value="min">MINUTES</option>
       </select>
       <select id="nba-team"><option value="">ALL TEAMS</option></select>
+      <select id="nba-sort"><option value="proj">SORT: PROJECTION</option><option value="grade">SORT: GRADE</option></select>
       <label class="inj-toggle"><input type="checkbox" id="nba-hide-out" checked> HIDE OUT</label>
       <label class="inj-toggle"><input type="checkbox" id="nba-great-only"> GREAT MATCHUPS ONLY</label>
       <button class="action" id="nba-proj-load" type="button">REFRESH</button>
@@ -1392,6 +1416,8 @@
     <div id="nba-proj-status" class="nba-status"></div>
     <div id="nba-proj-results"></div>
     <div id="nba-mu-results" style="display:none"></div>
+    <div id="nba-rank-results" style="display:none"></div>
+    <div id="nba-parlay-results" style="display:none"></div>
   </section>
 
   <!-- PROPS (premium) -->
@@ -1457,6 +1483,18 @@
           <li><span class="chip mu-great">GREAT MATCHUP</span> one of the 5 softest defenses against his position for the stat you're viewing, and at least +5%. <span class="chip mu-tough">TOUGH MATCHUP</span> one of the 5 stingiest, at least −5%.</li>
           <li>Matchups are shown next to the projection, <b>not baked into it</b>, so you can see both numbers separately.</li>
         </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Situation grade (A+ … D)</h3>
+        <p>The projection says how much he'll do. The grade says how good <b>tonight's spot</b> is compared with his normal. Otherwise it would just rank the stars every night. It's graded for whichever stat you're viewing.</p>
+        <ul>
+          <li><b>Matchup · 30%</b>: opponent defense vs his position for that stat.</li>
+          <li><b>Role · 25%</b>: tonight's projected minutes vs his recent normal (teammates out push it up, a back-to-back pulls it down).</li>
+          <li><b>Game environment · 20%</b>: his team's implied points from the spread and total. Neutral when no line is posted.</li>
+          <li><b>Recent form · 15%</b>: last 5 games' per-minute rate vs his blended rate. Fades in from 3 games played to full weight at 5.</li>
+          <li><b>Minutes security · 10%</b>: how steady his minutes are game to game.</li>
+        </ul>
+        <p>Each piece is ranked against the other rotation players at his position (guard, forward, center) on the slate, the weighted average is ranked across the whole slate, and the letter comes from that rank: <b>A+</b> top 10% · <b>A</b> top 25% · <b>B</b> top 50% · <b>C</b> top 75% · <b>D</b> the rest. Grades are relative to tonight's slate, and the weights are a starting point to tune once there's a track record.</p>
       </div>
       <div class="metric-card">
         <h3>Data sources</h3>
@@ -5236,6 +5274,8 @@
   function renderProjections(){
     if (!proj) return;
     if (projSub === 'matchups') { renderMatchups(); }
+    if (projSub === 'rankings') { renderRankings(); }
+    if (projSub === 'parlays') { renderNbaParlays(); }
     const stat = $('#nba-stat').value, team = $('#nba-team').value, hideOut = $('#nba-hide-out').checked;
     const greatOnly = $('#nba-great-only').checked;
     const box = $('#nba-proj-results');
@@ -5249,7 +5289,10 @@
     );
     let list = all.filter(r => (!team || r.team.abbr === team) && (!hideOut || !r.out));
     if (greatOnly) list = list.filter(r => { const mu = !r.out && matchupFor(r, stat); return mu && mu.tier === 'great'; });
-    list.sort((a, b) => (a.out - b.out) || (b.proj[stat] - a.proj[stat]));
+    const grades = gradesFor(stat);
+    const byGrade = $('#nba-sort').value === 'grade';
+    const gScore = r => { const g = grades.get(r); return g ? g.composite : -1; };
+    list.sort((a, b) => (a.out - b.out) || (byGrade ? gScore(b) - gScore(a) || b.proj[stat] - a.proj[stat] : b.proj[stat] - a.proj[stat]));
     box.innerHTML = '';
     if (!list.length) { box.innerHTML = `<div class="empty">${greatOnly ? 'No great matchups for this stat on this slate.' : 'Nobody to show with these filters.'}</div>`; return; }
     list.forEach((r, i) => {
@@ -5259,10 +5302,274 @@
         <div class="rank">${r.out ? '—' : i + 1}</div>
         ${avatar(r)}
         <div class="who"><div class="name">${esc(r.a.name)}</div><div class="chips">${chipsFor(r)}</div></div>
-        <div class="badges"></div>
+        <div class="badges">${r.out ? '' : gradeBadge(grades.get(r))}</div>
         <div><span class="score">${r.out ? 'OUT' : f1(r.proj[stat])}<span class="unit">${r.out ? '' : LABEL[stat]}</span></span>${stat !== 'min' && !r.out ? `<span class="nba-sub">${f1(r.projMin)} MIN</span>` : ''}</div>`;
       row.addEventListener('click', () => toggleDetail(row, r));
       box.appendChild(row);
+    });
+  }
+
+  /* ---------------- situation grades ----------------
+     Not "how much will he score" (that's the projection) but "how good is tonight's spot vs his
+     normal". Each component is percentile-ranked among rotation players at his position on this
+     slate; the weighted average is then ranked across the whole slate and turned into a letter. */
+  const GRADE_W = { matchup: 0.30, role: 0.25, env: 0.20, form: 0.15, secure: 0.10 };
+  const GRADE_LABEL = { matchup: 'MATCHUP', role: 'ROLE', env: 'GAME ENVIRONMENT', form: 'RECENT FORM', secure: 'MINUTES SECURITY' };
+  const statOf = (x, s) => s === 'pra' ? x.pts + x.reb + x.ast : s === 'min' ? x.min : x[s];
+  const logStat = (l, s) => s === 'pra' ? l[3] + l[4] + l[5] : s === 'min' ? l[2] : l[{ pts: 3, reb: 4, ast: 5, fg3m: 6 }[s]];
+  function pctRank(vals, v){
+    if (!vals.length) return 50;
+    let below = 0, eq = 0; vals.forEach(x => { if (x < v) below++; else if (x === v) eq++; });
+    return 100 * (below + eq / 2) / vals.length;
+  }
+  function impliedTeamTotal(g, abbr){
+    if (g.total == null || isNaN(+g.total)) return null;
+    const total = +g.total, m = /^([A-Z]{2,4})\s+(-?\d+(?:\.\d+)?)$/.exec(String(g.spread || '').trim());
+    if (!m) return /even|pk/i.test(String(g.spread || '')) ? total / 2 : null;
+    const fav = m[1], line = Math.abs(+m[2]);
+    return abbr === fav ? total / 2 + line / 2 : total / 2 - line / 2;
+  }
+  function gradeInputs(r, stat){
+    const s = stat === 'min' ? 'pra' : stat;
+    const out = {}, note = {};
+    const mu = matchupFor(r, s);
+    if (mu) { out.matchup = mu.idx; note.matchup = `${signPct(mu.idx)} · ${rankWords(mu.rank, mu.N)} vs ${mu.g === 'G' ? 'guards' : mu.g === 'F' ? 'forwards' : 'centers'}`; }
+    // role: tonight's minutes vs his recent normal
+    const curLogs = r.C ? r.C.logs : [];
+    const base = r.C && r.C.gp >= 3 ? curLogs.slice(0, 5).reduce((t, l) => t + l[2], 0) / Math.min(5, curLogs.length) : r.m.priorMpg;
+    if (base) { out.role = r.projMin - base; note.role = `${f1(r.projMin)} min tonight vs ${f1(base)} normal`; }
+    // game environment
+    const itt = impliedTeamTotal(r.game, r.team.abbr);
+    if (itt != null) { out.env = itt; note.env = `${r.team.abbr} implied ${f1(itt)} pts`; }
+    // recent form (needs 3+ games this season)
+    if (r.C && r.C.gp >= 3) {
+      const l5 = curLogs.slice(0, 5), mins = l5.reduce((t, l) => t + l[2], 0);
+      const rate = s === 'pra' ? r.m.rate.pts + r.m.rate.reb + r.m.rate.ast : r.m.rate[s];
+      if (mins > 0 && rate > 0) { out.form = (l5.reduce((t, l) => t + logStat(l, s), 0) / mins) / rate; note.form = `last ${l5.length}: ${signPct(out.form)} vs his rate`; }
+    }
+    // minutes security
+    const logs = (r.C && r.C.gp >= 5 ? r.C.logs : (r.P ? r.P.logs : [])).slice(0, 10);
+    if (logs.length >= 4) {
+      const mins = logs.map(l => l[2]), mean = mins.reduce((a, b) => a + b, 0) / mins.length;
+      const sd = Math.sqrt(mins.reduce((t, m) => t + (m - mean) * (m - mean), 0) / mins.length);
+      if (mean > 0) { out.secure = -sd / mean; note.secure = `${f1(mean)} ± ${f1(sd)} min`; }
+    }
+    return { v: out, note, formW: r.C ? Math.max(0, Math.min(1, (r.C.gp - 2) / 3)) : 0 };
+  }
+  function letterFor(score){
+    if (score >= 90) return { l: 'A+', cls: 'g-a' };
+    if (score >= 75) return { l: 'A', cls: 'g-a' };
+    if (score >= 50) return { l: 'B', cls: 'g-b' };
+    if (score >= 25) return { l: 'C', cls: 'g-c' };
+    return { l: 'D', cls: 'g-d' };
+  }
+  function gradesFor(stat){
+    proj.grades = proj.grades || {};
+    if (proj.grades[stat]) return proj.grades[stat];
+    const rows = proj.rows.filter(r => !r.out && r.projMin >= 8);
+    const pool = rows.filter(r => r.projMin >= 15);
+    const inp = new Map(rows.map(r => [r, gradeInputs(r, stat)]));
+    const grp = r => posGroup((r.P && r.P.pos) || (r.C && r.C.pos) || r.a.pos);
+    // component values per position group, from rotation players only
+    const dist = {};
+    pool.forEach(r => {
+      const g = grp(r); dist[g] = dist[g] || {};
+      Object.entries(inp.get(r).v).forEach(([k, v]) => { (dist[g][k] = dist[g][k] || []).push(v); });
+    });
+    const res = new Map();
+    rows.forEach(r => {
+      const x = inp.get(r), g = grp(r), parts = {};
+      let wSum = 0, sum = 0;
+      Object.keys(GRADE_W).forEach(k => {
+        if (x.v[k] == null || !dist[g] || !dist[g][k] || dist[g][k].length < 3) { parts[k] = null; return; }
+        const p = pctRank(dist[g][k], x.v[k]);
+        const w = GRADE_W[k] * (k === 'form' ? x.formW : 1);
+        parts[k] = { p, w, note: x.note[k] };
+        if (w > 0) { wSum += w; sum += w * p; }
+      });
+      res.set(r, { composite: wSum ? sum / wSum : 50, parts });
+    });
+    const comps = pool.map(r => res.get(r).composite);
+    res.forEach(v => { v.score = Math.round(pctRank(comps, v.composite)); Object.assign(v, letterFor(v.score)); });
+    return (proj.grades[stat] = res);
+  }
+  function gradeBadge(gr, small){
+    if (!gr) return '';
+    return `<span class="nba-grade ${gr.cls}${small ? ' sm' : ''}" title="Situation grade ${gr.l} · ${gr.score}/100">
+      <span class="l">${gr.l}</span><span class="n">${gr.score}</span></span>`;
+  }
+  function gradeSectionHtml(r){
+    const stat = $('#nba-stat').value, gr = !r.out && gradesFor(stat).get(r);
+    if (!gr) return '';
+    const bars = Object.keys(GRADE_W).map(k => {
+      const p = gr.parts[k];
+      if (!p || !p.w) return `<div class="gr-bar off"><div class="lbl">${GRADE_LABEL[k]}<small>${k === 'form' ? 'needs 3+ games this season' : k === 'env' ? 'no line posted yet' : 'not enough data'}</small></div><div class="track"></div><div class="pct">—</div></div>`;
+      const col = p.p >= 67 ? 'var(--win)' : p.p >= 34 ? 'var(--amber)' : 'var(--loss)';
+      return `<div class="gr-bar"><div class="lbl">${GRADE_LABEL[k]} · ${Math.round(p.w * 100)}%<small>${esc(p.note || '')}</small></div><div class="track"><div class="fill" style="width:${Math.max(3, p.p)}%;background:${col}"></div></div><div class="pct">${Math.round(p.p)}</div></div>`;
+    }).join('');
+    return `<details class="gw-sec" open><summary>SITUATION GRADE ${gradeBadge(gr, true)} <span class="tag">${LABEL[stat === 'min' ? 'pra' : stat]} · ${gr.score}/100 vs tonight's slate</span></summary><div class="gw-sec-body">
+      <div class="gr-bars">${bars}</div>
+      <ul class="nba-why"><li>Each bar ranks him against the other rotation players at his position tonight (100 = best spot). The grade ranks the weighted total across the whole slate.</li></ul>
+    </div></details>`;
+  }
+
+  /* ---------------- RANKINGS: tonight's top 25 spots for the selected stat ---------------- */
+  function renderRankings(){
+    const box = $('#nba-rank-results');
+    const stat = $('#nba-stat').value, team = $('#nba-team').value;
+    const grades = gradesFor(stat);
+    const list = proj.rows.filter(r => !r.out && r.projMin >= 15 && grades.get(r) && (!team || r.team.abbr === team))
+      .sort((a, b) => grades.get(b).composite - grades.get(a).composite || b.proj[stat] - a.proj[stat]).slice(0, 25);
+    box.innerHTML = `<div class="nba-status">Tonight's best spots for <b>${LABEL[stat === 'min' ? 'pra' : stat]}</b>, ranked by situation grade (rotation players, 15+ projected minutes). Click a player for the full breakdown.</div>`;
+    if (!list.length) { box.insertAdjacentHTML('beforeend', '<div class="empty">No graded players for this slate yet.</div>'); return; }
+    list.forEach((r, i) => {
+      const gr = grades.get(r);
+      const best = Object.entries(gr.parts).filter(([, v]) => v && v.w).sort((a, b) => b[1].p - a[1].p).slice(0, 2).map(([k]) => GRADE_LABEL[k]);
+      const row = document.createElement('div'); row.className = 'edge-row card-row';
+      row.innerHTML = `
+        <div class="rank">${i + 1}</div>
+        ${avatar(r)}
+        <div class="who"><div class="name">${esc(r.a.name)}</div><div class="chips">${chipsFor(r)}</div><div class="meta" style="margin-top:4px">${best.length ? 'driven by ' + best.join(' + ').toLowerCase() : ''}</div></div>
+        <div class="badges">${gradeBadge(gr)}</div>
+        <div><span class="score">${f1(r.proj[stat])}<span class="unit">${LABEL[stat]}</span></span>${stat !== 'min' ? `<span class="nba-sub">${f1(r.projMin)} MIN</span>` : ''}</div>`;
+      row.addEventListener('click', () => toggleDetail(row, r));
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------------- PARLAYS: cross-game prop legs where edge, grade and history agree ----------------
+     Legs come from the FREE ESPN/DraftKings feed only (never the paid Odds API), loaded for every
+     game on the slate. A leg qualifies when the projection beats the line by 8%+, he's a rotation
+     player (20+ min), and his last-10 history leans the same way. Leg score blends the edge, the
+     situation grade (flipped for unders) and that hit rate; combos are 2- and 3-leg, one leg per
+     game, the same shape as the NFL builder. */
+  const PARLAY = { minEdge: 0.08, minMin: 20, minHit: 0.5, w: { edge: 0.40, grade: 0.35, hit: 0.25 } };
+  let parlayLoading = null;
+  // Why the last ESPN props attempt came back empty, so the UI can say something useful instead
+  // of a blanket "no props posted". Reset per load.
+  let propsDiag = { routeMissing: false, directFailed: false, empty: 0, errors: 0 };
+
+  // Free DraftKings props for one game. Tries your worker first (edge-cached, shared by everyone);
+  // if the worker doesn't have the route yet (404 = not redeployed since the route was added) or
+  // the call fails, asks ESPN directly from the browser. Returns [] when ESPN has no lines.
+  async function fetchEspnProps(g){
+    try {
+      const list = parseEspnProps(await (await GW.premiumFetch('/nba/espn-props?event=' + g.id)).json());
+      if (!list.length) propsDiag.empty++;
+      return list;
+    } catch (e) {
+      if (e.message === 'NO_LICENSE' || e.shared) throw e;
+      if (e.status === 404) propsDiag.routeMissing = true; else propsDiag.errors++;
+    }
+    try {
+      const url = `https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events/${g.id}/competitions/${g.id}/odds/100/propBets?limit=1000`;
+      const list = parseEspnProps(await fetchJSON(url));
+      if (!list.length) propsDiag.empty++;
+      return list;
+    } catch (_) { propsDiag.directFailed = true; return []; }
+  }
+
+  async function loadAllEspnProps(progress){
+    let done = 0;
+    propsDiag = { routeMissing: false, directFailed: false, empty: 0, errors: 0 };
+    await pool(slate.games, 4, async g => {
+      if (!propsCache[g.id]) {
+        const list = await fetchEspnProps(g);
+        if (list.length) propsCache[g.id] = list;
+      }
+      done++; if (progress) progress(done, slate.games.length);
+    });
+  }
+  function noPropsMessage(){
+    if (propsDiag.routeMissing && propsDiag.directFailed)
+      return 'Couldn\'t get lines. Your deployed worker doesn\'t have the free ESPN props route yet (run <code>wrangler deploy</code> from the gridwave folder), and ESPN blocked the direct request from the browser.';
+    if (propsDiag.routeMissing) return 'Your deployed worker doesn\'t have the free ESPN props route yet. Lines came straight from ESPN instead, but none qualified. Run <code>wrangler deploy</code> when you\'re back at your computer.';
+    if (propsDiag.directFailed && propsDiag.errors) return 'Couldn\'t reach ESPN\'s props feed (through the worker or directly). Try REFRESH in a minute.';
+    return 'No props posted for this slate yet (books post them the day of).';
+  }
+  function propLegs(){
+    const legs = [];
+    slate.games.forEach(g => {
+      const props = propsCache[g.id]; if (!props) return;
+      const players = proj.rows.filter(r => r.game.id === g.id);
+      const byId = {}, byName = {}; players.forEach(r => { byId[r.a.id] = r; byName[normName(r.a.name)] = r; });
+      props.forEach(p => {
+        const r = (p.id && byId[p.id]) || byName[normName(p.name)];
+        if (!r || r.out || r.projMin < PARLAY.minMin) return;
+        const projV = r.proj[p.stat]; if (projV == null || !p.line) return;
+        const rel = (projV - p.line) / p.line;
+        if (Math.abs(rel) < PARLAY.minEdge) return;
+        const over = rel > 0;
+        if (!over && r.status) return;                                   // no unders on injury-tagged guys
+        const hr = hitRate(r, p.stat, p.line);
+        if (!hr || hr.n < 5) return;
+        const hit = over ? hr.hits / hr.n : (hr.n - hr.hits) / hr.n;
+        if (hit < PARLAY.minHit) return;
+        const gr = gradesFor(['pr', 'pa'].includes(p.stat) ? 'pra' : p.stat).get(r);
+        const gScore = gr ? (over ? gr.score : 100 - gr.score) : 50;
+        const score = PARLAY.w.edge * Math.min(100, Math.abs(rel) * 400) + PARLAY.w.grade * gScore + PARLAY.w.hit * hit * 100;
+        const why = [];
+        if (Math.abs(rel) >= 0.15) why.push('BIG EDGE');
+        const mu = matchupFor(r, ['pr', 'pa'].includes(p.stat) ? 'pra' : p.stat);
+        if (mu && ((over && mu.tier === 'great') || (!over && mu.tier === 'tough'))) why.push(over ? 'GREAT MATCHUP' : 'TOUGH MATCHUP');
+        if (hit >= 0.8) why.push('HOT L10');
+        if (r.boost >= 2 && over) why.push('MINUTES BUMP');
+        legs.push({ r, p, over, projV, rel, hr, hit, gr, score, why, gameId: g.id });
+      });
+    });
+    // one leg per player: his best
+    const best = {};
+    legs.forEach(l => { const k = l.r.a.id; if (!best[k] || l.score > best[k].score) best[k] = l; });
+    return Object.values(best).sort((a, b) => b.score - a.score);
+  }
+  // the grade shown on a leg is for the side being bet: an under leg in a great spot for overs
+  // is a bad under, so unders show the flipped grade (100 − score)
+  function legGrade(l){
+    if (!l.gr) return null;
+    if (l.over) return l.gr;
+    const sc = 100 - l.gr.score;
+    return Object.assign({ score: sc }, letterFor(sc));
+  }
+  async function renderNbaParlays(){
+    const box = $('#nba-parlay-results');
+    if (parlayLoading) return;
+    const missing = slate.games.filter(g => !propsCache[g.id]);
+    if (missing.length) {
+      box.innerHTML = '<div class="loading">Pulling lines for the slate…</div>';
+      parlayLoading = loadAllEspnProps((d, t) => { box.innerHTML = `<div class="loading">Pulling lines for the slate… ${d}/${t}</div>`; })
+        .catch(e => { lockedOrError(box, e, 'lines'); return 'err'; })
+        .finally(() => { parlayLoading = null; });
+      if ((await parlayLoading) === 'err') return;
+    }
+    const cand = propLegs().slice(0, 14);
+    box.innerHTML = `<div class="nba-status">Prop legs where the projection beats the line by 8%+, his last 10 games lean the same way, and the situation grade backs it (flipped for unders). One leg per game, like the NFL builder. Lines are DraftKings via ESPN (free). ESPN doesn't label over/under prices, so there are no payouts here, so check the price before you bet.</div>`;
+    if (cand.length < 2) { box.insertAdjacentHTML('beforeend', `<div class="empty">${slate.games.some(g => propsCache[g.id]) ? 'Not enough qualifying legs on this slate yet.' : noPropsMessage()}</div>`); return; }
+    const combos2 = [];
+    for (let i = 0; i < cand.length; i++) for (let j = i + 1; j < cand.length; j++) {
+      if (cand[i].gameId === cand[j].gameId) continue;
+      combos2.push({ legs: [cand[i], cand[j]], score: (cand[i].score + cand[j].score) / 2 });
+    }
+    combos2.sort((a, b) => b.score - a.score);
+    const top2 = combos2.slice(0, 4);
+    const combos3 = [], seen = new Set();
+    top2.forEach(c => cand.forEach(x => {
+      if (c.legs.some(l => l.gameId === x.gameId)) return;
+      const legs = [...c.legs, x].sort((a, b) => b.score - a.score);
+      const key = legs.map(l => l.r.a.id).sort().join('|');
+      if (seen.has(key)) return; seen.add(key);
+      combos3.push({ legs, score: legs.reduce((t, l) => t + l.score, 0) / 3 });
+    }));
+    combos3.sort((a, b) => b.score - a.score);
+    const all = [...top2, ...combos3.slice(0, 3)].sort((a, b) => b.score - a.score);
+    if (!all.length) { box.insertAdjacentHTML('beforeend', '<div class="empty">Qualifying legs are all in the same game, so there are no cross-game parlays tonight.</div>'); return; }
+    all.forEach((c, i) => {
+      const card = document.createElement('div'); card.className = 'parlay-card';
+      const tags = [...new Set([].concat(...c.legs.map(l => l.why)))];
+      card.innerHTML = `
+        <div class="head"><span>#${i + 1} <span class="tag2">${c.legs.length}-LEG</span> <span class="tag2">CROSS-GAME</span></span><span class="score">${c.score.toFixed(1)}</span></div>
+        ${c.legs.map(l => `<div class="parlay-leg">${esc(l.r.a.name)} <span class="nba-leg-dir ${l.over ? 'over' : 'under'}">${l.over ? 'OVER' : 'UNDER'} ${l.p.line} ${LABEL[l.p.stat]}</span>${gradeBadge(legGrade(l), true)} <span class="sub">(${esc(l.r.team.abbr)} ${l.r.home ? 'vs' : '@'} ${esc(l.r.opp.abbr)} · proj ${f1(l.projV)} · L10 ${l.over ? l.hr.hits : l.hr.n - l.hr.hits}/${l.hr.n} ${l.hr.src})</span></div>`).join('')}
+        ${tags.length ? `<div class="parlay-reason">${tags.join(' + ')}</div>` : ''}`;
+      box.appendChild(card);
     });
   }
 
@@ -5356,6 +5663,7 @@
         <div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>STAT</th><th>LAST SZN</th><th>THIS SZN</th><th>WEIGHT ON THIS SZN</th><th>TONIGHT</th></tr></thead><tbody>${rows}</tbody></table></div>
         <ul class="nba-why">${why.map(x => `<li>${x}</li>`).join('')}</ul>
       </div></details>
+      ${gradeSectionHtml(r)}
       ${matchupSectionHtml(r)}
       <details class="gw-sec" ${logs.length ? 'open' : ''}><summary>GAME LOG <span class="tag">${useCur ? 'this season, last 10' : 'last season, final 10'}</span></summary><div class="gw-sec-body">
         ${logs.length ? `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>DATE</th><th>OPP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th></tr></thead><tbody>${logRows}</tbody></table></div>` : '<div class="empty">No games on record.</div>'}
@@ -5459,15 +5767,11 @@
   async function loadGameProps(g, body){
     if (propsCache[g.id]) { drawProps(g, body, propsCache[g.id]); return; }
     body.innerHTML = '<div class="loading">Pulling lines…</div>';
-    // 1) free: DraftKings lines through ESPN's feed
+    // 1) free: DraftKings lines through ESPN's feed (worker first, then ESPN directly)
     try {
-      const j = await (await GW.premiumFetch('/nba/espn-props?event=' + g.id)).json();
-      const list = parseEspnProps(j);
+      const list = await fetchEspnProps(g);
       if (list.length) { propsCache[g.id] = list; drawProps(g, body, list); return; }
-    } catch (e) {
-      if (e.message === 'NO_LICENSE' || e.shared) { lockedOrError(body, e, 'props'); return; }
-      /* ESPN feed down or empty → fall through to The Odds API */
-    }
+    } catch (e) { lockedOrError(body, e, 'props'); return; }
     // 2) paid fallback: The Odds API (4 credits per game per 30 min)
     try {
       if (!oddsEvents) oddsEvents = await (await GW.premiumFetch('/nba/events')).json();
@@ -5495,11 +5799,11 @@
     const srcNote = props[0] && props[0].src === 'espn'
       ? '<div class="nba-status">DraftKings lines via ESPN · free. ESPN doesn\'t label which price is the over, so both are shown.</div>'
       : '<div class="nba-status">Consensus line across books via The Odds API.</div>';
-    body.innerHTML = srcNote + `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>PLAYER</th><th>MKT</th><th>LINE</th><th>PROJ</th><th>EDGE</th><th>L10</th><th>PRICES</th></tr></thead><tbody>${rows.map(x => {
+    body.innerHTML = srcNote + `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>PLAYER</th><th>MKT</th><th>GRADE</th><th>LINE</th><th>PROJ</th><th>EDGE</th><th>L10</th><th>PRICES</th></tr></thead><tbody>${rows.map(x => {
       const cls = x.edge == null ? '' : x.edge > 0 ? 'edge-pos' : 'edge-neg';
       const edgeTxt = x.edge == null ? (x.r && x.r.out ? 'OUT' : '—') : `${x.edge > 0 ? 'OVER +' : 'UNDER '}${f1(x.edge)}`;
       const hr = x.hr ? `${x.hr.hits}/${x.hr.n} <small>${x.hr.src}</small>` : '—';
-      return `<tr><td>${esc(x.p.name)}${x.r && x.r.status && !x.r.out ? ` <span class="chip inj-q">${esc(String(x.r.status).toUpperCase())}</span>` : ''}</td><td>${LABEL[x.p.stat]}</td><td>${x.p.line}</td><td>${f1(x.projV)}</td><td class="${cls}"><b>${edgeTxt}</b></td><td class="dvp-cell">${hr}</td><td>${pricesTxt(x.p)}</td></tr>`;
+      return `<tr><td>${esc(x.p.name)}${x.r && x.r.status && !x.r.out ? ` <span class="chip inj-q">${esc(String(x.r.status).toUpperCase())}</span>` : ''}</td><td>${LABEL[x.p.stat]}</td><td>${x.r && !x.r.out ? gradeBadge(gradesFor(['pr', 'pa'].includes(x.p.stat) ? 'pra' : x.p.stat).get(x.r), true) : ''}</td><td>${x.p.line}</td><td>${f1(x.projV)}</td><td class="${cls}"><b>${edgeTxt}</b></td><td class="dvp-cell">${hr}</td><td>${pricesTxt(x.p)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
 
@@ -5526,16 +5830,21 @@
     $('#nba-day-prev').addEventListener('click', () => changeDay(addDays(slateDate, -1)));
     $('#nba-day-next').addEventListener('click', () => changeDay(addDays(slateDate, 1)));
     $('#nba-day-today').addEventListener('click', () => changeDay(new Date()));
-    ['#nba-stat', '#nba-team', '#nba-hide-out'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
-    $('#nba-proj-load').addEventListener('click', () => ensureProjections(true));
+    ['#nba-stat', '#nba-team', '#nba-hide-out', '#nba-sort'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
+    $('#nba-proj-load').addEventListener('click', () => { for (const k in propsCache) delete propsCache[k]; ensureProjections(true); });
     $('#nba-great-only').addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); });
     document.querySelectorAll('.nba-subtab').forEach(b => b.addEventListener('click', () => {
       projSub = b.dataset.nbaSub;
       document.querySelectorAll('.nba-subtab').forEach(x => x.classList.toggle('active', x === b));
       $('#nba-proj-results').style.display = projSub === 'players' ? '' : 'none';
       $('#nba-mu-results').style.display = projSub === 'matchups' ? '' : 'none';
+      $('#nba-rank-results').style.display = projSub === 'rankings' ? '' : 'none';
+      $('#nba-parlay-results').style.display = projSub === 'parlays' ? '' : 'none';
       $('#nba-hide-out').parentElement.style.display = projSub === 'players' ? '' : 'none';
       $('#nba-great-only').parentElement.style.display = projSub === 'players' ? '' : 'none';
+      $('#nba-sort').style.display = projSub === 'players' ? '' : 'none';
+      $('#nba-stat').style.display = projSub === 'parlays' ? 'none' : '';
+      $('#nba-team').style.display = projSub === 'parlays' ? 'none' : '';
       if (proj) renderProjections();
     }));
     $('#nba-prop-market').addEventListener('change', () => {
@@ -5566,7 +5875,7 @@
   setSport(initial, false);
 
   // exposed for the headless tests only
-  window.__gwNba = { MODEL, projectPlayer, buildSlate, parseBox, hooprToRows, aggregate, parseProps, parseEspnProps, normName, positionAverages, dvpFrom, blendDvp };
+  window.__gwNba = { gradesFor: s => proj && gradesFor(s), MODEL, projectPlayer, buildSlate, parseBox, hooprToRows, aggregate, parseProps, parseEspnProps, normName, positionAverages, dvpFrom, blendDvp };
 })();
 </script>
 
