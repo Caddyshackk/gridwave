@@ -747,6 +747,9 @@
   .gr-bar .pct{ text-align:right; font-family:var(--font-display); color:var(--text-mid); }
   .gr-bar.off{ opacity:.45; }
   @media (max-width:700px){ .gr-bar{ grid-template-columns:100px 1fr 36px; } }
+  .nba-leg-dir{ font-family:var(--font-display); font-weight:700; letter-spacing:.04em; }
+  .nba-leg-dir.over{ color:var(--win); } .nba-leg-dir.under{ color:var(--loss); }
+  .parlay-leg .nba-grade{ vertical-align:middle; margin-left:4px; }
   /* matchups */
   .nba-subtab{ opacity:.55; transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy); }
   .nba-subtab.active{ opacity:1; background:rgba(0,240,255,.1); }
@@ -1391,7 +1394,9 @@
     <div class="panel-title"><h2>PROJECTIONS</h2><div class="rule"></div><span class="tag">premium · last season blended with this season</span></div>
     <div class="nba-controls">
       <button class="action nba-subtab active" type="button" data-nba-sub="players">PLAYERS</button>
+      <button class="action nba-subtab" type="button" data-nba-sub="rankings">RANKINGS</button>
       <button class="action nba-subtab" type="button" data-nba-sub="matchups">MATCHUPS</button>
+      <button class="action nba-subtab" type="button" data-nba-sub="parlays">PARLAYS</button>
     </div>
     <div class="nba-controls">
       <select id="nba-stat">
@@ -1411,6 +1416,8 @@
     <div id="nba-proj-status" class="nba-status"></div>
     <div id="nba-proj-results"></div>
     <div id="nba-mu-results" style="display:none"></div>
+    <div id="nba-rank-results" style="display:none"></div>
+    <div id="nba-parlay-results" style="display:none"></div>
   </section>
 
   <!-- PROPS (premium) -->
@@ -5267,6 +5274,8 @@
   function renderProjections(){
     if (!proj) return;
     if (projSub === 'matchups') { renderMatchups(); }
+    if (projSub === 'rankings') { renderRankings(); }
+    if (projSub === 'parlays') { renderNbaParlays(); }
     const stat = $('#nba-stat').value, team = $('#nba-team').value, hideOut = $('#nba-hide-out').checked;
     const greatOnly = $('#nba-great-only').checked;
     const box = $('#nba-proj-results');
@@ -5402,6 +5411,136 @@
       <div class="gr-bars">${bars}</div>
       <ul class="nba-why"><li>Each bar ranks him against the other rotation players at his position tonight (100 = best spot). The grade ranks the weighted total across the whole slate.</li></ul>
     </div></details>`;
+  }
+
+  /* ---------------- RANKINGS: tonight's top 25 spots for the selected stat ---------------- */
+  function renderRankings(){
+    const box = $('#nba-rank-results');
+    const stat = $('#nba-stat').value, team = $('#nba-team').value;
+    const grades = gradesFor(stat);
+    const list = proj.rows.filter(r => !r.out && r.projMin >= 15 && grades.get(r) && (!team || r.team.abbr === team))
+      .sort((a, b) => grades.get(b).composite - grades.get(a).composite || b.proj[stat] - a.proj[stat]).slice(0, 25);
+    box.innerHTML = `<div class="nba-status">Tonight's best spots for <b>${LABEL[stat === 'min' ? 'pra' : stat]}</b>, ranked by situation grade (rotation players, 15+ projected minutes). Click a player for the full breakdown.</div>`;
+    if (!list.length) { box.insertAdjacentHTML('beforeend', '<div class="empty">No graded players for this slate yet.</div>'); return; }
+    list.forEach((r, i) => {
+      const gr = grades.get(r);
+      const best = Object.entries(gr.parts).filter(([, v]) => v && v.w).sort((a, b) => b[1].p - a[1].p).slice(0, 2).map(([k]) => GRADE_LABEL[k]);
+      const row = document.createElement('div'); row.className = 'edge-row card-row';
+      row.innerHTML = `
+        <div class="rank">${i + 1}</div>
+        ${avatar(r)}
+        <div class="who"><div class="name">${esc(r.a.name)}</div><div class="chips">${chipsFor(r)}</div><div class="meta" style="margin-top:4px">${best.length ? 'driven by ' + best.join(' + ').toLowerCase() : ''}</div></div>
+        <div class="badges">${gradeBadge(gr)}</div>
+        <div><span class="score">${f1(r.proj[stat])}<span class="unit">${LABEL[stat]}</span></span>${stat !== 'min' ? `<span class="nba-sub">${f1(r.projMin)} MIN</span>` : ''}</div>`;
+      row.addEventListener('click', () => toggleDetail(row, r));
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------------- PARLAYS: cross-game prop legs where edge, grade and history agree ----------------
+     Legs come from the FREE ESPN/DraftKings feed only (never the paid Odds API), loaded for every
+     game on the slate. A leg qualifies when the projection beats the line by 8%+, he's a rotation
+     player (20+ min), and his last-10 history leans the same way. Leg score blends the edge, the
+     situation grade (flipped for unders) and that hit rate; combos are 2- and 3-leg, one leg per
+     game, the same shape as the NFL builder. */
+  const PARLAY = { minEdge: 0.08, minMin: 20, minHit: 0.5, w: { edge: 0.40, grade: 0.35, hit: 0.25 } };
+  let parlayLoading = null;
+  async function loadAllEspnProps(progress){
+    let done = 0;
+    await pool(slate.games, 4, async g => {
+      if (!propsCache[g.id]) {
+        try {
+          const list = parseEspnProps(await (await GW.premiumFetch('/nba/espn-props?event=' + g.id)).json());
+          if (list.length) propsCache[g.id] = list;
+        } catch (e) { if (e.message === 'NO_LICENSE' || e.shared) throw e; }
+      }
+      done++; if (progress) progress(done, slate.games.length);
+    });
+  }
+  function propLegs(){
+    const legs = [];
+    slate.games.forEach(g => {
+      const props = propsCache[g.id]; if (!props) return;
+      const players = proj.rows.filter(r => r.game.id === g.id);
+      const byId = {}, byName = {}; players.forEach(r => { byId[r.a.id] = r; byName[normName(r.a.name)] = r; });
+      props.forEach(p => {
+        const r = (p.id && byId[p.id]) || byName[normName(p.name)];
+        if (!r || r.out || r.projMin < PARLAY.minMin) return;
+        const projV = r.proj[p.stat]; if (projV == null || !p.line) return;
+        const rel = (projV - p.line) / p.line;
+        if (Math.abs(rel) < PARLAY.minEdge) return;
+        const over = rel > 0;
+        if (!over && r.status) return;                                   // no unders on injury-tagged guys
+        const hr = hitRate(r, p.stat, p.line);
+        if (!hr || hr.n < 5) return;
+        const hit = over ? hr.hits / hr.n : (hr.n - hr.hits) / hr.n;
+        if (hit < PARLAY.minHit) return;
+        const gr = gradesFor(['pr', 'pa'].includes(p.stat) ? 'pra' : p.stat).get(r);
+        const gScore = gr ? (over ? gr.score : 100 - gr.score) : 50;
+        const score = PARLAY.w.edge * Math.min(100, Math.abs(rel) * 400) + PARLAY.w.grade * gScore + PARLAY.w.hit * hit * 100;
+        const why = [];
+        if (Math.abs(rel) >= 0.15) why.push('BIG EDGE');
+        const mu = matchupFor(r, ['pr', 'pa'].includes(p.stat) ? 'pra' : p.stat);
+        if (mu && ((over && mu.tier === 'great') || (!over && mu.tier === 'tough'))) why.push(over ? 'GREAT MATCHUP' : 'TOUGH MATCHUP');
+        if (hit >= 0.8) why.push('HOT L10');
+        if (r.boost >= 2 && over) why.push('MINUTES BUMP');
+        legs.push({ r, p, over, projV, rel, hr, hit, gr, score, why, gameId: g.id });
+      });
+    });
+    // one leg per player: his best
+    const best = {};
+    legs.forEach(l => { const k = l.r.a.id; if (!best[k] || l.score > best[k].score) best[k] = l; });
+    return Object.values(best).sort((a, b) => b.score - a.score);
+  }
+  // the grade shown on a leg is for the side being bet: an under leg in a great spot for overs
+  // is a bad under, so unders show the flipped grade (100 − score)
+  function legGrade(l){
+    if (!l.gr) return null;
+    if (l.over) return l.gr;
+    const sc = 100 - l.gr.score;
+    return Object.assign({ score: sc }, letterFor(sc));
+  }
+  async function renderNbaParlays(){
+    const box = $('#nba-parlay-results');
+    if (parlayLoading) return;
+    const missing = slate.games.filter(g => !propsCache[g.id]);
+    if (missing.length) {
+      box.innerHTML = '<div class="loading">Pulling lines for the slate…</div>';
+      parlayLoading = loadAllEspnProps((d, t) => { box.innerHTML = `<div class="loading">Pulling lines for the slate… ${d}/${t}</div>`; })
+        .catch(e => { lockedOrError(box, e, 'lines'); return 'err'; })
+        .finally(() => { parlayLoading = null; });
+      if ((await parlayLoading) === 'err') return;
+    }
+    const cand = propLegs().slice(0, 14);
+    box.innerHTML = `<div class="nba-status">Prop legs where the projection beats the line by 8%+, his last 10 games lean the same way, and the situation grade backs it (flipped for unders). One leg per game, like the NFL builder. Lines are DraftKings via ESPN (free). ESPN doesn't label over/under prices, so there are no payouts here, so check the price before you bet.</div>`;
+    if (cand.length < 2) { box.insertAdjacentHTML('beforeend', `<div class="empty">${Object.keys(propsCache).length ? 'Not enough qualifying legs on this slate yet.' : 'No props posted for this slate yet (books post them the day of).'}</div>`); return; }
+    const combos2 = [];
+    for (let i = 0; i < cand.length; i++) for (let j = i + 1; j < cand.length; j++) {
+      if (cand[i].gameId === cand[j].gameId) continue;
+      combos2.push({ legs: [cand[i], cand[j]], score: (cand[i].score + cand[j].score) / 2 });
+    }
+    combos2.sort((a, b) => b.score - a.score);
+    const top2 = combos2.slice(0, 4);
+    const combos3 = [], seen = new Set();
+    top2.forEach(c => cand.forEach(x => {
+      if (c.legs.some(l => l.gameId === x.gameId)) return;
+      const legs = [...c.legs, x].sort((a, b) => b.score - a.score);
+      const key = legs.map(l => l.r.a.id).sort().join('|');
+      if (seen.has(key)) return; seen.add(key);
+      combos3.push({ legs, score: legs.reduce((t, l) => t + l.score, 0) / 3 });
+    }));
+    combos3.sort((a, b) => b.score - a.score);
+    const all = [...top2, ...combos3.slice(0, 3)].sort((a, b) => b.score - a.score);
+    if (!all.length) { box.insertAdjacentHTML('beforeend', '<div class="empty">Qualifying legs are all in the same game, so there are no cross-game parlays tonight.</div>'); return; }
+    all.forEach((c, i) => {
+      const card = document.createElement('div'); card.className = 'parlay-card';
+      const tags = [...new Set([].concat(...c.legs.map(l => l.why)))];
+      card.innerHTML = `
+        <div class="head"><span>#${i + 1} <span class="tag2">${c.legs.length}-LEG</span> <span class="tag2">CROSS-GAME</span></span><span class="score">${c.score.toFixed(1)}</span></div>
+        ${c.legs.map(l => `<div class="parlay-leg">${esc(l.r.a.name)} <span class="nba-leg-dir ${l.over ? 'over' : 'under'}">${l.over ? 'OVER' : 'UNDER'} ${l.p.line} ${LABEL[l.p.stat]}</span>${gradeBadge(legGrade(l), true)} <span class="sub">(${esc(l.r.team.abbr)} ${l.r.home ? 'vs' : '@'} ${esc(l.r.opp.abbr)} · proj ${f1(l.projV)} · L10 ${l.over ? l.hr.hits : l.hr.n - l.hr.hits}/${l.hr.n} ${l.hr.src})</span></div>`).join('')}
+        ${tags.length ? `<div class="parlay-reason">${tags.join(' + ')}</div>` : ''}`;
+      box.appendChild(card);
+    });
   }
 
   function matchupSectionHtml(r){
@@ -5673,8 +5812,13 @@
       document.querySelectorAll('.nba-subtab').forEach(x => x.classList.toggle('active', x === b));
       $('#nba-proj-results').style.display = projSub === 'players' ? '' : 'none';
       $('#nba-mu-results').style.display = projSub === 'matchups' ? '' : 'none';
+      $('#nba-rank-results').style.display = projSub === 'rankings' ? '' : 'none';
+      $('#nba-parlay-results').style.display = projSub === 'parlays' ? '' : 'none';
       $('#nba-hide-out').parentElement.style.display = projSub === 'players' ? '' : 'none';
       $('#nba-great-only').parentElement.style.display = projSub === 'players' ? '' : 'none';
+      $('#nba-sort').style.display = projSub === 'players' ? '' : 'none';
+      $('#nba-stat').style.display = projSub === 'parlays' ? 'none' : '';
+      $('#nba-team').style.display = projSub === 'parlays' ? 'none' : '';
       if (proj) renderProjections();
     }));
     $('#nba-prop-market').addEventListener('change', () => {
@@ -5711,4 +5855,3 @@
 
 </body>
 </html>
-
