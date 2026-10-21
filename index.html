@@ -729,6 +729,24 @@
   .inj-tag.prob{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
   .nba-inj-legend{ font-size:.64rem; color:var(--text-dim); margin:-4px 0 10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
   .nba-inj-legend .inj-tag{ min-width:0; }
+  /* situation grades */
+  .nba-grade{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; padding:4px 6px; border:1px solid; font-family:var(--font-display); line-height:1; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
+  .nba-grade .l{ font-size:1rem; font-weight:700; }
+  .nba-grade .n{ font-size:.52rem; opacity:.8; margin-top:3px; letter-spacing:.04em; }
+  .nba-grade.g-a{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
+  .nba-grade.g-b{ color:var(--cyan); border-color:rgba(0,240,255,.5); background:rgba(0,240,255,.06); }
+  .nba-grade.g-c{ color:var(--amber); border-color:var(--amber); background:rgba(252,238,10,.05); }
+  .nba-grade.g-d{ color:var(--loss); border-color:var(--loss); background:rgba(255,35,88,.06); }
+  .nba-grade.sm{ min-width:34px; padding:3px 5px; } .nba-grade.sm .l{ font-size:.8rem; } .nba-grade.sm .n{ display:none; }
+  .gr-bars{ display:flex; flex-direction:column; gap:7px; }
+  .gr-bar{ display:grid; grid-template-columns:130px 1fr 44px; gap:10px; align-items:center; font-size:.7rem; }
+  .gr-bar .lbl{ color:var(--text-hi); font-family:var(--font-display); letter-spacing:.04em; font-size:.64rem; }
+  .gr-bar .lbl small{ display:block; color:var(--text-dim); font-family:var(--font-body); letter-spacing:0; font-size:.6rem; margin-top:2px; }
+  .gr-bar .track{ height:8px; background:rgba(124,92,255,.12); border-radius:4px; overflow:hidden; }
+  .gr-bar .fill{ height:100%; border-radius:4px; }
+  .gr-bar .pct{ text-align:right; font-family:var(--font-display); color:var(--text-mid); }
+  .gr-bar.off{ opacity:.45; }
+  @media (max-width:700px){ .gr-bar{ grid-template-columns:100px 1fr 36px; } }
   /* matchups */
   .nba-subtab{ opacity:.55; transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy); }
   .nba-subtab.active{ opacity:1; background:rgba(0,240,255,.1); }
@@ -1385,6 +1403,7 @@
         <option value="min">MINUTES</option>
       </select>
       <select id="nba-team"><option value="">ALL TEAMS</option></select>
+      <select id="nba-sort"><option value="proj">SORT: PROJECTION</option><option value="grade">SORT: GRADE</option></select>
       <label class="inj-toggle"><input type="checkbox" id="nba-hide-out" checked> HIDE OUT</label>
       <label class="inj-toggle"><input type="checkbox" id="nba-great-only"> GREAT MATCHUPS ONLY</label>
       <button class="action" id="nba-proj-load" type="button">REFRESH</button>
@@ -1457,6 +1476,18 @@
           <li><span class="chip mu-great">GREAT MATCHUP</span> one of the 5 softest defenses against his position for the stat you're viewing, and at least +5%. <span class="chip mu-tough">TOUGH MATCHUP</span> one of the 5 stingiest, at least −5%.</li>
           <li>Matchups are shown next to the projection, <b>not baked into it</b>, so you can see both numbers separately.</li>
         </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Situation grade (A+ … D)</h3>
+        <p>The projection says how much he'll do. The grade says how good <b>tonight's spot</b> is compared with his normal. Otherwise it would just rank the stars every night. It's graded for whichever stat you're viewing.</p>
+        <ul>
+          <li><b>Matchup · 30%</b>: opponent defense vs his position for that stat.</li>
+          <li><b>Role · 25%</b>: tonight's projected minutes vs his recent normal (teammates out push it up, a back-to-back pulls it down).</li>
+          <li><b>Game environment · 20%</b>: his team's implied points from the spread and total. Neutral when no line is posted.</li>
+          <li><b>Recent form · 15%</b>: last 5 games' per-minute rate vs his blended rate. Fades in from 3 games played to full weight at 5.</li>
+          <li><b>Minutes security · 10%</b>: how steady his minutes are game to game.</li>
+        </ul>
+        <p>Each piece is ranked against the other rotation players at his position (guard, forward, center) on the slate, the weighted average is ranked across the whole slate, and the letter comes from that rank: <b>A+</b> top 10% · <b>A</b> top 25% · <b>B</b> top 50% · <b>C</b> top 75% · <b>D</b> the rest. Grades are relative to tonight's slate, and the weights are a starting point to tune once there's a track record.</p>
       </div>
       <div class="metric-card">
         <h3>Data sources</h3>
@@ -5249,7 +5280,10 @@
     );
     let list = all.filter(r => (!team || r.team.abbr === team) && (!hideOut || !r.out));
     if (greatOnly) list = list.filter(r => { const mu = !r.out && matchupFor(r, stat); return mu && mu.tier === 'great'; });
-    list.sort((a, b) => (a.out - b.out) || (b.proj[stat] - a.proj[stat]));
+    const grades = gradesFor(stat);
+    const byGrade = $('#nba-sort').value === 'grade';
+    const gScore = r => { const g = grades.get(r); return g ? g.composite : -1; };
+    list.sort((a, b) => (a.out - b.out) || (byGrade ? gScore(b) - gScore(a) || b.proj[stat] - a.proj[stat] : b.proj[stat] - a.proj[stat]));
     box.innerHTML = '';
     if (!list.length) { box.innerHTML = `<div class="empty">${greatOnly ? 'No great matchups for this stat on this slate.' : 'Nobody to show with these filters.'}</div>`; return; }
     list.forEach((r, i) => {
@@ -5259,11 +5293,115 @@
         <div class="rank">${r.out ? '—' : i + 1}</div>
         ${avatar(r)}
         <div class="who"><div class="name">${esc(r.a.name)}</div><div class="chips">${chipsFor(r)}</div></div>
-        <div class="badges"></div>
+        <div class="badges">${r.out ? '' : gradeBadge(grades.get(r))}</div>
         <div><span class="score">${r.out ? 'OUT' : f1(r.proj[stat])}<span class="unit">${r.out ? '' : LABEL[stat]}</span></span>${stat !== 'min' && !r.out ? `<span class="nba-sub">${f1(r.projMin)} MIN</span>` : ''}</div>`;
       row.addEventListener('click', () => toggleDetail(row, r));
       box.appendChild(row);
     });
+  }
+
+  /* ---------------- situation grades ----------------
+     Not "how much will he score" (that's the projection) but "how good is tonight's spot vs his
+     normal". Each component is percentile-ranked among rotation players at his position on this
+     slate; the weighted average is then ranked across the whole slate and turned into a letter. */
+  const GRADE_W = { matchup: 0.30, role: 0.25, env: 0.20, form: 0.15, secure: 0.10 };
+  const GRADE_LABEL = { matchup: 'MATCHUP', role: 'ROLE', env: 'GAME ENVIRONMENT', form: 'RECENT FORM', secure: 'MINUTES SECURITY' };
+  const statOf = (x, s) => s === 'pra' ? x.pts + x.reb + x.ast : s === 'min' ? x.min : x[s];
+  const logStat = (l, s) => s === 'pra' ? l[3] + l[4] + l[5] : s === 'min' ? l[2] : l[{ pts: 3, reb: 4, ast: 5, fg3m: 6 }[s]];
+  function pctRank(vals, v){
+    if (!vals.length) return 50;
+    let below = 0, eq = 0; vals.forEach(x => { if (x < v) below++; else if (x === v) eq++; });
+    return 100 * (below + eq / 2) / vals.length;
+  }
+  function impliedTeamTotal(g, abbr){
+    if (g.total == null || isNaN(+g.total)) return null;
+    const total = +g.total, m = /^([A-Z]{2,4})\s+(-?\d+(?:\.\d+)?)$/.exec(String(g.spread || '').trim());
+    if (!m) return /even|pk/i.test(String(g.spread || '')) ? total / 2 : null;
+    const fav = m[1], line = Math.abs(+m[2]);
+    return abbr === fav ? total / 2 + line / 2 : total / 2 - line / 2;
+  }
+  function gradeInputs(r, stat){
+    const s = stat === 'min' ? 'pra' : stat;
+    const out = {}, note = {};
+    const mu = matchupFor(r, s);
+    if (mu) { out.matchup = mu.idx; note.matchup = `${signPct(mu.idx)} · ${rankWords(mu.rank, mu.N)} vs ${mu.g === 'G' ? 'guards' : mu.g === 'F' ? 'forwards' : 'centers'}`; }
+    // role: tonight's minutes vs his recent normal
+    const curLogs = r.C ? r.C.logs : [];
+    const base = r.C && r.C.gp >= 3 ? curLogs.slice(0, 5).reduce((t, l) => t + l[2], 0) / Math.min(5, curLogs.length) : r.m.priorMpg;
+    if (base) { out.role = r.projMin - base; note.role = `${f1(r.projMin)} min tonight vs ${f1(base)} normal`; }
+    // game environment
+    const itt = impliedTeamTotal(r.game, r.team.abbr);
+    if (itt != null) { out.env = itt; note.env = `${r.team.abbr} implied ${f1(itt)} pts`; }
+    // recent form (needs 3+ games this season)
+    if (r.C && r.C.gp >= 3) {
+      const l5 = curLogs.slice(0, 5), mins = l5.reduce((t, l) => t + l[2], 0);
+      const rate = s === 'pra' ? r.m.rate.pts + r.m.rate.reb + r.m.rate.ast : r.m.rate[s];
+      if (mins > 0 && rate > 0) { out.form = (l5.reduce((t, l) => t + logStat(l, s), 0) / mins) / rate; note.form = `last ${l5.length}: ${signPct(out.form)} vs his rate`; }
+    }
+    // minutes security
+    const logs = (r.C && r.C.gp >= 5 ? r.C.logs : (r.P ? r.P.logs : [])).slice(0, 10);
+    if (logs.length >= 4) {
+      const mins = logs.map(l => l[2]), mean = mins.reduce((a, b) => a + b, 0) / mins.length;
+      const sd = Math.sqrt(mins.reduce((t, m) => t + (m - mean) * (m - mean), 0) / mins.length);
+      if (mean > 0) { out.secure = -sd / mean; note.secure = `${f1(mean)} ± ${f1(sd)} min`; }
+    }
+    return { v: out, note, formW: r.C ? Math.max(0, Math.min(1, (r.C.gp - 2) / 3)) : 0 };
+  }
+  function letterFor(score){
+    if (score >= 90) return { l: 'A+', cls: 'g-a' };
+    if (score >= 75) return { l: 'A', cls: 'g-a' };
+    if (score >= 50) return { l: 'B', cls: 'g-b' };
+    if (score >= 25) return { l: 'C', cls: 'g-c' };
+    return { l: 'D', cls: 'g-d' };
+  }
+  function gradesFor(stat){
+    proj.grades = proj.grades || {};
+    if (proj.grades[stat]) return proj.grades[stat];
+    const rows = proj.rows.filter(r => !r.out && r.projMin >= 8);
+    const pool = rows.filter(r => r.projMin >= 15);
+    const inp = new Map(rows.map(r => [r, gradeInputs(r, stat)]));
+    const grp = r => posGroup((r.P && r.P.pos) || (r.C && r.C.pos) || r.a.pos);
+    // component values per position group, from rotation players only
+    const dist = {};
+    pool.forEach(r => {
+      const g = grp(r); dist[g] = dist[g] || {};
+      Object.entries(inp.get(r).v).forEach(([k, v]) => { (dist[g][k] = dist[g][k] || []).push(v); });
+    });
+    const res = new Map();
+    rows.forEach(r => {
+      const x = inp.get(r), g = grp(r), parts = {};
+      let wSum = 0, sum = 0;
+      Object.keys(GRADE_W).forEach(k => {
+        if (x.v[k] == null || !dist[g] || !dist[g][k] || dist[g][k].length < 3) { parts[k] = null; return; }
+        const p = pctRank(dist[g][k], x.v[k]);
+        const w = GRADE_W[k] * (k === 'form' ? x.formW : 1);
+        parts[k] = { p, w, note: x.note[k] };
+        if (w > 0) { wSum += w; sum += w * p; }
+      });
+      res.set(r, { composite: wSum ? sum / wSum : 50, parts });
+    });
+    const comps = pool.map(r => res.get(r).composite);
+    res.forEach(v => { v.score = Math.round(pctRank(comps, v.composite)); Object.assign(v, letterFor(v.score)); });
+    return (proj.grades[stat] = res);
+  }
+  function gradeBadge(gr, small){
+    if (!gr) return '';
+    return `<span class="nba-grade ${gr.cls}${small ? ' sm' : ''}" title="Situation grade ${gr.l} · ${gr.score}/100">
+      <span class="l">${gr.l}</span><span class="n">${gr.score}</span></span>`;
+  }
+  function gradeSectionHtml(r){
+    const stat = $('#nba-stat').value, gr = !r.out && gradesFor(stat).get(r);
+    if (!gr) return '';
+    const bars = Object.keys(GRADE_W).map(k => {
+      const p = gr.parts[k];
+      if (!p || !p.w) return `<div class="gr-bar off"><div class="lbl">${GRADE_LABEL[k]}<small>${k === 'form' ? 'needs 3+ games this season' : k === 'env' ? 'no line posted yet' : 'not enough data'}</small></div><div class="track"></div><div class="pct">—</div></div>`;
+      const col = p.p >= 67 ? 'var(--win)' : p.p >= 34 ? 'var(--amber)' : 'var(--loss)';
+      return `<div class="gr-bar"><div class="lbl">${GRADE_LABEL[k]} · ${Math.round(p.w * 100)}%<small>${esc(p.note || '')}</small></div><div class="track"><div class="fill" style="width:${Math.max(3, p.p)}%;background:${col}"></div></div><div class="pct">${Math.round(p.p)}</div></div>`;
+    }).join('');
+    return `<details class="gw-sec" open><summary>SITUATION GRADE ${gradeBadge(gr, true)} <span class="tag">${LABEL[stat === 'min' ? 'pra' : stat]} · ${gr.score}/100 vs tonight's slate</span></summary><div class="gw-sec-body">
+      <div class="gr-bars">${bars}</div>
+      <ul class="nba-why"><li>Each bar ranks him against the other rotation players at his position tonight (100 = best spot). The grade ranks the weighted total across the whole slate.</li></ul>
+    </div></details>`;
   }
 
   function matchupSectionHtml(r){
@@ -5356,6 +5494,7 @@
         <div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>STAT</th><th>LAST SZN</th><th>THIS SZN</th><th>WEIGHT ON THIS SZN</th><th>TONIGHT</th></tr></thead><tbody>${rows}</tbody></table></div>
         <ul class="nba-why">${why.map(x => `<li>${x}</li>`).join('')}</ul>
       </div></details>
+      ${gradeSectionHtml(r)}
       ${matchupSectionHtml(r)}
       <details class="gw-sec" ${logs.length ? 'open' : ''}><summary>GAME LOG <span class="tag">${useCur ? 'this season, last 10' : 'last season, final 10'}</span></summary><div class="gw-sec-body">
         ${logs.length ? `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>DATE</th><th>OPP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th></tr></thead><tbody>${logRows}</tbody></table></div>` : '<div class="empty">No games on record.</div>'}
@@ -5495,11 +5634,11 @@
     const srcNote = props[0] && props[0].src === 'espn'
       ? '<div class="nba-status">DraftKings lines via ESPN · free. ESPN doesn\'t label which price is the over, so both are shown.</div>'
       : '<div class="nba-status">Consensus line across books via The Odds API.</div>';
-    body.innerHTML = srcNote + `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>PLAYER</th><th>MKT</th><th>LINE</th><th>PROJ</th><th>EDGE</th><th>L10</th><th>PRICES</th></tr></thead><tbody>${rows.map(x => {
+    body.innerHTML = srcNote + `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>PLAYER</th><th>MKT</th><th>GRADE</th><th>LINE</th><th>PROJ</th><th>EDGE</th><th>L10</th><th>PRICES</th></tr></thead><tbody>${rows.map(x => {
       const cls = x.edge == null ? '' : x.edge > 0 ? 'edge-pos' : 'edge-neg';
       const edgeTxt = x.edge == null ? (x.r && x.r.out ? 'OUT' : '—') : `${x.edge > 0 ? 'OVER +' : 'UNDER '}${f1(x.edge)}`;
       const hr = x.hr ? `${x.hr.hits}/${x.hr.n} <small>${x.hr.src}</small>` : '—';
-      return `<tr><td>${esc(x.p.name)}${x.r && x.r.status && !x.r.out ? ` <span class="chip inj-q">${esc(String(x.r.status).toUpperCase())}</span>` : ''}</td><td>${LABEL[x.p.stat]}</td><td>${x.p.line}</td><td>${f1(x.projV)}</td><td class="${cls}"><b>${edgeTxt}</b></td><td class="dvp-cell">${hr}</td><td>${pricesTxt(x.p)}</td></tr>`;
+      return `<tr><td>${esc(x.p.name)}${x.r && x.r.status && !x.r.out ? ` <span class="chip inj-q">${esc(String(x.r.status).toUpperCase())}</span>` : ''}</td><td>${LABEL[x.p.stat]}</td><td>${x.r && !x.r.out ? gradeBadge(gradesFor(['pr', 'pa'].includes(x.p.stat) ? 'pra' : x.p.stat).get(x.r), true) : ''}</td><td>${x.p.line}</td><td>${f1(x.projV)}</td><td class="${cls}"><b>${edgeTxt}</b></td><td class="dvp-cell">${hr}</td><td>${pricesTxt(x.p)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
 
@@ -5526,7 +5665,7 @@
     $('#nba-day-prev').addEventListener('click', () => changeDay(addDays(slateDate, -1)));
     $('#nba-day-next').addEventListener('click', () => changeDay(addDays(slateDate, 1)));
     $('#nba-day-today').addEventListener('click', () => changeDay(new Date()));
-    ['#nba-stat', '#nba-team', '#nba-hide-out'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
+    ['#nba-stat', '#nba-team', '#nba-hide-out', '#nba-sort'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
     $('#nba-proj-load').addEventListener('click', () => ensureProjections(true));
     $('#nba-great-only').addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); });
     document.querySelectorAll('.nba-subtab').forEach(b => b.addEventListener('click', () => {
@@ -5566,9 +5705,10 @@
   setSport(initial, false);
 
   // exposed for the headless tests only
-  window.__gwNba = { MODEL, projectPlayer, buildSlate, parseBox, hooprToRows, aggregate, parseProps, parseEspnProps, normName, positionAverages, dvpFrom, blendDvp };
+  window.__gwNba = { gradesFor: s => proj && gradesFor(s), MODEL, projectPlayer, buildSlate, parseBox, hooprToRows, aggregate, parseProps, parseEspnProps, normName, positionAverages, dvpFrom, blendDvp };
 })();
 </script>
 
 </body>
 </html>
+
