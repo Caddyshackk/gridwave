@@ -729,6 +729,18 @@
   .inj-tag.prob{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
   .nba-inj-legend{ font-size:.64rem; color:var(--text-dim); margin:-4px 0 10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
   .nba-inj-legend .inj-tag{ min-width:0; }
+  /* matchups */
+  .nba-subtab{ opacity:.55; transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy); }
+  .nba-subtab.active{ opacity:1; background:rgba(0,240,255,.1); }
+  .chip.mu-great{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.10); }
+  .chip.mu-tough{ color:var(--loss); border-color:var(--loss); background:rgba(255,35,88,.08); }
+  table.dvp.nba-mu td.dvp-cell{ text-align:right; }
+  table.dvp.nba-mu td.dvp-cell small{ display:block; margin:2px 0 0; font-size:.56rem; color:var(--text-dim); }
+  .nba-mu-faces{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:8px; }
+  .nba-mu-face{ display:flex; align-items:center; gap:10px; border:1px solid var(--grid-line); border-radius:8px; padding:8px 10px; }
+  .nba-mu-face .avatar{ width:48px; height:48px; }
+  .nba-mu-face .nm{ color:var(--text-hi); font-weight:700; font-size:.76rem; }
+  .nba-mu-face .sub{ color:var(--text-dim); font-size:.64rem; margin-top:2px; }
   .nba-controls{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
   .nba-controls select{ background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-hi); font-family:var(--font-body); padding:.6em .8em; font-size:.8rem; }
   .nba-status{ font-size:.72rem; color:var(--text-dim); margin:0 0 12px; line-height:1.6; }
@@ -1360,6 +1372,10 @@
   <section id="nba-view-proj" class="nba-view">
     <div class="panel-title"><h2>PROJECTIONS</h2><div class="rule"></div><span class="tag">premium · last season blended with this season</span></div>
     <div class="nba-controls">
+      <button class="action nba-subtab active" type="button" data-nba-sub="players">PLAYERS</button>
+      <button class="action nba-subtab" type="button" data-nba-sub="matchups">MATCHUPS</button>
+    </div>
+    <div class="nba-controls">
       <select id="nba-stat">
         <option value="pts">POINTS</option>
         <option value="reb">REBOUNDS</option>
@@ -1370,10 +1386,12 @@
       </select>
       <select id="nba-team"><option value="">ALL TEAMS</option></select>
       <label class="inj-toggle"><input type="checkbox" id="nba-hide-out" checked> HIDE OUT</label>
+      <label class="inj-toggle"><input type="checkbox" id="nba-great-only"> GREAT MATCHUPS ONLY</label>
       <button class="action" id="nba-proj-load" type="button">REFRESH</button>
     </div>
     <div id="nba-proj-status" class="nba-status"></div>
     <div id="nba-proj-results"></div>
+    <div id="nba-mu-results" style="display:none"></div>
   </section>
 
   <!-- PROPS (premium) -->
@@ -1431,6 +1449,16 @@
         </ul>
       </div>
       <div class="metric-card">
+        <h3>Matchups (defense vs position)</h3>
+        <p>For each defense: how much it gives up to guards, forwards and centers, per minute, compared with the league rate for that position. +10% means it allows 10% more than average.</p>
+        <ul>
+          <li><b>Per minute</b>, so a team whose starters play heavy minutes doesn't look softer than it is.</li>
+          <li><b>Blended</b> like the players: this season's games against last season's, with k = 10 team games (rosters turn over, so last season fades fast).</li>
+          <li><span class="chip mu-great">GREAT MATCHUP</span> one of the 5 softest defenses against his position for the stat you're viewing, and at least +5%. <span class="chip mu-tough">TOUGH MATCHUP</span> one of the 5 stingiest, at least −5%.</li>
+          <li>Matchups are shown next to the projection, <b>not baked into it</b>, so you can see both numbers separately.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
         <h3>Data sources</h3>
         <ul>
           <li><b>ESPN</b>: scoreboard, rosters, injuries, and this season's box scores.</li>
@@ -1441,7 +1469,7 @@
       <div class="metric-card">
         <h3>Limitations</h3>
         <ul>
-          <li>No opponent pace or defense adjustment yet. Projections are about the player, not the matchup.</li>
+          <li>Matchup ratings are shown beside the projection but don't change it, and there's no pace adjustment yet.</li>
           <li>Late scratches only show once ESPN updates the injury report. Lineups confirmed 30 minutes before tip beat any model.</li>
           <li>Once the season is more than 30 days old, "this season" means his last 30 days of games, which is also the more relevant sample.</li>
           <li>Name matching between the sportsbooks and ESPN can occasionally miss a player with an unusual spelling.</li>
@@ -4778,19 +4806,101 @@
     return out;
   }
 
+  /* ---------------- matchups: defense vs position ----------------
+     How much each defense gives up to guards / forwards / centers, per minute, relative to the
+     league rate for that position (1.10 = allows 10% more than average). Per minute so a team
+     whose starters play 40 minutes doesn't look softer than it is. */
+  const DVP_STATS = ['pts', 'reb', 'ast', 'fg3m', 'pra'];
+  const DVP_GROUPS = ['G', 'F', 'C'];
+  const DVP_K = 10;   // team-games of trust in last season's defense (rosters turn over)
+  const dvpVal = (x, s) => s === 'pra' ? x.pts + x.reb + x.ast : x[s];
+  function dvpFrom(rows){
+    // fill a missing opponent from the other team in the same game
+    const teamsByGame = {};
+    rows.forEach(r => { if (r.gid && r.team) (teamsByGame[r.gid] = teamsByGame[r.gid] || new Set()).add(r.team); });
+    const acc = {}, lg = {}, games = {};
+    const add = (x, r) => { x.min += r.min; x.pts += r.pts; x.reb += r.reb; x.ast += r.ast; x.fg3m += r.fg3m; };
+    const blank = () => ({ min: 0, pts: 0, reb: 0, ast: 0, fg3m: 0 });
+    rows.forEach(r => {
+      let opp = r.opp;
+      if (!opp && r.gid && teamsByGame[r.gid]) opp = [...teamsByGame[r.gid]].find(t => t !== r.team);
+      if (!opp || !(r.min > 0)) return;
+      const g = posGroup(r.pos);
+      acc[opp] = acc[opp] || {};
+      add(acc[opp][g] = acc[opp][g] || blank(), r);
+      add(lg[g] = lg[g] || blank(), r);
+      (games[opp] = games[opp] || {})[r.gid || r.date] = 1;
+    });
+    const teams = {};
+    Object.keys(acc).forEach(t => {
+      teams[t] = { games: Object.keys(games[t]).length, idx: {} };
+      DVP_GROUPS.forEach(g => {
+        const a = acc[t][g], L = lg[g];
+        if (!a || !L || a.min < 1 || L.min < 1) return;
+        teams[t].idx[g] = {};
+        DVP_STATS.forEach(s => { const lr = dvpVal(L, s) / L.min; teams[t].idx[g][s] = lr ? (dvpVal(a, s) / a.min) / lr : 1; });
+      });
+    });
+    return { teams };
+  }
+
+  // this season's defense blended with last season's (same formula as the players), then ranked
+  // 1 = stingiest … N = softest, per position and stat
+  function blendDvp(last, cur){
+    const L = (last && last.teams) || {}, C = (cur && cur.teams) || {};
+    const names = [...new Set([...Object.keys(L), ...Object.keys(C)])];
+    const teams = {};
+    names.forEach(t => {
+      const n = C[t] ? C[t].games : 0;
+      teams[t] = { n, idx: {}, rank: {} };
+      DVP_GROUPS.forEach(g => {
+        teams[t].idx[g] = {}; teams[t].rank[g] = {};
+        DVP_STATS.forEach(s => {
+          const l = L[t] && L[t].idx[g] ? L[t].idx[g][s] : null;
+          const c = C[t] && C[t].idx[g] ? C[t].idx[g][s] : null;
+          teams[t].idx[g][s] = l == null && c == null ? 1 : l == null ? c : c == null ? l : (n * c + DVP_K * l) / (n + DVP_K);
+        });
+      });
+    });
+    DVP_GROUPS.forEach(g => DVP_STATS.forEach(s => {
+      names.slice().sort((a, b) => teams[a].idx[g][s] - teams[b].idx[g][s]).forEach((t, i) => { teams[t].rank[g][s] = i + 1; });
+    }));
+    return { teams, count: names.length };
+  }
+
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th'));
+  const signPct = v => { const p = Math.round((v - 1) * 100); return p === 0 ? 'avg' : (p > 0 ? '+' : '−') + Math.abs(p) + '%'; };
+  function rankWords(rank, count){
+    if (!rank || !count) return '';
+    return rank > count / 2 ? `${ordinal(count - rank + 1)} softest` : `${ordinal(rank)} toughest`;
+  }
+  // matchup for one player row and stat ('min' → judged on PRA)
+  function matchupFor(r, stat){
+    if (!proj || !proj.dvp) return null;
+    const s = DVP_STATS.includes(stat) ? stat : 'pra';
+    const d = proj.dvp.teams[r.opp.abbr]; if (!d) return null;
+    const g = posGroup((r.P && r.P.pos) || (r.C && r.C.pos) || r.a.pos);
+    const idx = d.idx[g][s], rank = d.rank[g][s], N = proj.dvp.count;
+    let tier = '';
+    if (N >= 10 && rank > N - 5 && idx >= 1.05) tier = 'great';
+    else if (N >= 10 && rank <= 5 && idx <= 0.95) tier = 'tough';
+    return { s, g, idx, rank, N, tier };
+  }
+
   async function loadPrior(lastSeason){
-    const key = `prior:v1:${lastSeason}`;
+    const key = `prior:v2:${lastSeason}`;   // v2 adds the defense-vs-position table
     const c = await store.get(key);
     if (c && Date.now() - c.at < 7 * 86400000) return c.data;
     let data;
     try {
       const res = await GW.premiumFetch('/hoopr?url=' + encodeURIComponent(HOOPR_BOX + lastSeason + '.csv'));
-      const players = aggregate(hooprToRows(await res.text()), 20);
-      data = { season: lastSeason, players, posAvg: positionAverages(players), ok: true };
+      const rows = hooprToRows(await res.text());
+      const players = aggregate(rows, 20);
+      data = { season: lastSeason, players, posAvg: positionAverages(players), dvp: dvpFrom(rows), ok: true };
     } catch (e) {
       if (e.message === 'NO_LICENSE' || e.shared) throw e;
       console.warn('NBA prior unavailable', e);
-      data = { season: lastSeason, players: {}, posAvg: positionAverages({}), ok: false, err: e.message };
+      data = { season: lastSeason, players: {}, posAvg: positionAverages({}), dvp: { teams: {} }, ok: false, err: e.message };
       return data;  // don't cache a failure
     }
     await store.set(key, { at: Date.now(), data });
@@ -4917,6 +5027,7 @@
   let proj = null;                  // { day, rows, prior, cur, meta }
   let projLoading = null;
   let activeView = 'tonight';
+  let projSub = 'players';          // PROJECTIONS sub-view: players | matchups
   const propsCache = {};            // espn game id → parsed props
   let oddsEvents = null;
 
@@ -5041,14 +5152,15 @@
         try { cal = (await scoreboard(ymd(noon(new Date())))).calendar || cal; } catch (_) {}
         const curRaw = await loadCurrent(ymd(noon(new Date())), cal, (d, t) => { box.innerHTML = `<div class="loading">Syncing this season's games… ${d}/${t}</div>`; });
         // only games BEFORE the slate date count (so browsing a past date doesn't peek at its results)
-        const cur = aggregate(curRaw.rows.filter(r => r.date < slate.day), 20);
+        const curRows = curRaw.rows.filter(r => r.date < slate.day);
+        const cur = aggregate(curRows, 20);
         box.innerHTML = '<div class="loading">Pulling rosters + injuries…</div>';
         const teams = []; slate.games.forEach(g => teams.push(g.away, g.home));
         const rosterList = await pool(teams, 6, t => roster(t.id).catch(() => []));
         const rosters = {}; teams.forEach((t, i) => { rosters[t.id] = rosterList[i]; });
         let inj = { byTeam: {}, byName: {} }; try { inj = await injuries(); } catch (_) {}
         const rows = buildSlate(slate.games, rosters, prior, cur, inj, slate.b2b);
-        proj = { day: slate.day, rows, prior, curGames: curRaw.games, capped: curRaw.capped };
+        proj = { day: slate.day, rows, prior, curGames: curRaw.games, capped: curRaw.capped, dvp: blendDvp(prior.dvp, dvpFrom(curRows)) };
         fillTeamFilter();
         renderProjections();
         if (btn) GW.gwFeedback(btn, true);
@@ -5100,12 +5212,16 @@
     if (r.b2b) out.push('<span class="chip b2b">B2B</span>');
     if (r.m.newTeam) out.push('<span class="chip note">NEW TEAM</span>');
     if (r.boost >= 0.5) out.push(`<span class="chip note">+${f1(r.boost)} MIN</span>`);
+    const mu = !r.out && matchupFor(r, $('#nba-stat').value);
+    if (mu && mu.tier) out.push(`<span class="chip mu-${mu.tier}" title="${esc(r.opp.abbr)} is the ${rankWords(mu.rank, mu.N)} defense vs ${mu.g === 'G' ? 'guards' : mu.g === 'F' ? 'forwards' : 'centers'} (${LABEL[mu.s]})">${mu.tier === 'great' ? 'GREAT' : 'TOUGH'} MATCHUP ${signPct(mu.idx)}</span>`);
     return out.join('');
   }
 
   function renderProjections(){
     if (!proj) return;
+    if (projSub === 'matchups') { renderMatchups(); }
     const stat = $('#nba-stat').value, team = $('#nba-team').value, hideOut = $('#nba-hide-out').checked;
+    const greatOnly = $('#nba-great-only').checked;
     const box = $('#nba-proj-results');
     const all = proj.rows.filter(r => r.out || r.projMin >= 8);
     const ns = all.filter(r => !r.out).map(r => r.m.n);
@@ -5116,9 +5232,10 @@
       `${proj.curGames} game${proj.curGames === 1 ? '' : 's'} this season synced${proj.capped ? ' (last 30 days)' : ''}. Players on this slate average <b>${f1(avgN)} GP</b>, so minutes run <b>${pct(wMin)}</b> on this season and points <b>${pct(wPts)}</b>. The rest is ${proj.prior.season - 1}-${String(proj.prior.season).slice(2)} data.`
     );
     let list = all.filter(r => (!team || r.team.abbr === team) && (!hideOut || !r.out));
+    if (greatOnly) list = list.filter(r => { const mu = !r.out && matchupFor(r, stat); return mu && mu.tier === 'great'; });
     list.sort((a, b) => (a.out - b.out) || (b.proj[stat] - a.proj[stat]));
     box.innerHTML = '';
-    if (!list.length) { box.innerHTML = '<div class="empty">Nobody to show with these filters.</div>'; return; }
+    if (!list.length) { box.innerHTML = `<div class="empty">${greatOnly ? 'No great matchups for this stat on this slate.' : 'Nobody to show with these filters.'}</div>`; return; }
     list.forEach((r, i) => {
       const row = document.createElement('div');
       row.className = 'edge-row card-row' + (r.out ? ' row-dim' : '');
@@ -5131,6 +5248,62 @@
       row.addEventListener('click', () => toggleDetail(row, r));
       box.appendChild(row);
     });
+  }
+
+  function matchupSectionHtml(r){
+    if (!proj.dvp || !proj.dvp.teams[r.opp.abbr]) return '';
+    const d = proj.dvp.teams[r.opp.abbr], N = proj.dvp.count;
+    const g = posGroup((r.P && r.P.pos) || (r.C && r.C.pos) || r.a.pos);
+    const who = g === 'G' ? 'guards' : g === 'F' ? 'forwards' : 'centers';
+    const rows = DVP_STATS.map(s => {
+      const idx = d.idx[g][s], rank = d.rank[g][s];
+      const cls = idx >= 1.05 ? 'hot' : idx <= 0.95 ? 'cold' : '';
+      return `<tr><td>${LABEL[s]}</td><td class="dvp-cell ${cls}"><b>${signPct(idx)}</b></td><td>${rankWords(rank, N)}</td></tr>`;
+    }).join('');
+    return `<details class="gw-sec" open><summary>MATCHUP <span class="tag">${esc(r.opp.abbr)} defense vs ${who} · ${d.n} game${d.n === 1 ? '' : 's'} this season + last season</span></summary><div class="gw-sec-body">
+      <div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>STAT</th><th>VS AVERAGE</th><th>RANK OF ${N}</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <ul class="nba-why"><li>Green = this defense gives up more than average to ${who}; red = less. Shown for context, not added into the projection.</li></ul>
+    </div></details>`;
+  }
+
+  // MATCHUPS sub-view: every defense on tonight's slate vs guards / forwards / centers
+  function renderMatchups(){
+    const box = $('#nba-mu-results');
+    if (!proj || !proj.dvp) { box.innerHTML = ''; return; }
+    const stat = DVP_STATS.includes($('#nba-stat').value) ? $('#nba-stat').value : 'pra';
+    const N = proj.dvp.count, team = $('#nba-team').value;
+    const defs = [];
+    slate.games.forEach(g => { defs.push({ def: g.home, off: g.away, game: g }, { def: g.away, off: g.home, game: g }); });
+    const list = defs.filter(x => proj.dvp.teams[x.def.abbr] && (!team || x.off.abbr === team || x.def.abbr === team));
+    const avgIdx = x => { const d = proj.dvp.teams[x.def.abbr]; return DVP_GROUPS.reduce((t, g) => t + d.idx[g][stat], 0) / 3; };
+    list.sort((a, b) => avgIdx(b) - avgIdx(a));
+    if (!list.length) { box.innerHTML = '<div class="empty">No matchup data yet for this slate.</div>'; return; }
+    const cell = (d, g) => {
+      const idx = d.idx[g][stat], rank = d.rank[g][stat];
+      const cls = idx >= 1.05 ? 'hot' : idx <= 0.95 ? 'cold' : '';
+      return `<td class="dvp-cell ${cls}"><b>${signPct(idx)}</b><small>${rankWords(rank, N)}</small></td>`;
+    };
+    box.innerHTML = `<div class="nba-status">How each defense on this slate treats each position for <b>${LABEL[stat]}</b>, per minute vs the league average. Softest defenses first. Click a row to see who gets the matchup.</div>
+      <div class="dvp-wrap"><table class="dvp compact nba-mu"><thead><tr><th>DEFENSE</th><th>FACES</th><th>VS GUARDS</th><th>VS FORWARDS</th><th>VS CENTERS</th><th>GP</th></tr></thead><tbody>${list.map((x, i) => {
+        const d = proj.dvp.teams[x.def.abbr];
+        return `<tr class="dvp-row" data-i="${i}"><td><span class="dvp-team">${x.def.logo ? `<img src="${esc(x.def.logo)}" alt="">` : ''}${esc(x.def.abbr)}</span></td><td>${esc(x.off.abbr)}</td>${cell(d, 'G')}${cell(d, 'F')}${cell(d, 'C')}<td>${d.n}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    box.querySelectorAll('tr.dvp-row').forEach(tr => tr.addEventListener('click', () => {
+      const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('dvp-detail');
+      box.querySelectorAll('tr.dvp-detail').forEach(x => x.remove());
+      box.querySelectorAll('tr.dvp-row.open').forEach(x => x.classList.remove('open'));
+      if (open) return;
+      const x = list[+tr.dataset.i];
+      const faces = proj.rows.filter(r => r.team.abbr === x.off.abbr && !r.out && r.projMin >= 15)
+        .sort((a, b) => b.proj[stat] - a.proj[stat]).slice(0, 8);
+      const det = document.createElement('tr'); det.className = 'dvp-detail';
+      det.innerHTML = `<td colspan="6"><div class="nba-mu-faces">${faces.map(r => {
+        const mu = matchupFor(r, stat);
+        const cls = mu && mu.idx >= 1.05 ? 'edge-pos' : mu && mu.idx <= 0.95 ? 'edge-neg' : '';
+        return `<div class="nba-mu-face">${avatar(r)}<div><div class="nm">${esc(r.a.name)}</div><div class="sub">${esc(r.a.pos || '')} · proj ${f1(r.proj[stat])} ${LABEL[stat]}</div><div class="sub ${cls}">${mu ? `${signPct(mu.idx)} · ${rankWords(mu.rank, mu.N)}` : ''}</div></div></div>`;
+      }).join('') || '<div class="empty">No rotation players found.</div>'}</div></td>`;
+      tr.after(det); tr.classList.add('open');
+    }));
   }
 
   function toggleDetail(row, r){
@@ -5167,6 +5340,7 @@
         <div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>STAT</th><th>LAST SZN</th><th>THIS SZN</th><th>WEIGHT ON THIS SZN</th><th>TONIGHT</th></tr></thead><tbody>${rows}</tbody></table></div>
         <ul class="nba-why">${why.map(x => `<li>${x}</li>`).join('')}</ul>
       </div></details>
+      ${matchupSectionHtml(r)}
       <details class="gw-sec" ${logs.length ? 'open' : ''}><summary>GAME LOG <span class="tag">${useCur ? 'this season, last 10' : 'last season, final 10'}</span></summary><div class="gw-sec-body">
         ${logs.length ? `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>DATE</th><th>OPP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th></tr></thead><tbody>${logRows}</tbody></table></div>` : '<div class="empty">No games on record.</div>'}
       </div></details>
@@ -5338,6 +5512,16 @@
     $('#nba-day-today').addEventListener('click', () => changeDay(new Date()));
     ['#nba-stat', '#nba-team', '#nba-hide-out'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
     $('#nba-proj-load').addEventListener('click', () => ensureProjections(true));
+    $('#nba-great-only').addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); });
+    document.querySelectorAll('.nba-subtab').forEach(b => b.addEventListener('click', () => {
+      projSub = b.dataset.nbaSub;
+      document.querySelectorAll('.nba-subtab').forEach(x => x.classList.toggle('active', x === b));
+      $('#nba-proj-results').style.display = projSub === 'players' ? '' : 'none';
+      $('#nba-mu-results').style.display = projSub === 'matchups' ? '' : 'none';
+      $('#nba-hide-out').parentElement.style.display = projSub === 'players' ? '' : 'none';
+      $('#nba-great-only').parentElement.style.display = projSub === 'players' ? '' : 'none';
+      if (proj) renderProjections();
+    }));
     $('#nba-prop-market').addEventListener('change', () => {
       document.querySelectorAll('#nba-props-results details.gw-sec[open]').forEach(d => d.dispatchEvent(new Event('toggle')));
     });
@@ -5366,7 +5550,7 @@
   setSport(initial, false);
 
   // exposed for the headless tests only
-  window.__gwNba = { MODEL, projectPlayer, buildSlate, parseBox, hooprToRows, aggregate, parseProps, parseEspnProps, normName, positionAverages };
+  window.__gwNba = { MODEL, projectPlayer, buildSlate, parseBox, hooprToRows, aggregate, parseProps, parseEspnProps, normName, positionAverages, dvpFrom, blendDvp };
 })();
 </script>
 
