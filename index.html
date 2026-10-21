@@ -1123,7 +1123,7 @@
           <li><b>Expected TDs (xTD)</b> = sum of those priced touches. <b>TD Debt</b> = xTD minus TDs actually scored.</li>
           <li>Positive debt: the ball finds him in scoring spots more than the scoreboard shows. Negative: he has scored more than his looks support.</li>
           <li>The bar for DUE / OVERPERFORMING is <b>2.5 − 0.15 × games played</b>, never below 1.0, so it gets easier to trigger as the sample grows.</li>
-          <li>The <b>CHEAT CODE · n</b> badge counts signals that fired: (1) TD debt above 1.0, (2) goal-line + red-zone share of his touches in the top 20% of his group. Click it to jump to the zone table.</li>
+          <li>The <b>CHEAT CODE</b> badge needs <b>both</b> signals: (1) TD debt above 1.0, and (2) a real red-zone role: goal-line + red-zone share of his touches in the top 20% of his group <b>and</b> at least 6 of those touches on the season (3 in the last-3-games view). Click it to jump to the zone table, which shows which signals he has.</li>
           <li>Needs the play-by-play file, a bigger download that finishes loading a moment after the rest.</li>
         </ul>
       </div>
@@ -2763,6 +2763,9 @@
   };
 
   // Builds the flat, sorted, scored list for one category + scope.
+  // Cheat Code volume floor: goal-line + red-zone touches needed in the selected scope.
+  const CHEAT_MIN_RZ = { season: 6, last3: 3 };
+
   function computeCategoryScores(category, scope){
     const def = CATEGORIES[category];
     const defenseSplits = buildDefenseSplits(scope);
@@ -2901,11 +2904,19 @@
       p.formStat = def.formStat(p);
       p.reason = p.components.slice().sort((a,b)=>b.pct-a.pct).slice(0,2).map(c=>c.label).join(' + ');
 
-      // Cheat Code: real signals only counted when the play-by-play data is loaded.
-      p.cheatCodeCount = 0;
-      if(p.tdDebt !== undefined && p.tdDebt > 1.0) p.cheatCodeCount++;
+      // Cheat Code: real signals only counted when the play-by-play data is loaded. The badge needs
+      // BOTH: (1) TD debt above 1.0, and (2) a real red-zone role, meaning his goal-line + red-zone
+      // share is top 20% of his group AND he has the raw volume behind it (CHEAT_MIN_RZ touches),
+      // so a backup with 2 red-zone looks out of 5 touches can't qualify on share alone.
+      const rzTouches = p.zoneBreakdown ? p.zoneBreakdown.filter(z=> z.key==='goalline' || z.key==='redzone').reduce((t,z)=> t + z.carries + z.targets, 0) : 0;
       const pRedZoneShare = percentileRank(redZoneShareVals, redZoneShareVals[idx]);
-      if(pRedZoneShare >= 80 && p.opportunity > 0) p.cheatCodeCount++;
+      p.cheatSignals = {
+        debt: p.tdDebt !== undefined && p.tdDebt > 1.0,
+        rz: pRedZoneShare >= 80 && rzTouches >= CHEAT_MIN_RZ[scope === 'last3' ? 'last3' : 'season'],
+        rzTouches, rzPct: pRedZoneShare
+      };
+      p.cheatCodeCount = (p.cheatSignals.debt ? 1 : 0) + (p.cheatSignals.rz ? 1 : 0);
+      p.cheatCode = p.cheatCodeCount === 2;
 
       // Flags need real sample size to mean anything — TD scoring especially is high-variance
       // game to game, so under 4 games played, a flag is more likely noise than signal. The
@@ -3105,7 +3116,7 @@
     return '';
   }
   function cheatCodeBadge(p){
-    return p.cheatCodeCount > 0 ? `<span class="flag-badge cheat">⚡ CHEAT CODE · ${p.cheatCodeCount}</span>` : '';
+    return p.cheatCode ? '<span class="flag-badge cheat">⚡ CHEAT CODE</span>' : '';
   }
 
   /* ---- sub-tab switching ---- */
@@ -3394,6 +3405,11 @@
       </div>
       <div class="cheat-explain">His touches priced by where they happen: positive debt means the ball has found
         him in scoring spots more than the scoreboard shows. Due to convert.</div>
+      ${p.cheatSignals ? `<div class="cheat-explain">
+        ${p.cheatSignals.debt ? '✅' : '⬜'} TD debt above 1.0 (${p.tdDebt>=0?'+':''}${p.tdDebt.toFixed(1)})<br>
+        ${p.cheatSignals.rz ? '✅' : '⬜'} Red-zone role: ${p.cheatSignals.rzTouches} goal-line + red-zone touches (needs ${CHEAT_MIN_RZ[$('#edge-scope').value === 'last3' ? 'last3' : 'season']}), share in the top ${Math.max(1, 100 - Math.round(p.cheatSignals.rzPct))}% of his group (needs top 20%)<br>
+        ${p.cheatCode ? '<b style="color:var(--cyan)">Both signals: CHEAT CODE.</b>' : 'Cheat Code needs both.'}
+      </div>` : ''}
       <table class="zone-table">
         <thead><tr><th>ZONE</th><th style="text-align:right">CARRIES</th><th style="text-align:right">TARGETS</th><th style="text-align:right">xTD</th></tr></thead>
         <tbody>
@@ -4270,7 +4286,7 @@
     ['top10', 'VAULT TOP 10', pool=> pool.slice(0, 10)],
     ['top25', 'VAULT TOP 25', pool=> pool.slice(0, 25)],
     ['debt10', 'TD DEBT TOP 10', pool=> pool.filter(p=> p.tdDebt !== undefined && p.seasonGames >= 3 && p.xTD >= 1.0).sort((a,b)=> b.tdDebt - a.tdDebt).slice(0, 10)],
-    ['cheat', 'CHEAT CODE', pool=> pool.filter(p=> p.cheatCodeCount > 0).slice(0, 15)]
+    ['cheat', 'CHEAT CODE', pool=> pool.filter(p=> p.cheatCode).slice(0, 15)]
   ];
   let recData = null;
   // Past weeks must be graded with THAT week's Vegas lines, not this week's. nflverse's schedule
