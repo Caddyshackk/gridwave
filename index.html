@@ -1409,6 +1409,7 @@
       </select>
       <select id="nba-team"><option value="">ALL TEAMS</option></select>
       <select id="nba-sort"><option value="proj">SORT: PROJECTION</option><option value="grade">SORT: GRADE</option></select>
+      <select id="nba-parlay-market" style="display:none"><option value="">ALL MARKETS</option><option value="pts">POINTS</option><option value="reb">REBOUNDS</option><option value="ast">ASSISTS</option><option value="fg3m">THREES</option><option value="pr">PTS + REB</option><option value="pa">PTS + AST</option></select>
       <label class="inj-toggle"><input type="checkbox" id="nba-hide-out" checked> HIDE OUT</label>
       <label class="inj-toggle"><input type="checkbox" id="nba-great-only"> GREAT MATCHUPS ONLY</label>
       <button class="action" id="nba-proj-load" type="button">REFRESH</button>
@@ -1471,6 +1472,8 @@
         <ul>
           <li><b>Teammates out.</b> Minutes from players listed OUT or DOUBTFUL (10+ MPG) are handed to available teammates in proportion to their roles, capped at +25% each and 40 minutes total.</li>
           <li><b>Back-to-back.</b> Teams on the second night of a back-to-back get minutes trimmed 4%.</li>
+          <li><b>New role.</b> ESPN marks starters in every box score. When his start rate this season is 50+ points off his last 20 games last season (starter → bench, or a rookie starting), his minutes follow this season's games right away instead of waiting on k = 3.</li>
+          <li><b>Team minutes budget.</b> Each player's minutes × how often he actually plays, summed over the roster, can't pass 240. A crowded rotation trims everyone proportionally (at most 20%).</li>
           <li><b>Questionable / day-to-day</b> players are flagged but still projected. Check status before tip.</li>
         </ul>
       </div>
@@ -4598,7 +4601,10 @@
     outBoostMinMpg: 10,        // only real rotation players' minutes get redistributed
     maxBoost: 1.25,
     maxMpg: 40,
-    currentWindowDays: 30
+    currentWindowDays: 30,
+    roleChangeShift: 0.5,      // start rate moved by 50+ points vs his last 20 games last season = new role
+    teamMinutes: 240,          // a team's projected minutes can't add up to more than a game has
+    teamScaleFloor: 0.8        // ...but never cut anyone more than 20% for it
   };
   const STATS = ['pts', 'reb', 'ast', 'fg3m'];
   const LABEL = { pts:'PTS', reb:'REB', ast:'AST', fg3m:'3PM', pra:'PRA', pr:'PTS+REB', pa:'PTS+AST', min:'MIN' };
@@ -4761,7 +4767,8 @@
         rows.push({
           gid: String(ev.id), date: isoDay(ev.date), id: String(a.athlete && a.athlete.id), name: a.athlete && a.athlete.displayName,
           pos: a.athlete && a.athlete.position && a.athlete.position.abbreviation,
-          team: abbr, opp, min, pts: v(iPts), reb: v(iReb), ast: v(iAst), fg3m: v(i3)
+          team: abbr, opp, min, pts: v(iPts), reb: v(iReb), ast: v(iAst), fg3m: v(i3),
+          st: a.starter === true ? 1 : a.starter === false ? 0 : null
         });
       });
     });
@@ -4769,7 +4776,7 @@
   }
 
   async function boxRows(ev){
-    const key = 'box:' + ev.id;
+    const key = 'box2:' + ev.id;   // box2 adds the starter flag
     const c = await store.get(key);
     if (c) return c;
     const j = await fetchJSON(`${ESPN}/summary?event=${ev.id}`);
@@ -4813,7 +4820,8 @@
           team: col(['team_abbreviation']), opp: col(['opponent_team_abbreviation']), gid: col(['game_id']),
           date: col(['game_date']), stype: col(['season_type']), dnp: col(['did_not_play']),
           min: col(['minutes', 'min']), pts: col(['points', 'pts']), reb: col(['rebounds', 'reb']),
-          ast: col(['assists', 'ast']), fg3m: col(['three_point_field_goals_made', 'fg3m'])
+          ast: col(['assists', 'ast']), fg3m: col(['three_point_field_goals_made', 'fg3m']),
+          st: col(['starter'])
         };
         const missing = ['id', 'min', 'pts', 'reb', 'ast'].filter(k => ix[k] < 0);
         if (missing.length) throw new Error('unexpected hoopR columns (missing ' + missing.join(', ') + ')');
@@ -4827,7 +4835,8 @@
         gid: ix.gid >= 0 ? r[ix.gid] : '', date: ix.date >= 0 ? isoDay(r[ix.date]) : '', id: String(r[ix.id]),
         name: ix.name >= 0 ? r[ix.name] : '', pos: ix.pos >= 0 ? r[ix.pos] : '',
         team: ix.team >= 0 ? r[ix.team] : '', opp: ix.opp >= 0 ? r[ix.opp] : '',
-        min, pts: nv('pts'), reb: nv('reb'), ast: nv('ast'), fg3m: ix.fg3m >= 0 ? nv('fg3m') : 0
+        min, pts: nv('pts'), reb: nv('reb'), ast: nv('ast'), fg3m: ix.fg3m >= 0 ? nv('fg3m') : 0,
+        st: ix.st >= 0 ? (/^true$/i.test(r[ix.st]) ? 1 : 0) : null
       });
     });
     return rows;
@@ -4840,7 +4849,7 @@
       const p = by[r.id] || (by[r.id] = { id: r.id, name: r.name, pos: r.pos, team: r.team, gp: 0, min: 0, pts: 0, reb: 0, ast: 0, fg3m: 0, logs: [] });
       p.gp++; p.min += r.min; STATS.forEach(s => { p[s] += r[s]; });
       p.team = r.team || p.team; p.pos = r.pos || p.pos; p.name = r.name || p.name;   // latest game wins
-      p.logs.push([r.date, r.opp, r.min, r.pts, r.reb, r.ast, r.fg3m]);
+      p.logs.push([r.date, r.opp, r.min, r.pts, r.reb, r.ast, r.fg3m, r.st == null ? null : r.st]);
     });
     Object.values(by).forEach(p => { p.logs = p.logs.slice(-keepLogs).reverse(); });
     return by;
@@ -4942,7 +4951,7 @@
   }
 
   async function loadPrior(lastSeason){
-    const key = `prior:v2:${lastSeason}`;   // v2 adds the defense-vs-position table
+    const key = `prior:v3:${lastSeason}`;   // v2 added defense-vs-position, v3 the starter flag
     const c = await store.get(key);
     if (c && Date.now() - c.at < 7 * 86400000) return c.data;
     let data;
@@ -5011,8 +5020,15 @@
       if (newTeam) { priorMpg *= MODEL.newTeamMpgScale; priorMpgNote = 'new team'; }
     } else priorMpg = MODEL.rookieMpg;
     const curMpg = n ? C.min / n : 0;
-    // new team: once he's played, his new role is the only minutes signal that matters
-    const kMin = newTeam ? 0.5 : MODEL.k.min * kScale;
+    // role change: starter last season → bench now (or the reverse, rookies included). ESPN marks
+    // starters in every box score; compare this season's start rate with his last 20 games last season.
+    const startRate = logs => { const k = (logs || []).filter(l => l[7] != null); return k.length ? k.filter(l => l[7] === 1).length / k.length : null; };
+    const priorStart = P ? startRate(P.logs) : 0;            // rookies: assumed bench until shown otherwise
+    const curStart = n ? startRate(C.logs) : null;
+    const roleChange = priorStart != null && curStart != null && Math.abs(curStart - priorStart) >= MODEL.roleChangeShift
+      ? (curStart > priorStart ? 'starter' : 'bench') : '';
+    // new team or new role: once he's played, the new role is the only minutes signal that matters
+    const kMin = (newTeam || roleChange) ? 0.5 : MODEL.k.min * kScale;
     const mpg = n ? blend(n, curMpg, kMin, priorMpg) : priorMpg;
 
     // per-minute rates
@@ -5025,10 +5041,11 @@
       w[s] = n / (n + k);
     });
     w.min = n ? n / (n + kMin) : 0;
-    return { n, rookie, newTeam, mpgBase: mpg, priorMpg, curMpg, priorMpgNote, rate, w };
+    return { n, rookie, newTeam, roleChange, mpgBase: mpg, priorMpg, curMpg, priorMpgNote, rate, w };
   }
 
-  function buildSlate(games, rosters, prior, cur, inj, b2b){
+  function buildSlate(games, rosters, prior, cur, inj, b2b, teamGames){
+    teamGames = teamGames || {};
     const rows = [];
     games.forEach(g => {
       [['away', 'home'], ['home', 'away']].forEach(([s, o]) => {
@@ -5060,8 +5077,21 @@
             pool -= given;
           }
         }
+        // team minutes budget: expected minutes (minutes × how often he actually plays) across the
+        // roster can't exceed 240. A crowded rotation (new starters, rookies playing big minutes)
+        // trims everyone proportionally, at most 20%.
+        const tg = teamGames[team.abbr] || 0;
+        let expected = 0;
+        teamRows.filter(r => !r.out).forEach(r => {
+          const priorShare = r.P ? Math.min(1, r.P.gp / 82) : 0.7;
+          const curShare = tg ? Math.min(1, (r.C ? r.C.gp : 0) / tg) : priorShare;
+          r.avail = tg ? (tg * curShare + 10 * priorShare) / (tg + 10) : priorShare;
+          expected += r.avail * (r.mpg + r.boost);
+        });
+        const scale = expected > MODEL.teamMinutes ? Math.max(MODEL.teamScaleFloor, MODEL.teamMinutes / expected) : 1;
         teamRows.forEach(r => {
-          r.projMin = r.out ? 0 : (r.mpg + r.boost) * (r.b2b ? MODEL.b2bMinScale : 1);
+          r.teamScale = scale;
+          r.projMin = r.out ? 0 : (r.mpg + r.boost) * scale * (r.b2b ? MODEL.b2bMinScale : 1);
           r.proj = { min: r.projMin };
           STATS.forEach(s2 => { r.proj[s2] = r.projMin * r.m.rate[s2]; });
           r.proj.pra = r.proj.pts + r.proj.reb + r.proj.ast;
@@ -5213,7 +5243,10 @@
         const rosterList = await pool(teams, 6, t => roster(t.id).catch(() => []));
         const rosters = {}; teams.forEach((t, i) => { rosters[t.id] = rosterList[i]; });
         let inj = { byTeam: {}, byName: {} }; try { inj = await injuries(); } catch (_) {}
-        const rows = buildSlate(slate.games, rosters, prior, cur, inj, slate.b2b);
+        const teamGames = {};
+        const seenG = {};
+        curRows.forEach(r => { const k = r.team + '|' + r.gid; if (!seenG[k]) { seenG[k] = 1; teamGames[r.team] = (teamGames[r.team] || 0) + 1; } });
+        const rows = buildSlate(slate.games, rosters, prior, cur, inj, slate.b2b, teamGames);
         proj = { day: slate.day, rows, prior, curGames: curRaw.games, capped: curRaw.capped, dvp: blendDvp(prior.dvp, dvpFrom(curRows)) };
         fillTeamFilter();
         renderProjections();
@@ -5265,6 +5298,7 @@
     if (r.status) out.push(`<span class="chip ${r.out ? 'inj-out' : 'inj-q'}">${esc(String(r.status).toUpperCase())}</span>`);
     if (r.b2b) out.push('<span class="chip b2b">B2B</span>');
     if (r.m.newTeam) out.push('<span class="chip note">NEW TEAM</span>');
+    if (r.m.roleChange) out.push(`<span class="chip note">NEW ROLE: ${r.m.roleChange === 'bench' ? 'BENCH' : 'STARTER'}</span>`);
     if (r.boost >= 0.5) out.push(`<span class="chip note">+${f1(r.boost)} MIN</span>`);
     const mu = !r.out && matchupFor(r, $('#nba-stat').value);
     if (mu && mu.tier) out.push(`<span class="chip mu-${mu.tier}" title="${esc(r.opp.abbr)} is the ${rankWords(mu.rank, mu.N)} defense vs ${mu.g === 'G' ? 'guards' : mu.g === 'F' ? 'forwards' : 'centers'} (${LABEL[mu.s]})">${mu.tier === 'great' ? 'GREAT' : 'TOUGH'} MATCHUP ${signPct(mu.idx)}</span>`);
@@ -5443,7 +5477,28 @@
      player (20+ min), and his last-10 history leans the same way. Leg score blends the edge, the
      situation grade (flipped for unders) and that hit rate; combos are 2- and 3-leg, one leg per
      game, the same shape as the NFL builder. */
-  const PARLAY = { minEdge: 0.08, minMin: 20, minHit: 0.5, w: { edge: 0.40, grade: 0.35, hit: 0.25 } };
+  // Edge is measured against how much his own stat swings game to game (a z-score turned into a
+  // probability), not as a % of the line: 4.5 vs 3.5 rebounds is +29% but well inside a big man's
+  // normal swing, while 26.5 vs 23.5 points from a steady scorer is real.
+  const PARLAY = {
+    minProb: 0.58,        // projection must put the bet side at 58%+ given his game-to-game swing
+    minMin: 24,           // real rotation minutes only
+    minHit: 0.5,          // last 10 games lean the same way
+    overMinGrade: 50,     // overs need a B or better situation grade (unders: C or worse)
+    maxGap: 0.30,         // projection 30%+ off the book's line = probably a role change we haven't caught: skip
+    maxPerPlayer: 2,      // any one player shows up in at most 2 parlays
+    w: { edge: 0.40, grade: 0.35, hit: 0.25 }
+  };
+  const normCdf = z => { const t = 1 / (1 + 0.2316419 * Math.abs(z)); const d = 0.3989423 * Math.exp(-z * z / 2);
+    const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; };
+  // his game-to-game standard deviation for a stat, from his recent games; floored so a short,
+  // lucky-steady sample can't fake certainty
+  function statSd(r, stat, line){
+    const logs = (r.C && r.C.gp >= 5 ? r.C.logs : (r.P ? r.P.logs : [])).slice(0, 15).map(l => logVal(l, stat));
+    let sd = 0;
+    if (logs.length >= 4) { const m = logs.reduce((a, b) => a + b, 0) / logs.length; sd = Math.sqrt(logs.reduce((t, v) => t + (v - m) * (v - m), 0) / logs.length); }
+    return Math.max(sd, 0.5 * Math.sqrt(Math.max(line, 1)), 1);
+  }
   let parlayLoading = null;
   // Why the last ESPN props attempt came back empty, so the UI can say something useful instead
   // of a blanket "no props posted". Reset per load.
@@ -5489,6 +5544,7 @@
   }
   function propLegs(){
     const legs = [];
+    const market = $('#nba-parlay-market').value;
     slate.games.forEach(g => {
       const props = propsCache[g.id]; if (!props) return;
       const players = proj.rows.filter(r => r.game.id === g.id);
@@ -5496,10 +5552,14 @@
       props.forEach(p => {
         const r = (p.id && byId[p.id]) || byName[normName(p.name)];
         if (!r || r.out || r.projMin < PARLAY.minMin) return;
+        if (market && p.stat !== market) return;
         const projV = r.proj[p.stat]; if (projV == null || !p.line) return;
         const rel = (projV - p.line) / p.line;
-        if (Math.abs(rel) < PARLAY.minEdge) return;
+        if (Math.abs(rel) >= PARLAY.maxGap) return;                     // book knows something we don't
         const over = rel > 0;
+        const pOver = normCdf((projV - p.line) / statSd(r, p.stat, p.line));
+        const prob = over ? pOver : 1 - pOver;
+        if (prob < PARLAY.minProb) return;
         if (!over && r.status) return;                                   // no unders on injury-tagged guys
         const hr = hitRate(r, p.stat, p.line);
         if (!hr || hr.n < 5) return;
@@ -5507,14 +5567,15 @@
         if (hit < PARLAY.minHit) return;
         const gr = gradesFor(['pr', 'pa'].includes(p.stat) ? 'pra' : p.stat).get(r);
         const gScore = gr ? (over ? gr.score : 100 - gr.score) : 50;
-        const score = PARLAY.w.edge * Math.min(100, Math.abs(rel) * 400) + PARLAY.w.grade * gScore + PARLAY.w.hit * hit * 100;
+        if (gScore < PARLAY.overMinGrade) return;                        // grade has to back the side
+        const score = PARLAY.w.edge * Math.min(100, (prob - 0.5) * 400) + PARLAY.w.grade * gScore + PARLAY.w.hit * hit * 100;
         const why = [];
-        if (Math.abs(rel) >= 0.15) why.push('BIG EDGE');
+        if (prob >= 0.68) why.push('BIG EDGE');
         const mu = matchupFor(r, ['pr', 'pa'].includes(p.stat) ? 'pra' : p.stat);
         if (mu && ((over && mu.tier === 'great') || (!over && mu.tier === 'tough'))) why.push(over ? 'GREAT MATCHUP' : 'TOUGH MATCHUP');
         if (hit >= 0.8) why.push('HOT L10');
         if (r.boost >= 2 && over) why.push('MINUTES BUMP');
-        legs.push({ r, p, over, projV, rel, hr, hit, gr, score, why, gameId: g.id });
+        legs.push({ r, p, over, projV, rel, prob, hr, hit, gr, score, why, gameId: g.id });
       });
     });
     // one leg per player: his best
@@ -5542,7 +5603,7 @@
       if ((await parlayLoading) === 'err') return;
     }
     const cand = propLegs().slice(0, 14);
-    box.innerHTML = `<div class="nba-status">Prop legs where the projection beats the line by 8%+, his last 10 games lean the same way, and the situation grade backs it (flipped for unders). One leg per game, like the NFL builder. Lines are DraftKings via ESPN (free). ESPN doesn't label over/under prices, so there are no payouts here, so check the price before you bet.</div>`;
+    box.innerHTML = `<div class="nba-status">Legs need: <b>24+ projected minutes</b>; a projection that puts the side at <b>58%+</b> given how much his stat swings game to game; last 10 games leaning the same way; and a situation grade of <b>B or better</b> for overs (C or worse for unders). Legs where the projection is 30%+ off the book's line are skipped, since that usually means a role change. No player appears in more than 2 parlays, one leg per game. Lines are DraftKings via ESPN (free). ESPN doesn't label over/under prices, so there are no payouts here; check the price before you bet.</div>`;
     if (cand.length < 2) { box.insertAdjacentHTML('beforeend', `<div class="empty">${slate.games.some(g => propsCache[g.id]) ? 'Not enough qualifying legs on this slate yet.' : noPropsMessage()}</div>`); return; }
     const combos2 = [];
     for (let i = 0; i < cand.length; i++) for (let j = i + 1; j < cand.length; j++) {
@@ -5550,7 +5611,7 @@
       combos2.push({ legs: [cand[i], cand[j]], score: (cand[i].score + cand[j].score) / 2 });
     }
     combos2.sort((a, b) => b.score - a.score);
-    const top2 = combos2.slice(0, 4);
+    const top2 = combos2.slice(0, 12);
     const combos3 = [], seen = new Set();
     top2.forEach(c => cand.forEach(x => {
       if (c.legs.some(l => l.gameId === x.gameId)) return;
@@ -5560,14 +5621,20 @@
       combos3.push({ legs, score: legs.reduce((t, l) => t + l.score, 0) / 3 });
     }));
     combos3.sort((a, b) => b.score - a.score);
-    const all = [...top2, ...combos3.slice(0, 3)].sort((a, b) => b.score - a.score);
+    // pick the best combos while no player appears in more than PARLAY.maxPerPlayer of them
+    const uses = {}, all = [];
+    const take = (list, max) => { let n = 0; for (const c of list) { if (n >= max) break;
+      if (c.legs.some(l => (uses[l.r.a.id] || 0) >= PARLAY.maxPerPlayer)) continue;
+      c.legs.forEach(l => { uses[l.r.a.id] = (uses[l.r.a.id] || 0) + 1; }); all.push(c); n++; } };
+    take(combos2, 4); take(combos3, 3);
+    all.sort((a, b) => b.score - a.score);
     if (!all.length) { box.insertAdjacentHTML('beforeend', '<div class="empty">Qualifying legs are all in the same game, so there are no cross-game parlays tonight.</div>'); return; }
     all.forEach((c, i) => {
       const card = document.createElement('div'); card.className = 'parlay-card';
       const tags = [...new Set([].concat(...c.legs.map(l => l.why)))];
       card.innerHTML = `
         <div class="head"><span>#${i + 1} <span class="tag2">${c.legs.length}-LEG</span> <span class="tag2">CROSS-GAME</span></span><span class="score">${c.score.toFixed(1)}</span></div>
-        ${c.legs.map(l => `<div class="parlay-leg">${esc(l.r.a.name)} <span class="nba-leg-dir ${l.over ? 'over' : 'under'}">${l.over ? 'OVER' : 'UNDER'} ${l.p.line} ${LABEL[l.p.stat]}</span>${gradeBadge(legGrade(l), true)} <span class="sub">(${esc(l.r.team.abbr)} ${l.r.home ? 'vs' : '@'} ${esc(l.r.opp.abbr)} · proj ${f1(l.projV)} · L10 ${l.over ? l.hr.hits : l.hr.n - l.hr.hits}/${l.hr.n} ${l.hr.src})</span></div>`).join('')}
+        ${c.legs.map(l => `<div class="parlay-leg">${esc(l.r.a.name)} <span class="nba-leg-dir ${l.over ? 'over' : 'under'}">${l.over ? 'OVER' : 'UNDER'} ${l.p.line} ${LABEL[l.p.stat]}</span>${gradeBadge(legGrade(l), true)} <span class="sub">(${esc(l.r.team.abbr)} ${l.r.home ? 'vs' : '@'} ${esc(l.r.opp.abbr)} · proj ${f1(l.projV)} in ${Math.round(l.r.projMin)} min · ${Math.round(l.prob * 100)}% · L10 ${l.over ? l.hr.hits : l.hr.n - l.hr.hits}/${l.hr.n} ${l.hr.src})</span></div>`).join('')}
         ${tags.length ? `<div class="parlay-reason">${tags.join(' + ')}</div>` : ''}`;
       box.appendChild(card);
     });
@@ -5651,7 +5718,11 @@
     why.push(n ? `<b>${n}</b> game${n === 1 ? '' : 's'} this season: minutes are ${pct(r.m.w.min)} this season, points ${pct(r.m.w.pts)}.` : 'No games this season yet, so this is all prior.');
     if (r.m.rookie) why.push('No NBA history in last season\'s data, so the prior is the position average and his own games take over twice as fast.');
     if (r.m.newTeam) why.push(`New team (was ${esc(P.team)}). Last season's rates carry over; his minutes ${n ? 'come from his new role' : 'are last season\'s, trimmed 10%'}.`);
+    if (r.m.roleChange) why.push(r.m.roleChange === 'bench'
+      ? 'Started last season but is <b>coming off the bench</b> now, so his minutes follow this season\'s games instead of last season\'s.'
+      : 'Wasn\'t a starter last season but <b>is starting now</b>, so his minutes follow this season\'s games.');
     if (r.boost >= 0.5) why.push(`<b>+${f1(r.boost)} min</b> from teammates listed out.`);
+    if (r.teamScale && r.teamScale < 0.995) why.push(`Crowded rotation: ${esc(r.team.abbr)}'s projected minutes ran past 240, so everyone is trimmed ${Math.round((1 - r.teamScale) * 100)}%.`);
     if (r.b2b) why.push('Second night of a back-to-back: minutes trimmed 4%.');
     if (r.status && !r.out) why.push(`Listed <b>${esc(r.status)}</b>${r.injWhat ? ' (' + esc(r.injWhat) + ')' : ''}. Projected as if he plays.`);
     const useCur = C && C.gp >= 5;
@@ -5801,7 +5872,8 @@
       : '<div class="nba-status">Consensus line across books via The Odds API.</div>';
     body.innerHTML = srcNote + `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>PLAYER</th><th>MKT</th><th>GRADE</th><th>LINE</th><th>PROJ</th><th>EDGE</th><th>L10</th><th>PRICES</th></tr></thead><tbody>${rows.map(x => {
       const cls = x.edge == null ? '' : x.edge > 0 ? 'edge-pos' : 'edge-neg';
-      const edgeTxt = x.edge == null ? (x.r && x.r.out ? 'OUT' : '—') : `${x.edge > 0 ? 'OVER +' : 'UNDER '}${f1(x.edge)}`;
+      const gapBig = x.edge != null && Math.abs(x.edge) / Math.max(x.p.line, 0.5) >= PARLAY.maxGap;
+      const edgeTxt = x.edge == null ? (x.r && x.r.out ? 'OUT' : '—') : `${x.edge > 0 ? 'OVER +' : 'UNDER '}${f1(x.edge)}${gapBig ? ' <span class="chip inj-q" title="Projection is 30%+ off the book. Usually a role or injury change the model hasn\'t caught yet.">CHECK ROLE</span>' : ''}`;
       const hr = x.hr ? `${x.hr.hits}/${x.hr.n} <small>${x.hr.src}</small>` : '—';
       return `<tr><td>${esc(x.p.name)}${x.r && x.r.status && !x.r.out ? ` <span class="chip inj-q">${esc(String(x.r.status).toUpperCase())}</span>` : ''}</td><td>${LABEL[x.p.stat]}</td><td>${x.r && !x.r.out ? gradeBadge(gradesFor(['pr', 'pa'].includes(x.p.stat) ? 'pra' : x.p.stat).get(x.r), true) : ''}</td><td>${x.p.line}</td><td>${f1(x.projV)}</td><td class="${cls}"><b>${edgeTxt}</b></td><td class="dvp-cell">${hr}</td><td>${pricesTxt(x.p)}</td></tr>`;
     }).join('')}</tbody></table></div>`;
@@ -5832,6 +5904,7 @@
     $('#nba-day-today').addEventListener('click', () => changeDay(new Date()));
     ['#nba-stat', '#nba-team', '#nba-hide-out', '#nba-sort'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
     $('#nba-proj-load').addEventListener('click', () => { for (const k in propsCache) delete propsCache[k]; ensureProjections(true); });
+    $('#nba-parlay-market').addEventListener('change', () => { if (proj && projSub === 'parlays') renderNbaParlays(); });
     $('#nba-great-only').addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); });
     document.querySelectorAll('.nba-subtab').forEach(b => b.addEventListener('click', () => {
       projSub = b.dataset.nbaSub;
@@ -5845,6 +5918,7 @@
       $('#nba-sort').style.display = projSub === 'players' ? '' : 'none';
       $('#nba-stat').style.display = projSub === 'parlays' ? 'none' : '';
       $('#nba-team').style.display = projSub === 'parlays' ? 'none' : '';
+      $('#nba-parlay-market').style.display = projSub === 'parlays' ? '' : 'none';
       if (proj) renderProjections();
     }));
     $('#nba-prop-market').addEventListener('change', () => {
