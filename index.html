@@ -729,6 +729,19 @@
   .inj-tag.prob{ color:var(--win); border-color:var(--win); background:rgba(61,255,154,.08); }
   .nba-inj-legend{ font-size:.64rem; color:var(--text-dim); margin:-4px 0 10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
   .nba-inj-legend .inj-tag{ min-width:0; }
+  /* NBA research / players / markets (built on the NFL classes) */
+  .nba-team-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
+  .nba-team-btn{ display:flex; flex-direction:column; align-items:center; gap:4px; background:var(--bg-panel); border:1px solid var(--grid-line); color:var(--text-mid); padding:8px 4px; cursor:pointer; font-family:var(--font-display); font-size:.66rem; letter-spacing:.06em; }
+  .nba-team-btn img{ width:28px; height:28px; object-fit:contain; }
+  .nba-team-btn:hover, .nba-team-btn.active{ border-color:var(--cyan); color:var(--cyan); }
+  .nba-odds-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+  .nba-odds-grid .odds-card{ margin:0; }
+  .nba-rest-team{ padding:8px 0 4px; border-top:1px solid rgba(255,255,255,.05); margin-top:8px; }
+  .nba-rest-team .wx-teams img{ width:20px; height:20px; }
+  .nba-rest-team .sub{ display:block; font-size:.66rem; color:var(--text-dim); margin:3px 0 5px; }
+  .nba-wl-suggest{ display:flex; flex-direction:column; margin-bottom:8px; }
+  .player-row.nba-player{ cursor:pointer; }
+  .player-row .usage-who .avatar{ width:48px; height:48px; }
   /* situation grades */
   .nba-grade{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; padding:4px 6px; border:1px solid; font-family:var(--font-display); line-height:1; clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px); }
   .nba-grade .l{ font-size:1rem; font-weight:700; }
@@ -822,10 +835,22 @@
   <button data-view="record">MODEL RECORD</button>
 </nav>
 <nav class="tabs nba-only" id="nba-nav">
-  <button data-nba-view="tonight" class="active">TONIGHT</button>
-  <button data-nba-view="proj">PROJECTIONS</button>
-  <button data-nba-view="props">PROPS</button>
-  <button data-nba-view="method">METHOD</button>
+  <button data-nba-view="teams" class="active">TEAMS</button>
+  <button data-nba-view="vault">VAULT</button>
+  <button id="nba-grp-research" type="button">RESEARCH</button>
+  <button data-nba-view="mylist">MY LIST</button>
+  <button data-nba-view="players">PLAYERS</button>
+  <button data-nba-view="markets">MARKETS</button>
+  <button data-nba-view="metrics">METRICS</button>
+</nav>
+<nav class="tabs subtabs nba-only" id="nba-subnav" style="display:none">
+  <button data-nba-view="matchups">MATCHUPS</button>
+  <button data-nba-view="usage">USAGE</button>
+  <button data-nba-view="shooting">SHOOTING</button>
+  <button data-nba-view="pace">PACE</button>
+  <button data-nba-view="injuries">INJURIES</button>
+  <button data-nba-view="rest">REST</button>
+  <button data-nba-view="record">MODEL RECORD</button>
 </nav>
 
 <div class="license-bar">
@@ -1380,26 +1405,32 @@
     <button class="action" id="nba-day-today" type="button">TODAY</button>
   </div>
 
-  <!-- TONIGHT (free) -->
-  <section id="nba-view-tonight" class="nba-view active">
+  <!-- TEAMS (free) -->
+  <section id="nba-view-teams" class="nba-view active">
     <div class="panel-title"><h2>THE SLATE</h2><div class="rule"></div><span class="tag">live · espn</span></div>
     <div id="nba-ticker" class="ticker"><div class="loading">Pulling the NBA scoreboard…</div></div>
 
-    <div class="panel-title"><h2>INJURY REPORT</h2><div class="rule"></div><span class="tag" id="nba-inj-asof">teams on this slate · espn</span></div>
-    <div id="nba-injuries"><div class="loading">Pulling injuries…</div></div>
+    <div class="panel-title"><h2>STANDINGS</h2><div class="rule"></div><span class="tag">by conference</span></div>
+    <div id="nba-standings"><div class="loading">Pulling standings…</div></div>
+
+    <div class="panel-title"><h2>SCORING EFFICIENCY</h2><div class="rule"></div><span class="tag">pts for / game</span></div>
+    <div id="nba-stat-grid" class="stat-grid"><div class="loading">Crunching team stats…</div></div>
   </section>
 
-  <!-- PROJECTIONS (premium) -->
-  <section id="nba-view-proj" class="nba-view">
-    <div class="panel-title"><h2>PROJECTIONS</h2><div class="rule"></div><span class="tag">premium · last season blended with this season</span></div>
-    <div class="nba-controls">
-      <button class="action nba-subtab active" type="button" data-nba-sub="players">PLAYERS</button>
+  <!-- VAULT (premium) -->
+  <section id="nba-view-vault" class="nba-view">
+    <div class="panel-title"><h2>THE VAULT</h2><div class="rule"></div><span class="tag">premium · nightly projection engine</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Every projection, grade and tag is explained in the <a href="#" class="nba-goto-metrics" style="color:var(--cyan);">METRICS tab →</a>
+      Premium — unlock with your license key above.
+    </div>
+    <div class="search-row">
+      <button class="action nba-subtab active" type="button" data-nba-sub="gamevault">GAME VAULT</button>
       <button class="action nba-subtab" type="button" data-nba-sub="rankings">RANKINGS</button>
-      <button class="action nba-subtab" type="button" data-nba-sub="matchups">MATCHUPS</button>
       <button class="action nba-subtab" type="button" data-nba-sub="parlays">PARLAYS</button>
     </div>
-    <div class="nba-controls">
-      <select id="nba-stat">
+    <div class="search-row">
+      <select id="nba-stat" class="gw-select">
         <option value="pts">POINTS</option>
         <option value="reb">REBOUNDS</option>
         <option value="ast">ASSISTS</option>
@@ -1407,25 +1438,173 @@
         <option value="pra">PTS + REB + AST</option>
         <option value="min">MINUTES</option>
       </select>
-      <select id="nba-team"><option value="">ALL TEAMS</option></select>
-      <select id="nba-sort"><option value="proj">SORT: PROJECTION</option><option value="grade">SORT: GRADE</option></select>
-      <select id="nba-parlay-market" style="display:none"><option value="">ALL MARKETS</option><option value="pts">POINTS</option><option value="reb">REBOUNDS</option><option value="ast">ASSISTS</option><option value="fg3m">THREES</option><option value="pr">PTS + REB</option><option value="pa">PTS + AST</option></select>
-      <label class="inj-toggle"><input type="checkbox" id="nba-hide-out" checked> HIDE OUT</label>
+      <select id="nba-team" class="gw-select"><option value="">ALL TEAMS</option></select>
+      <select id="nba-sort" class="gw-select"><option value="proj">SORT: PROJECTION</option><option value="grade">SORT: GRADE</option></select>
+      <select id="nba-parlay-market" class="gw-select" style="display:none"><option value="">ALL MARKETS</option><option value="pts">POINTS</option><option value="reb">REBOUNDS</option><option value="ast">ASSISTS</option><option value="fg3m">THREES</option><option value="pr">PTS + REB</option><option value="pa">PTS + AST</option></select>
+      <button class="action" id="nba-proj-load" type="button">LOAD</button>
+      <label class="inj-toggle"><input type="checkbox" id="nba-hide-out" checked> HIDE OUT / DOUBTFUL</label>
       <label class="inj-toggle"><input type="checkbox" id="nba-great-only"> GREAT MATCHUPS ONLY</label>
-      <button class="action" id="nba-proj-load" type="button">REFRESH</button>
     </div>
     <div id="nba-proj-status" class="nba-status"></div>
-    <div id="nba-proj-results"></div>
-    <div id="nba-mu-results" style="display:none"></div>
+    <div id="nba-gv-results"><div class="empty">Unlock with a license key above, then hit LOAD.</div></div>
     <div id="nba-rank-results" style="display:none"></div>
-    <div id="nba-parlay-results" style="display:none"></div>
+    <div id="nba-parlay-wrap" style="display:none">
+      <div class="key-box" style="font-size:.74rem;">Model picks paired up — not odds or EV math. Bet responsibly. Details in METRICS.</div>
+      <div id="nba-parlay-results"></div>
+    </div>
   </section>
 
-  <!-- PROPS (premium) -->
-  <section id="nba-view-props" class="nba-view">
+  <!-- MATCHUPS -->
+  <section id="nba-view-matchups" class="nba-view">
+    <div class="panel-title"><h2>DEFENSE VS POSITION</h2><div class="rule"></div><span class="tag" id="nba-mu-tag">premium · what each defense allows</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      How much each defense gives up to guards, forwards and centers, per minute, vs the league average for that position.
+      <span style="color:var(--win)">Green</span> = gives up 5%+ more than average (good for the offense), <span style="color:var(--loss)">red</span> = 5%+ less.
+      Click a column to sort, click a defense to see who faces it tonight.
+    </div>
+    <div class="search-row">
+      <select id="nba-mu-stat" class="gw-select">
+        <option value="pts">POINTS</option><option value="reb">REBOUNDS</option><option value="ast">ASSISTS</option><option value="fg3m">THREES MADE</option><option value="pra" selected>PTS + REB + AST</option>
+      </select>
+      <button class="action nba-refresh" type="button">REFRESH</button>
+      <label class="inj-toggle"><input type="checkbox" id="nba-mu-tonight" checked> TONIGHT'S GAMES ONLY</label>
+    </div>
+    <div id="nba-mu-results"><div class="empty">Unlock with a license key above.</div></div>
+  </section>
+
+  <!-- USAGE -->
+  <section id="nba-view-usage" class="nba-view">
+    <div class="panel-title"><h2>USAGE TRENDS</h2><div class="rule"></div><span class="tag" id="nba-usage-tag">premium · who is gaining or losing opportunity</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Minutes and <b>usage</b> (his share of his team's shots, free throws and turnovers while he's in the game) over his last 3 games, against his normal:
+      this season once he has 5 games, last season until then. A rising role usually shows up in the box score before the lines catch up.
+      <span style="color:var(--win)">Green</span> = up 3+ minutes or 3+ usage points, <span style="color:var(--loss)">red</span> = down. Click a column to sort.
+    </div>
+    <div class="search-row">
+      <select id="nba-usage-pos" class="gw-select"><option value="ALL">ALL POSITIONS</option><option value="G">GUARDS</option><option value="F">FORWARDS</option><option value="C">CENTERS</option></select>
+      <button class="action nba-refresh" type="button">REFRESH</button>
+      <label class="inj-toggle"><input type="checkbox" id="nba-usage-tonight" checked> TONIGHT'S GAMES ONLY</label>
+      <label class="inj-toggle"><input type="checkbox" id="nba-usage-hide" checked> HIDE OUT / DOUBTFUL</label>
+    </div>
+    <div id="nba-usage-movers"></div>
+    <div id="nba-usage-results"><div class="empty">Unlock with a license key above.</div></div>
+  </section>
+
+  <!-- SHOOTING -->
+  <section id="nba-view-shooting" class="nba-view">
+    <div class="panel-title"><h2>SHOOTING LUCK BOARD</h2><div class="rule"></div><span class="tag" id="nba-shoot-tag">premium · expected points vs points scored</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      The basketball version of TD Debt. Every shot and free throw from his last 5 games is priced at <b>his own normal percentages</b> (last season's, pulled toward league average on small samples).
+      <b>Shooting debt</b> = expected points minus points actually scored, per game. Big positive: he's been missing shots he normally makes, so the points are due (<span class="flag-badge due">DUE</span>).
+      Big negative: he's shooting well above his normal, so expect some cooling (<span class="flag-badge over">RUNNING HOT</span>). Click a player for his full breakdown.
+    </div>
+    <div class="search-row">
+      <button class="action nba-refresh" type="button">REFRESH</button>
+      <label class="inj-toggle"><input type="checkbox" id="nba-shoot-tonight" checked> TONIGHT'S GAMES ONLY</label>
+      <label class="inj-toggle"><input type="checkbox" id="nba-shoot-hide" checked> HIDE OUT / DOUBTFUL</label>
+    </div>
+    <div id="nba-shoot-results"><div class="empty">Unlock with a license key above.</div></div>
+  </section>
+
+  <!-- PACE -->
+  <section id="nba-view-pace" class="nba-view">
+    <div class="panel-title"><h2>PACE &amp; TEAM RATINGS</h2><div class="rule"></div><span class="tag" id="nba-pace-tag">premium · how teams really play</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      More possessions means more chances for everyone on the floor. <b>Pace</b> = possessions per 48 minutes (shots + 0.44 × free throws − offensive rebounds + turnovers).
+      <b>ORTG / DRTG</b> = points scored / allowed per 100 possessions, <b>NET</b> = the difference. This season blended with last season (k = 10 games). Click a column to sort.
+    </div>
+    <div class="search-row">
+      <button class="action nba-refresh" type="button">REFRESH</button>
+    </div>
+    <div id="nba-pace-insights"></div>
+    <div id="nba-pace-results"><div class="empty">Unlock with a license key above.</div></div>
+  </section>
+
+  <!-- INJURIES -->
+  <section id="nba-view-injuries" class="nba-view">
+    <div class="panel-title"><h2>INJURY IMPACT</h2><div class="rule"></div><span class="tag" id="nba-inj-tag">who is out and who benefits</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      When a rotation player (10+ minutes) is out or doubtful, his minutes go to teammates. Each card shows the minutes he leaves behind and an <b>estimate</b> of who absorbs them,
+      split in proportion to each teammate's role. It's a starting point, not a forecast: coaches shuffle rotations. The full ESPN report for tonight's teams is below.
+    </div>
+    <div class="search-row">
+      <button class="action nba-refresh" type="button">REFRESH</button>
+    </div>
+    <div id="nba-inj-impact"></div>
+    <div class="panel-title"><h2>FULL REPORT</h2><div class="rule"></div><span class="tag" id="nba-inj-asof">teams on this slate · espn</span></div>
+    <div id="nba-injuries"><div class="loading">Pulling injuries…</div></div>
+  </section>
+
+  <!-- REST -->
+  <section id="nba-view-rest" class="nba-view">
+    <div class="panel-title"><h2>REST &amp; SCHEDULE</h2><div class="rule"></div><span class="tag" id="nba-rest-tag">free data · fatigue spots</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      The NBA's version of weather. Tired legs show up in minutes and shooting. <span style="color:var(--loss)">Red</span> = second night of a back-to-back or 3 games in 4 nights,
+      <span style="color:var(--amber)">amber</span> = 4 in 6, <span style="color:var(--win)">green</span> = 2+ days of rest. <b>REST EDGE</b> marks games where one team is fresh and the other isn't. The Vault already trims back-to-back minutes 4%.
+    </div>
+    <div class="search-row"><button class="action nba-refresh" type="button">REFRESH</button></div>
+    <div id="nba-rest-results"><div class="loading">Loading…</div></div>
+  </section>
+
+  <!-- MODEL RECORD -->
+  <section id="nba-view-record" class="nba-view">
+    <div class="panel-title"><h2>MODEL RECORD</h2><div class="rule"></div><span class="tag" id="nba-rec-tag">premium · how the projections and grades actually did</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Each past night is rescored as if it were that morning: only games from <i>earlier</i> nights are used, never the night being graded. Then we check what actually happened.
+      <b>Projection error</b> compares the model with a naive guess (his per-game average). <b>Beat projection</b> by grade shows whether the A's really outdo the D's: if the grade works, A-graded players should beat their projection more often.
+      One honest caveat: the rosters come from who actually played that night, so late scratches don't count against the model. Click a night to see its top 10.
+    </div>
+    <div class="search-row">
+      <select id="nba-rec-stat" class="gw-select"><option value="pts">POINTS</option><option value="reb">REBOUNDS</option><option value="ast">ASSISTS</option><option value="pra">PTS + REB + AST</option></select>
+      <button class="action" id="nba-rec-run" type="button">RUN</button>
+    </div>
+    <div id="nba-rec-results"><div class="empty">Hit RUN to rescore every past night this season with only the information available before tip. It takes a few seconds.</div></div>
+  </section>
+
+  <!-- MY LIST -->
+  <section id="nba-view-mylist" class="nba-view">
+    <div class="panel-title"><h2>MY LIST</h2><div class="rule"></div><span class="tag" id="nba-wl-tag">saved in this browser</span></div>
+    <div class="key-box" style="font-size:.74rem;">
+      Your own short list. Tap the <b>☆</b> next to any player in the Vault, Usage, Shooting or Injuries tabs, or search below. Each row shows tonight's game, his projection and grade, how his minutes are moving, his shooting debt and how soft the matchup is. The list lives in this browser only.
+    </div>
+    <div class="search-row">
+      <input type="text" id="nba-wl-search" placeholder="search a player to add" autocomplete="off">
+      <button class="action" id="nba-wl-load" type="button">LOAD</button>
+    </div>
+    <div id="nba-wl-suggest" class="nba-wl-suggest"></div>
+    <div id="nba-wl-results"><div class="empty">Your list is empty.</div></div>
+  </section>
+
+  <!-- PLAYERS -->
+  <section id="nba-view-players" class="nba-view">
+    <div class="panel-title"><h2>SEARCH A PLAYER</h2><div class="rule"></div><span class="tag">every roster · espn</span></div>
+    <div class="search-row">
+      <input type="text" id="nba-player-search" placeholder="type a name… e.g. jokic">
+      <button class="action" id="nba-player-search-btn" type="button">SEARCH</button>
+    </div>
+    <div id="nba-player-results"></div>
+
+    <div class="panel-title"><h2>BROWSE BY TEAM</h2><div class="rule"></div><span class="tag">tap a team to open its roster</span></div>
+    <div id="nba-team-browser"><div class="loading">Loading teams…</div></div>
+
+    <div class="panel-title"><h2>MINUTES RISERS</h2><div class="rule"></div><span class="tag">last 3 games vs normal</span></div>
+    <div id="nba-risers"><div class="empty">Loads with this season's games: open the Vault or hit SEARCH first.</div></div>
+
+    <div class="panel-title"><h2>MINUTES FALLERS</h2><div class="rule"></div><span class="tag">last 3 games vs normal</span></div>
+    <div id="nba-fallers"></div>
+  </section>
+
+  <!-- MARKETS -->
+  <section id="nba-view-markets" class="nba-view">
+    <div class="panel-title"><h2>ODDS</h2><div class="rule"></div><span class="tag">free · DraftKings via ESPN</span></div>
+    <div class="key-box">
+      Spreads, totals, moneylines and each team's implied points for this slate. Player props are below.
+    </div>
+    <div id="nba-odds-results"><div class="loading">Loading lines…</div></div>
+
     <div class="panel-title"><h2>PLAYER PROPS</h2><div class="rule"></div><span class="tag">premium · lines vs projection</span></div>
-    <div class="nba-controls">
-      <select id="nba-prop-market">
+    <div class="search-row">
+      <select id="nba-prop-market" class="gw-select">
         <option value="">ALL MARKETS</option>
         <option value="pts">POINTS</option>
         <option value="reb">REBOUNDS</option>
@@ -1435,14 +1614,15 @@
         <option value="pa">PTS + AST</option>
       </select>
     </div>
-    <div class="nba-status">Open a game to pull its lines. Lines come free from ESPN (DraftKings) and refresh every 10 minutes; if ESPN has none for a game, The Odds API is used instead. <b>EDGE</b> = projection minus the consensus line. <b>L10</b> = how often he cleared that line in his last 10 games (last season's games until he has 5 this season).</div>
+    <div class="nba-status">Open a game to pull its lines. Lines come free from ESPN (DraftKings) and refresh every 10 minutes; if ESPN has none for a game, The Odds API is used instead. <b>EDGE</b> = projection minus the line. <b>L10</b> = how often he cleared that line in his last 10 games (last season's games until he has 5 this season).</div>
     <div id="nba-props-results"></div>
   </section>
 
-  <!-- METHOD (free) -->
-  <section id="nba-view-method" class="nba-view">
-    <div class="panel-title"><h2>HOW THE NBA MODEL WORKS</h2><div class="rule"></div><span class="tag">every number, explained</span></div>
+  <!-- METRICS -->
+  <section id="nba-view-metrics" class="nba-view">
+    <div class="panel-title"><h2>HOW GRIDWAVE NBA WORKS</h2><div class="rule"></div><span class="tag">every projection, grade &amp; tag explained</span></div>
     <div class="metric-grid">
+
       <div class="metric-card">
         <h3>Projection = minutes × per-minute rate</h3>
         <p>Every projected stat is built from two pieces that are blended separately: how many minutes he'll play, and how much he produces per minute. PRA is the sum of the points, rebounds and assists projections.</p>
@@ -1514,6 +1694,26 @@
           <li>Late scratches only show once ESPN updates the injury report. Lineups confirmed 30 minutes before tip beat any model.</li>
           <li>Once the season is more than 30 days old, "this season" means his last 30 days of games, which is also the more relevant sample.</li>
           <li>Name matching between the sportsbooks and ESPN can occasionally miss a player with an unusual spelling.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Parlays</h3>
+        <ul>
+          <li>Legs need <b>24+ projected minutes</b> and a projection that puts the side at <b>58%+</b>, measured against how much his stat swings game to game (not as a % of the line, so tiny lines can't fake big edges).</li>
+          <li>His last 10 games must lean the same way, and the situation grade must back it: <b>B or better</b> for overs, C or worse for unders.</li>
+          <li>Legs where the projection is <b>30%+ off the book's line</b> are skipped. That usually means a role change the model hasn't caught.</li>
+          <li>One leg per game, no player in more than 2 parlays. Lines are DraftKings via ESPN (free), never the paid feed.</li>
+        </ul>
+      </div>
+      <div class="metric-card">
+        <h3>Research tabs</h3>
+        <ul>
+          <li><b>Usage</b>: last 3 games of minutes and usage (shots + 0.44 × free throws + turnovers, as a share of his team's while he played) vs his normal.</li>
+          <li><b>Shooting</b>: expected points at his normal 2-point, 3-point and free-throw percentages minus actual points, last 5 games. Normal percentages are last season's, pulled toward league average (50 two-point tries, 75 threes, 20 free throws of league average mixed in). <span class="flag-badge due">DUE</span> at +3 per game, <span class="flag-badge over">RUNNING HOT</span> at −3.</li>
+          <li><b>Pace</b>: possessions per 48 and points per 100 possessions, this season blended with last (k = 10 games).</li>
+          <li><b>Injuries</b>: the same minutes hand-off the Vault uses, shown per injured player.</li>
+          <li><b>Rest</b>: days since each team's last game, back-to-backs, 3 in 4 and 4 in 6.</li>
+          <li><b>Model Record</b>: each past night rebuilt from earlier games only, then graded.</li>
         </ul>
       </div>
     </div>
@@ -4690,7 +4890,8 @@
       state: ev.status && ev.status.type && ev.status.type.state,
       detail: ev.status && ev.status.type && ev.status.type.shortDetail,
       home: side('home'), away: side('away'),
-      spread: odds && odds.details, total: odds && odds.overUnder
+      spread: odds && odds.details, total: odds && odds.overUnder,
+      mlHome: odds && odds.homeTeamOdds && odds.homeTeamOdds.moneyLine, mlAway: odds && odds.awayTeamOdds && odds.awayTeamOdds.moneyLine
     };
   }
 
@@ -4759,15 +4960,20 @@
       const ix = k => keys.indexOf(k);
       const iMin = ix('minutes'), iPts = ix('points'), iReb = ix('rebounds'), iAst = ix('assists');
       const i3 = keys.findIndex(k => k.indexOf('threePointFieldGoalsMade') === 0);
+      const iFG = keys.findIndex(k => k.indexOf('fieldGoalsMade') === 0);
+      const iFT = keys.findIndex(k => k.indexOf('freeThrowsMade') === 0);
+      const iOR = ix('offensiveRebounds'), iTO = ix('turnovers');
       (st.athletes || []).forEach(a => {
         if (a.didNotPlay || !a.stats || !a.stats.length) return;
         const min = parseFloat(a.stats[iMin]);
         if (!(min > 0)) return;
         const v = i => { const n = parseFloat(String(a.stats[i] || '').split('-')[0]); return isNaN(n) ? 0 : n; };
+        const att = i => { const n = parseFloat(String(a.stats[i] || '').split('-')[1]); return isNaN(n) ? 0 : n; };
         rows.push({
           gid: String(ev.id), date: isoDay(ev.date), id: String(a.athlete && a.athlete.id), name: a.athlete && a.athlete.displayName,
           pos: a.athlete && a.athlete.position && a.athlete.position.abbreviation,
           team: abbr, opp, min, pts: v(iPts), reb: v(iReb), ast: v(iAst), fg3m: v(i3),
+          fgm: v(iFG), fga: att(iFG), fg3a: att(i3), ftm: v(iFT), fta: att(iFT), oreb: v(iOR), tov: v(iTO),
           st: a.starter === true ? 1 : a.starter === false ? 0 : null
         });
       });
@@ -4776,7 +4982,7 @@
   }
 
   async function boxRows(ev){
-    const key = 'box2:' + ev.id;   // box2 adds the starter flag
+    const key = 'box3:' + ev.id;   // box2 added the starter flag, box3 shot attempts / OREB / TOV
     const c = await store.get(key);
     if (c) return c;
     const j = await fetchJSON(`${ESPN}/summary?event=${ev.id}`);
@@ -4821,7 +5027,10 @@
           date: col(['game_date']), stype: col(['season_type']), dnp: col(['did_not_play']),
           min: col(['minutes', 'min']), pts: col(['points', 'pts']), reb: col(['rebounds', 'reb']),
           ast: col(['assists', 'ast']), fg3m: col(['three_point_field_goals_made', 'fg3m']),
-          st: col(['starter'])
+          st: col(['starter']),
+          fgm: col(['field_goals_made', 'fgm']), fga: col(['field_goals_attempted', 'fga']), fg3a: col(['three_point_field_goals_attempted', 'fg3a']),
+          ftm: col(['free_throws_made', 'ftm']), fta: col(['free_throws_attempted', 'fta']),
+          oreb: col(['offensive_rebounds', 'oreb']), tov: col(['turnovers', 'tov'])
         };
         const missing = ['id', 'min', 'pts', 'reb', 'ast'].filter(k => ix[k] < 0);
         if (missing.length) throw new Error('unexpected hoopR columns (missing ' + missing.join(', ') + ')');
@@ -4836,20 +5045,25 @@
         name: ix.name >= 0 ? r[ix.name] : '', pos: ix.pos >= 0 ? r[ix.pos] : '',
         team: ix.team >= 0 ? r[ix.team] : '', opp: ix.opp >= 0 ? r[ix.opp] : '',
         min, pts: nv('pts'), reb: nv('reb'), ast: nv('ast'), fg3m: ix.fg3m >= 0 ? nv('fg3m') : 0,
-        st: ix.st >= 0 ? (/^true$/i.test(r[ix.st]) ? 1 : 0) : null
+        st: ix.st >= 0 ? (/^true$/i.test(r[ix.st]) ? 1 : 0) : null,
+        fgm: ix.fgm >= 0 ? nv('fgm') : 0, fga: ix.fga >= 0 ? nv('fga') : 0, fg3a: ix.fg3a >= 0 ? nv('fg3a') : 0,
+        ftm: ix.ftm >= 0 ? nv('ftm') : 0, fta: ix.fta >= 0 ? nv('fta') : 0, oreb: ix.oreb >= 0 ? nv('oreb') : 0, tov: ix.tov >= 0 ? nv('tov') : 0
       });
     });
     return rows;
   }
 
   // Rows → { id: { gp, min, pts, reb, ast, fg3m, team, pos, name, logs:[newest first] } }
+  // game log row: [0 date, 1 opp, 2 min, 3 pts, 4 reb, 5 ast, 6 fg3m, 7 started, 8 fgm, 9 fga, 10 fg3a, 11 ftm, 12 fta, 13 oreb, 14 tov]
+  const EXTRA = ['fgm', 'fga', 'fg3a', 'ftm', 'fta', 'oreb', 'tov'];
   function aggregate(rows, keepLogs){
     const by = {};
     rows.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0).forEach(r => {
-      const p = by[r.id] || (by[r.id] = { id: r.id, name: r.name, pos: r.pos, team: r.team, gp: 0, min: 0, pts: 0, reb: 0, ast: 0, fg3m: 0, logs: [] });
-      p.gp++; p.min += r.min; STATS.forEach(s => { p[s] += r[s]; });
+      const p = by[r.id] || (by[r.id] = { id: r.id, name: r.name, pos: r.pos, team: r.team, gp: 0, min: 0, pts: 0, reb: 0, ast: 0, fg3m: 0, fgm: 0, fga: 0, fg3a: 0, ftm: 0, fta: 0, oreb: 0, tov: 0, logs: [] });
+      p.gp++; p.min += r.min; STATS.forEach(s => { p[s] += r[s]; }); EXTRA.forEach(s => { p[s] += r[s] || 0; });
       p.team = r.team || p.team; p.pos = r.pos || p.pos; p.name = r.name || p.name;   // latest game wins
-      p.logs.push([r.date, r.opp, r.min, r.pts, r.reb, r.ast, r.fg3m, r.st == null ? null : r.st]);
+      p.logs.push([r.date, r.opp, r.min, r.pts, r.reb, r.ast, r.fg3m, r.st == null ? null : r.st,
+        r.fgm || 0, r.fga || 0, r.fg3a || 0, r.ftm || 0, r.fta || 0, r.oreb || 0, r.tov || 0]);
     });
     Object.values(by).forEach(p => { p.logs = p.logs.slice(-keepLogs).reverse(); });
     return by;
@@ -4950,8 +5164,73 @@
     return { s, g, idx, rank, N, tier };
   }
 
+  /* ---------------- team ratings, usage, league shooting (shared by the research tabs) ---------------- */
+  const plays = r => (r.fga || 0) + 0.44 * (r.fta || 0) + (r.tov || 0);         // possessions a player "used"
+  const possOf = t => t.fga + 0.44 * t.fta - t.oreb + t.tov;                      // team possessions estimate
+  function teamGames(rows){
+    const tg = {};
+    rows.forEach(r => {
+      if (!r.gid || !r.team) return;
+      const k = r.gid + '|' + r.team;
+      const t = tg[k] || (tg[k] = { gid: r.gid, team: r.team, date: r.date, pts: 0, fga: 0, fta: 0, oreb: 0, tov: 0, min: 0, plays: 0 });
+      t.pts += r.pts; t.fga += r.fga || 0; t.fta += r.fta || 0; t.oreb += r.oreb || 0; t.tov += r.tov || 0; t.min += r.min; t.plays += plays(r);
+    });
+    return tg;
+  }
+  // pace (possessions per 48) and points per 100 possessions, both ends, per team
+  function teamStatsFrom(rows, keepGames){
+    const byGame = {};
+    Object.values(teamGames(rows)).forEach(t => (byGame[t.gid] = byGame[t.gid] || []).push(t));
+    const out = {};
+    Object.values(byGame).forEach(pair => {
+      if (pair.length !== 2) return;
+      pair.forEach((t, i) => {
+        const o = pair[1 - i], poss = possOf(t), oposs = possOf(o);
+        if (!(poss > 0 && oposs > 0 && t.min > 0)) return;
+        const x = out[t.team] || (out[t.team] = { g: 0, poss: 0, oposs: 0, pts: 0, opts: 0, min: 0, games: [] });
+        x.g++; x.poss += poss; x.oposs += oposs; x.pts += t.pts; x.opts += o.pts; x.min += t.min;
+        if (keepGames) x.games.push({ date: t.date, pace: 240 * ((poss + oposs) / 2) / t.min });
+      });
+    });
+    Object.values(out).forEach(x => {
+      x.pace = 240 * ((x.poss + x.oposs) / 2) / x.min;
+      x.ortg = 100 * x.pts / x.poss; x.drtg = 100 * x.opts / x.oposs; x.net = x.ortg - x.drtg;
+      if (keepGames) x.games.sort((a, b) => a.date < b.date ? 1 : -1); else delete x.games;
+    });
+    return out;
+  }
+  // usage share: his plays / his team's plays, over the games he played
+  function useShares(rows){
+    const tg = teamGames(rows), acc = {};
+    rows.forEach(r => {
+      const t = tg[r.gid + '|' + r.team]; if (!t || !t.plays) return;
+      const a = acc[r.id] || (acc[r.id] = { p: 0, t: 0 }); a.p += plays(r); a.t += t.plays;
+    });
+    const out = {}; Object.keys(acc).forEach(id => { out[id] = acc[id].t ? acc[id].p / acc[id].t : 0; });
+    return out;
+  }
+  // per player, per game: minutes and usage share, newest first (this season)
+  function useMapFrom(rows){
+    const tg = teamGames(rows), m = {};
+    rows.forEach(r => {
+      const t = tg[r.gid + '|' + r.team];
+      (m[r.id] = m[r.id] || []).push({ date: r.date, min: r.min, share: t && t.plays ? plays(r) / t.plays : 0 });
+    });
+    Object.values(m).forEach(a => a.sort((x, y) => x.date < y.date ? 1 : -1));
+    return m;
+  }
+  function leagueShooting(rows){
+    let fgm = 0, fga = 0, f3m = 0, f3a = 0, ftm = 0, fta = 0;
+    rows.forEach(r => { fgm += r.fgm || 0; fga += r.fga || 0; f3m += r.fg3m || 0; f3a += r.fg3a || 0; ftm += r.ftm || 0; fta += r.fta || 0; });
+    return {
+      p2: fga - f3a > 0 ? (fgm - f3m) / (fga - f3a) : 0.54,
+      p3: f3a > 0 ? f3m / f3a : 0.36,
+      pft: fta > 0 ? ftm / fta : 0.78
+    };
+  }
+
   async function loadPrior(lastSeason){
-    const key = `prior:v3:${lastSeason}`;   // v2 added defense-vs-position, v3 the starter flag
+    const key = `prior:v4:${lastSeason}`;   // v2 defense-vs-position, v3 starter flag, v4 shooting/pace/usage
     const c = await store.get(key);
     if (c && Date.now() - c.at < 7 * 86400000) return c.data;
     let data;
@@ -4959,11 +5238,13 @@
       const res = await GW.premiumFetch('/hoopr?url=' + encodeURIComponent(HOOPR_BOX + lastSeason + '.csv'));
       const rows = hooprToRows(await res.text());
       const players = aggregate(rows, 20);
-      data = { season: lastSeason, players, posAvg: positionAverages(players), dvp: dvpFrom(rows), ok: true };
+      const use = useShares(rows);
+      Object.keys(use).forEach(id => { if (players[id]) players[id].use = use[id]; });
+      data = { season: lastSeason, players, posAvg: positionAverages(players), dvp: dvpFrom(rows), teams: teamStatsFrom(rows, false), league: leagueShooting(rows), ok: true };
     } catch (e) {
       if (e.message === 'NO_LICENSE' || e.shared) throw e;
       console.warn('NBA prior unavailable', e);
-      data = { season: lastSeason, players: {}, posAvg: positionAverages({}), dvp: { teams: {} }, ok: false, err: e.message };
+      data = { season: lastSeason, players: {}, posAvg: positionAverages({}), dvp: { teams: {} }, teams: {}, league: leagueShooting([]), ok: false, err: e.message };
       return data;  // don't cache a failure
     }
     await store.set(key, { at: Date.now(), data });
@@ -5110,8 +5391,7 @@
   let slate = null;                 // { day, games, season, calendar }
   let proj = null;                  // { day, rows, prior, cur, meta }
   let projLoading = null;
-  let activeView = 'tonight';
-  let projSub = 'players';          // PROJECTIONS sub-view: players | matchups
+  let activeView = 'teams';
   const propsCache = {};            // espn game id → parsed props
   let oddsEvents = null;
 
@@ -5196,16 +5476,18 @@
     return { txt: (String(status || '?').toUpperCase().slice(0, 4)), cls: 'q', rank: 5 };
   }
 
-  async function refreshTonight(){
+  async function refreshSlate(){
     $('#nba-day-label').textContent = dayLabel(slateDate);
     $('#nba-ticker').innerHTML = '<div class="loading">Pulling the NBA scoreboard…</div>';
     try { await loadSlate(); }
-    catch (e) { $('#nba-ticker').innerHTML = `<div class="error">Could not reach ESPN (${esc(e.message)}).</div>`; $('#nba-injuries').innerHTML = ''; return; }
+    catch (e) { $('#nba-ticker').innerHTML = `<div class="error">Could not reach ESPN (${esc(e.message)}).</div>`; return false; }
     renderTicker();
-    renderInjuries();
+    return true;
   }
 
-  /* ---------------- projections ---------------- */
+  /* ---------------- shared data loader ----------------
+     One loader feeds every premium tab: last season (the prior), this season's box scores, tonight's
+     rosters + injuries, and the projection rows. Progress and errors go to whichever tab asked. */
   function setProjStatus(html){ $('#nba-proj-status').innerHTML = html; }
 
   function lockedOrError(box, e, what){
@@ -5216,50 +5498,58 @@
     box.appendChild(d);
   }
 
-  async function ensureProjections(force){
-    const box = $('#nba-proj-results');
-    if (!GW.getLicenseKey()) { setProjStatus(''); box.innerHTML = ''; box.appendChild(GW.paywallCard()); return null; }
-    if (!force && proj && slate && proj.day === slate.day) { renderProjections(); return proj; }
-    if (projLoading) return projLoading;
+  async function ensureProjections(force, boxSel){
+    const box = $(boxSel || '#nba-gv-results');
+    if (!GW.getLicenseKey()) { if (box) { box.innerHTML = ''; box.appendChild(GW.paywallCard()); } return null; }
+    if (!force && proj && proj.day === ymd(slateDate)) return proj;
+    const say = msg => { if (box) box.innerHTML = `<div class="loading">${msg}</div>`; };
+    if (projLoading) { say('Loading…'); const p = await projLoading; if (!p && box && !box.querySelector('.paywall,.error')) say('Could not load. Hit REFRESH.'); return p; }
     projLoading = (async () => {
-      const btn = $('#nba-proj-load');
-      box.innerHTML = '<div class="loading">Loading…</div>';
       try {
         if (!slate || slate.day !== ymd(slateDate)) await loadSlate();
-        if (!slate.games.length) { setProjStatus(''); box.innerHTML = '<div class="empty">No NBA games on this date.</div>'; return null; }
         const season = (slate.season && slate.season.year) || (slateDate.getMonth() >= 7 ? slateDate.getFullYear() + 1 : slateDate.getFullYear());
-        box.innerHTML = `<div class="loading">Loading last season's box scores (${season - 1})… first load is the big one, then it's cached for a week.</div>`;
+        say(`Loading last season's box scores (${season - 1})… first load is the big one, then it's cached for a week.`);
         const prior = await loadPrior(season - 1);
-        box.innerHTML = '<div class="loading">Syncing this season\'s games…</div>';
+        say('Syncing this season\'s games…');
         // calendar comes from the TODAY scoreboard so the sync always runs through last night
         let cal = slate.calendar;
         try { cal = (await scoreboard(ymd(noon(new Date())))).calendar || cal; } catch (_) {}
-        const curRaw = await loadCurrent(ymd(noon(new Date())), cal, (d, t) => { box.innerHTML = `<div class="loading">Syncing this season's games… ${d}/${t}</div>`; });
+        const curRaw = await loadCurrent(ymd(noon(new Date())), cal, (d, t) => say(`Syncing this season's games… ${d}/${t}`));
         // only games BEFORE the slate date count (so browsing a past date doesn't peek at its results)
         const curRows = curRaw.rows.filter(r => r.date < slate.day);
         const cur = aggregate(curRows, 20);
-        box.innerHTML = '<div class="loading">Pulling rosters + injuries…</div>';
-        const teams = []; slate.games.forEach(g => teams.push(g.away, g.home));
-        const rosterList = await pool(teams, 6, t => roster(t.id).catch(() => []));
-        const rosters = {}; teams.forEach((t, i) => { rosters[t.id] = rosterList[i]; });
-        let inj = { byTeam: {}, byName: {} }; try { inj = await injuries(); } catch (_) {}
-        const teamGames = {};
-        const seenG = {};
-        curRows.forEach(r => { const k = r.team + '|' + r.gid; if (!seenG[k]) { seenG[k] = 1; teamGames[r.team] = (teamGames[r.team] || 0) + 1; } });
-        const rows = buildSlate(slate.games, rosters, prior, cur, inj, slate.b2b, teamGames);
-        proj = { day: slate.day, rows, prior, curGames: curRaw.games, capped: curRaw.capped, dvp: blendDvp(prior.dvp, dvpFrom(curRows)) };
+        let rows = [], inj = { byTeam: {}, byName: {} };
+        try { inj = await injuries(); } catch (_) {}
+        if (slate.games.length) {
+          say('Pulling rosters + injuries…');
+          const teams = []; slate.games.forEach(g => teams.push(g.away, g.home));
+          const rosterList = await pool(teams, 6, t => roster(t.id).catch(() => []));
+          const rosters = {}; teams.forEach((t, i) => { rosters[t.id] = rosterList[i]; });
+          const teamGamesN = {}, seenG = {};
+          curRows.forEach(r => { const k = r.team + '|' + r.gid; if (!seenG[k]) { seenG[k] = 1; teamGamesN[r.team] = (teamGamesN[r.team] || 0) + 1; } });
+          rows = buildSlate(slate.games, rosters, prior, cur, inj, slate.b2b, teamGamesN);
+        }
+        proj = {
+          day: slate.day, rows, prior, cur, curRows, curAll: curRaw.rows, inj,
+          curGames: curRaw.games, capped: curRaw.capped, noGames: !slate.games.length,
+          dvp: blendDvp(prior.dvp, dvpFrom(curRows)),
+          teamsCur: teamStatsFrom(curRows, true), useMap: useMapFrom(curRows)
+        };
         fillTeamFilter();
-        renderProjections();
-        if (btn) GW.gwFeedback(btn, true);
         return proj;
       } catch (e) {
-        setProjStatus('');
-        lockedOrError(box, e, 'projections');
-        if (btn) GW.gwFeedback(btn, false);
+        if (box) lockedOrError(box, e, 'the NBA data');
         return null;
       } finally { projLoading = null; }
     })();
     return projLoading;
+  }
+
+  // premium research tabs: load (or reuse) the data, then draw
+  async function withData(boxSel, render, force){
+    const p = await ensureProjections(force, boxSel);
+    if (p) render();
+    return p;
   }
 
   function fillTeamFilter(){
@@ -5284,13 +5574,37 @@
     const inner = srcs.length
       ? `<img src="${esc(srcs[0])}" data-fb="${esc(srcs.slice(1).join('|'))}" data-ini="${esc(ini)}" alt="" loading="lazy" decoding="async" onerror="gwNbaImgErr(this)">`
       : esc(ini);
-    return `<div class="avatar"><div class="circ">${inner}</div><span class="tm">${esc(r.team.abbr)}</span></div>`;
+    return `<div class="avatar"><div class="circ">${inner}</div><span class="tm">${esc((r.team && r.team.abbr) || '')}</span></div>`;
   }
   window.gwNbaImgErr = function(img){
     const rest = (img.dataset.fb || '').split('|').filter(Boolean);
     if (rest.length) { img.dataset.fb = rest.slice(1).join('|'); img.src = rest[0]; return; }
     const c = img.parentElement; if (c) c.textContent = img.dataset.ini || '?';
   };
+  // a player that isn't on tonight's slate, shaped like a slate row for avatar()/starHtml()
+  const lite = (id, name, pos, abbr) => ({ a: { id: String(id), name, pos }, team: { abbr } });
+
+  /* ---------------- MY LIST storage (NBA) ---------------- */
+  const NBA_WL_KEY = 'gridwave_nba_watchlist_v1';
+  let nbaWl = [];
+  try { nbaWl = JSON.parse(localStorage.getItem(NBA_WL_KEY) || '[]') || []; } catch (_) { nbaWl = []; }
+  function nbaWlSave(){ try { localStorage.setItem(NBA_WL_KEY, JSON.stringify(nbaWl)); } catch (_) { /* private mode: this visit only */ } }
+  const onList = id => nbaWl.some(x => x.id === String(id));
+  function starHtml(r){
+    const on = onList(r.a.id);
+    const data = encodeURIComponent(JSON.stringify({ id: String(r.a.id), name: r.a.name, pos: r.a.pos || '', team: (r.team && r.team.abbr) || '' }));
+    return `<button type="button" class="wl-star nba-star${on ? ' on' : ''}" data-p="${data}" title="${on ? 'Remove from' : 'Add to'} MY LIST">${on ? '★' : '☆'}</button>`;
+  }
+  // capture phase, so tapping the star never also opens the row's detail panel
+  document.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.nba-star'); if (!b) return;
+    e.stopPropagation(); e.preventDefault();
+    let p; try { p = JSON.parse(decodeURIComponent(b.dataset.p)); } catch (_) { return; }
+    if (onList(p.id)) nbaWl = nbaWl.filter(x => x.id !== p.id); else nbaWl.push(p);
+    nbaWlSave();
+    document.querySelectorAll('.nba-star').forEach(s => { try { const q = JSON.parse(decodeURIComponent(s.dataset.p)); if (q.id === p.id) { const on = onList(p.id); s.classList.toggle('on', on); s.textContent = on ? '★' : '☆'; } } catch (_) {} });
+    if (activeView === 'mylist') renderMyList();
+  }, true);
 
   function chipsFor(r){
     const c = confidence(r.m.n, r.m.rookie);
@@ -5305,41 +5619,94 @@
     return out.join('');
   }
 
-  function renderProjections(){
-    if (!proj) return;
-    if (projSub === 'matchups') { renderMatchups(); }
-    if (projSub === 'rankings') { renderRankings(); }
-    if (projSub === 'parlays') { renderNbaParlays(); }
-    const stat = $('#nba-stat').value, team = $('#nba-team').value, hideOut = $('#nba-hide-out').checked;
-    const greatOnly = $('#nba-great-only').checked;
-    const box = $('#nba-proj-results');
-    const all = proj.rows.filter(r => r.out || r.projMin >= 8);
-    const ns = all.filter(r => !r.out).map(r => r.m.n);
-    const avgN = ns.length ? ns.reduce((a, b) => a + b, 0) / ns.length : 0;
-    const wMin = avgN / (avgN + MODEL.k.min), wPts = avgN / (avgN + MODEL.k.pts);
-    setProjStatus(
-      (proj.prior.ok ? '' : `<span style="color:var(--loss)">Last season's file didn't load (${esc(proj.prior.err || '')}), so priors are position averages for now.</span><br>`) +
-      `${proj.curGames} game${proj.curGames === 1 ? '' : 's'} this season synced${proj.capped ? ' (last 30 days)' : ''}. Players on this slate average <b>${f1(avgN)} GP</b>, so minutes run <b>${pct(wMin)}</b> on this season and points <b>${pct(wPts)}</b>. The rest is ${proj.prior.season - 1}-${String(proj.prior.season).slice(2)} data.`
-    );
-    let list = all.filter(r => (!team || r.team.abbr === team) && (!hideOut || !r.out));
+  // one Vault card row (same layout as the NFL cards)
+  function playerRowEl(r, rank, stat, grades){
+    const row = document.createElement('div');
+    row.className = 'edge-row card-row' + (r.out ? ' row-dim' : '');
+    row.innerHTML = `
+      <div class="rank">${r.out ? '—' : rank}</div>
+      ${avatar(r)}
+      <div class="who"><div class="name">${esc(r.a.name)} ${starHtml(r)}</div><div class="chips">${chipsFor(r)}</div></div>
+      <div class="badges">${r.out ? '' : gradeBadge(grades.get(r))}</div>
+      <div><span class="score">${r.out ? 'OUT' : f1(r.proj[stat])}<span class="unit">${r.out ? '' : LABEL[stat]}</span></span>${stat !== 'min' && !r.out ? `<span class="nba-sub">${f1(r.projMin)} MIN</span>` : ''}</div>`;
+    row.addEventListener('click', () => toggleDetail(row, r));
+    return row;
+  }
+
+  /* ---------------- VAULT ---------------- */
+  let vaultSub = 'gamevault';
+  function vaultList(stat){
+    const team = $('#nba-team').value, hideOut = $('#nba-hide-out').checked, greatOnly = $('#nba-great-only').checked;
+    let list = proj.rows.filter(r => (r.out || r.projMin >= 8) && (!team || r.team.abbr === team) && (!hideOut || !r.out));
     if (greatOnly) list = list.filter(r => { const mu = !r.out && matchupFor(r, stat); return mu && mu.tier === 'great'; });
     const grades = gradesFor(stat);
     const byGrade = $('#nba-sort').value === 'grade';
     const gScore = r => { const g = grades.get(r); return g ? g.composite : -1; };
     list.sort((a, b) => (a.out - b.out) || (byGrade ? gScore(b) - gScore(a) || b.proj[stat] - a.proj[stat] : b.proj[stat] - a.proj[stat]));
+    return { list, grades, greatOnly };
+  }
+
+  function renderVault(){
+    if (!proj) return;
+    if (proj.noGames) { setProjStatus(''); $('#nba-gv-results').innerHTML = '<div class="empty">No NBA games on this date.</div>'; $('#nba-rank-results').innerHTML = ''; $('#nba-parlay-results').innerHTML = ''; return; }
+    const active = proj.rows.filter(r => !r.out && r.projMin >= 8);
+    const avgN = active.length ? active.reduce((a, r) => a + r.m.n, 0) / active.length : 0;
+    const wMin = avgN / (avgN + MODEL.k.min), wPts = avgN / (avgN + MODEL.k.pts);
+    setProjStatus(
+      (proj.prior.ok ? '' : `<span style="color:var(--loss)">Last season's file didn't load (${esc(proj.prior.err || '')}), so priors are position averages for now.</span><br>`) +
+      `${proj.curGames} game${proj.curGames === 1 ? '' : 's'} this season synced${proj.capped ? ' (last 30 days)' : ''}. Players on this slate average <b>${f1(avgN)} GP</b>, so minutes run <b>${pct(wMin)}</b> on this season and points <b>${pct(wPts)}</b>. The rest is ${proj.prior.season - 1}-${String(proj.prior.season).slice(2)} data.`
+    );
+    if (vaultSub === 'gamevault') renderGameVault();
+    else if (vaultSub === 'rankings') renderRankings();
+    else renderNbaParlays();
+  }
+
+  // Game Vault: one block per game (like the NFL Game Vault), each with its quick insights
+  function gameInsights(g, stat){
+    const tips = [];
+    const it = t => impliedTeamTotal(g, t.abbr);
+    if (it(g.away) != null) tips.push(`Implied: <b>${esc(g.away.abbr)} ${f1(it(g.away))}</b> · <b>${esc(g.home.abbr)} ${f1(it(g.home))}</b>`);
+    const b2b = [g.away, g.home].filter(t => slate.b2b[t.abbr]).map(t => t.abbr);
+    if (b2b.length) tips.push(`<b>${b2b.map(esc).join(' & ')}</b> on the 2nd night of a back-to-back`);
+    const pace = gamePace(g);
+    if (pace) tips.push(`Projected pace <b>${f1(pace.pace)}</b> · ${pace.rank === 1 ? 'fastest' : ordinal(pace.rank) + ' fastest'} of ${pace.of} tonight`);
+    const outs = proj.rows.filter(r => r.game.id === g.id && r.out && r.mpg >= 20).map(r => `${esc(r.a.name)} (${esc(r.team.abbr)})`);
+    if (outs.length) tips.push(`Out: <b>${outs.join(', ')}</b>`);
+    const great = proj.rows.filter(r => r.game.id === g.id && !r.out && r.projMin >= 15)
+      .map(r => ({ r, mu: matchupFor(r, stat) })).filter(x => x.mu && x.mu.tier === 'great')
+      .sort((a, b) => b.r.proj[stat] - a.r.proj[stat]).slice(0, 2);
+    if (great.length) tips.push(`Great matchup: ${great.map(x => `<b>${esc(x.r.a.name)}</b> ${signPct(x.mu.idx)}`).join(' · ')}`);
+    return tips.map(t => `<div class="gv-insight">${t}</div>`).join('');
+  }
+
+  function renderGameVault(){
+    const box = $('#nba-gv-results');
+    const stat = $('#nba-stat').value;
+    const { list, grades, greatOnly } = vaultList(stat);
     box.innerHTML = '';
     if (!list.length) { box.innerHTML = `<div class="empty">${greatOnly ? 'No great matchups for this stat on this slate.' : 'Nobody to show with these filters.'}</div>`; return; }
-    list.forEach((r, i) => {
-      const row = document.createElement('div');
-      row.className = 'edge-row card-row' + (r.out ? ' row-dim' : '');
-      row.innerHTML = `
-        <div class="rank">${r.out ? '—' : i + 1}</div>
-        ${avatar(r)}
-        <div class="who"><div class="name">${esc(r.a.name)}</div><div class="chips">${chipsFor(r)}</div></div>
-        <div class="badges">${r.out ? '' : gradeBadge(grades.get(r))}</div>
-        <div><span class="score">${r.out ? 'OUT' : f1(r.proj[stat])}<span class="unit">${r.out ? '' : LABEL[stat]}</span></span>${stat !== 'min' && !r.out ? `<span class="nba-sub">${f1(r.projMin)} MIN</span>` : ''}</div>`;
-      row.addEventListener('click', () => toggleDetail(row, r));
-      box.appendChild(row);
+    slate.games.forEach(g => {
+      const inGame = list.filter(r => r.game.id === g.id);
+      if (!inGame.length) return;
+      const group = document.createElement('div'); group.className = 'game-vault-group';
+      const when = g.state === 'pre' ? new Date(g.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : (g.detail || '');
+      group.innerHTML = `<div class="game-vault-head"><span>${esc(g.away.abbr)} @ ${esc(g.home.abbr)}</span><span class="ctx">${esc(when)} · ${inGame.length} players</span></div>`;
+      const ins = gameInsights(g, stat);
+      if (ins) group.insertAdjacentHTML('beforeend', `<div class="gv-insights">${ins}</div>`);
+      inGame.slice(0, 8).forEach((r, i) => group.appendChild(playerRowEl(r, i + 1, stat, grades)));
+      if (inGame.length > 8) {
+        // grid-rows reveal (0fr → 1fr), the same smooth open as the NFL Game Vault
+        const reveal = document.createElement('div'); reveal.className = 'gw-reveal';
+        const inner = document.createElement('div'); inner.className = 'gw-reveal-inner';
+        const fade = document.createElement('div'); fade.className = 'gw-reveal-fade';
+        inGame.slice(8).forEach((r, i) => fade.appendChild(playerRowEl(r, i + 9, stat, grades)));
+        inner.appendChild(fade); reveal.appendChild(inner);
+        const more = document.createElement('div'); more.className = 'empty';
+        more.textContent = `+ ${inGame.length - 8} more in this game`; more.style.cursor = 'pointer'; more.style.padding = '6px 12px';
+        more.addEventListener('click', () => { reveal.classList.add('gw-reveal-open'); more.remove(); });
+        group.appendChild(more); group.appendChild(reveal);
+      }
+      box.appendChild(group);
     });
   }
 
@@ -5656,46 +6023,6 @@
     </div></details>`;
   }
 
-  // MATCHUPS sub-view: every defense on tonight's slate vs guards / forwards / centers
-  function renderMatchups(){
-    const box = $('#nba-mu-results');
-    if (!proj || !proj.dvp) { box.innerHTML = ''; return; }
-    const stat = DVP_STATS.includes($('#nba-stat').value) ? $('#nba-stat').value : 'pra';
-    const N = proj.dvp.count, team = $('#nba-team').value;
-    const defs = [];
-    slate.games.forEach(g => { defs.push({ def: g.home, off: g.away, game: g }, { def: g.away, off: g.home, game: g }); });
-    const list = defs.filter(x => proj.dvp.teams[x.def.abbr] && (!team || x.off.abbr === team || x.def.abbr === team));
-    const avgIdx = x => { const d = proj.dvp.teams[x.def.abbr]; return DVP_GROUPS.reduce((t, g) => t + d.idx[g][stat], 0) / 3; };
-    list.sort((a, b) => avgIdx(b) - avgIdx(a));
-    if (!list.length) { box.innerHTML = '<div class="empty">No matchup data yet for this slate.</div>'; return; }
-    const cell = (d, g) => {
-      const idx = d.idx[g][stat], rank = d.rank[g][stat];
-      const cls = idx >= 1.05 ? 'hot' : idx <= 0.95 ? 'cold' : '';
-      return `<td class="dvp-cell ${cls}"><b>${signPct(idx)}</b><small>${rankWords(rank, N)}</small></td>`;
-    };
-    box.innerHTML = `<div class="nba-status">How each defense on this slate treats each position for <b>${LABEL[stat]}</b>, per minute vs the league average. Softest defenses first. Click a row to see who gets the matchup.</div>
-      <div class="dvp-wrap"><table class="dvp compact nba-mu"><thead><tr><th>DEFENSE</th><th>FACES</th><th>VS GUARDS</th><th>VS FORWARDS</th><th>VS CENTERS</th><th>GP</th></tr></thead><tbody>${list.map((x, i) => {
-        const d = proj.dvp.teams[x.def.abbr];
-        return `<tr class="dvp-row" data-i="${i}"><td><span class="dvp-team">${x.def.logo ? `<img src="${esc(x.def.logo)}" alt="">` : ''}${esc(x.def.abbr)}</span></td><td>${esc(x.off.abbr)}</td>${cell(d, 'G')}${cell(d, 'F')}${cell(d, 'C')}<td>${d.n}</td></tr>`;
-      }).join('')}</tbody></table></div>`;
-    box.querySelectorAll('tr.dvp-row').forEach(tr => tr.addEventListener('click', () => {
-      const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('dvp-detail');
-      box.querySelectorAll('tr.dvp-detail').forEach(x => x.remove());
-      box.querySelectorAll('tr.dvp-row.open').forEach(x => x.classList.remove('open'));
-      if (open) return;
-      const x = list[+tr.dataset.i];
-      const faces = proj.rows.filter(r => r.team.abbr === x.off.abbr && !r.out && r.projMin >= 15)
-        .sort((a, b) => b.proj[stat] - a.proj[stat]).slice(0, 8);
-      const det = document.createElement('tr'); det.className = 'dvp-detail';
-      det.innerHTML = `<td colspan="6"><div class="nba-mu-faces">${faces.map(r => {
-        const mu = matchupFor(r, stat);
-        const cls = mu && mu.idx >= 1.05 ? 'edge-pos' : mu && mu.idx <= 0.95 ? 'edge-neg' : '';
-        return `<div class="nba-mu-face">${avatar(r)}<div><div class="nm">${esc(r.a.name)}</div><div class="sub">${esc(r.a.pos || '')} · proj ${f1(r.proj[stat])} ${LABEL[stat]}</div><div class="sub ${cls}">${mu ? `${signPct(mu.idx)} · ${rankWords(mu.rank, mu.N)}` : ''}</div></div></div>`;
-      }).join('') || '<div class="empty">No rotation players found.</div>'}</div></td>`;
-      tr.after(det); tr.classList.add('open');
-    }));
-  }
-
   function toggleDetail(row, r){
     const next = row.nextElementSibling;
     const wasOpen = next && next.classList.contains('nba-inline');
@@ -5812,19 +6139,12 @@
   const priceTxt = x => x ? am(x.price) : '—';
   const pricesTxt = p => p.src === 'espn' ? (p.pair.length ? p.pair.map(am).join(' / ') : '—') : `O ${priceTxt(p.over)} · U ${priceTxt(p.under)}`;
 
-  async function renderPropsShell(){
+  async function renderPropsShell(force){
     const box = $('#nba-props-results');
     if (!GW.getLicenseKey()) { box.innerHTML = ''; box.appendChild(GW.paywallCard()); return; }
-    if (!proj || !slate || proj.day !== ymd(slateDate)) {
-      box.innerHTML = '<div class="loading">Building projections first…</div>';
-      const p = await ensureProjections();
-      if (!p) {
-        const src = $('#nba-proj-results');
-        if (src.querySelector('.paywall')) { box.innerHTML = ''; box.appendChild(GW.paywallCard()); }
-        else box.innerHTML = src.querySelector('.error') ? src.innerHTML : '<div class="empty">No projections for this date, so there\'s nothing to compare lines against.</div>';
-        return;
-      }
-    }
+    const p = await ensureProjections(force, '#nba-props-results');
+    if (!p) return;
+    if (p.noGames) { box.innerHTML = '<div class="empty">No NBA games on this date.</div>'; return; }
     box.innerHTML = '';
     slate.games.forEach(g => {
       const d = document.createElement('details'); d.className = 'gw-sec';
@@ -5879,54 +6199,702 @@
     }).join('')}</tbody></table></div>`;
   }
 
-  /* ---------------- wiring ---------------- */
+  /* ======================= RESEARCH ======================= */
+  const sparkSvg = vals => {
+    const w = 84, h = 26, n = vals.length, max = Math.max(...vals, 0.01);
+    if (!n) return '';
+    const pt = (v, i) => [n > 1 ? i / (n - 1) * (w - 6) + 3 : w / 2, h - 3 - (v / max) * (h - 6)];
+    const pts = vals.map((v, i) => pt(v, i).map(x => x.toFixed(1)).join(',')).join(' ');
+    const [lx, ly] = pt(vals[n - 1], n - 1);
+    return `<svg class="usage-spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" style="stroke:var(--cyan)" stroke-width="1.6" stroke-linejoin="round"/><circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="2.4" style="fill:var(--amber)"/></svg>`;
+  };
+  const sgn = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d == null ? 1 : d);
+  // sortable table header, NFL style (click a column to sort)
+  function sortHead(cols, st){
+    return cols.map(([k, l, noSort]) => noSort ? `<th style="cursor:default">${l}</th>`
+      : `<th data-k="${k}" class="${st.key === k ? 'sorted' : ''}">${l}${st.key === k ? (st.asc ? ' ▲' : ' ▼') : ''}</th>`).join('');
+  }
+  function wireSort(box, st, rerender){
+    box.querySelectorAll('th[data-k]').forEach(th => th.addEventListener('click', () => {
+      const k = th.dataset.k;
+      st.asc = st.key === k ? !st.asc : (k === 'name' || k === 'team');
+      st.key = k; rerender();
+    }));
+  }
+  function sortRows(rows, val, st){
+    const f = val[st.key] || (() => 0);
+    return rows.sort((a, b) => { const x = f(a), y = f(b); const c = typeof x === 'string' ? x.localeCompare(y) : x - y; return st.asc ? c : -c; });
+  }
+  // the slate row for a player id, if he plays tonight
+  const slateRow = id => proj && proj.rows.find(r => r.a.id === String(id));
+  // OUT/doubtful check for anyone (slate row first, then tonight's ESPN report by name)
+  function isOutTonight(id, name, teamName){
+    const r = slateRow(id); if (r) return r.out;
+    const rec = proj && proj.inj && proj.inj.byName[normName(name) + '|' + teamName];
+    return !!(rec && OUT_STATUSES.includes(String(rec.status).toLowerCase()));
+  }
+  // team meta (logos / full names) for teams that aren't on tonight's slate
+  let teamsMeta = null;
+  async function loadTeamsMeta(){
+    if (teamsMeta) return teamsMeta;
+    const c = await store.get('teams:v1');
+    if (c && Date.now() - c.at < 7 * 86400000) return (teamsMeta = c.data);
+    const j = await fetchJSON(`${ESPN}/teams`);
+    const list = (((j.sports || [])[0] || {}).leagues || [{}])[0].teams || [];
+    const data = list.map(x => x.team || x).map(t => ({ id: String(t.id), abbr: t.abbreviation, name: t.displayName, nick: t.name || t.shortDisplayName, logo: (t.logos && t.logos[0] && t.logos[0].href) || '' }))
+      .filter(t => t.id && t.abbr).sort((a, b) => a.name.localeCompare(b.name));
+    await store.set('teams:v1', { at: Date.now(), data });
+    return (teamsMeta = data);
+  }
+  const metaFor = abbr => (teamsMeta || []).find(t => t.abbr === abbr) || slateTeams().find(t => t.abbr === abbr) || { abbr, name: abbr, logo: '' };
+  const slateTeams = () => slate ? [].concat(...slate.games.map(g => [g.away, g.home])) : [];
+  const oppTonight = abbr => { if (!slate) return null; const g = slate.games.find(x => x.home.abbr === abbr || x.away.abbr === abbr); if (!g) return null; const home = g.home.abbr === abbr; return { g, home, opp: home ? g.away : g.home }; };
+  const teamLogo = abbr => { const m = metaFor(abbr); return m.logo ? `<img src="${esc(m.logo)}" alt="">` : ''; };
+
+  /* ---- MATCHUPS: defense vs position, all teams ---- */
+  const muSort = { key: 'avg', asc: false };
+  function renderMatchupsView(){
+    const box = $('#nba-mu-results');
+    const stat = $('#nba-mu-stat').value, tonight = $('#nba-mu-tonight').checked;
+    const N = proj.dvp.count;
+    let teams = Object.keys(proj.dvp.teams);
+    if (tonight) teams = teams.filter(t => oppTonight(t));
+    if (!teams.length) { box.innerHTML = `<div class="empty">${tonight ? 'No games on this date. Untick TONIGHT\'S GAMES ONLY to see every defense.' : 'No defensive data yet.'}</div>`; return; }
+    const d = t => proj.dvp.teams[t];
+    const val = { team: t => t, G: t => d(t).idx.G[stat], F: t => d(t).idx.F[stat], C: t => d(t).idx.C[stat], avg: t => (d(t).idx.G[stat] + d(t).idx.F[stat] + d(t).idx.C[stat]) / 3, gp: t => d(t).n };
+    sortRows(teams, val, muSort);
+    const cell = (t, g) => {
+      const idx = d(t).idx[g][stat], rank = d(t).rank[g][stat];
+      const cls = idx >= 1.05 ? 'hot' : idx <= 0.95 ? 'cold' : '';
+      return `<td class="dvp-cell ${cls}"><b>${signPct(idx)}</b><small>${rankWords(rank, N)}</small></td>`;
+    };
+    const cols = [['team', 'DEFENSE'], ['faces', 'FACES TONIGHT', true], ['G', 'VS GUARDS'], ['F', 'VS FORWARDS'], ['C', 'VS CENTERS'], ['avg', 'OVERALL'], ['gp', 'GP THIS SZN']];
+    box.innerHTML = `<div class="dvp-wrap"><table class="dvp nba-mu"><thead><tr>${sortHead(cols, muSort)}</tr></thead><tbody>${teams.map((t, i) => {
+      const o = oppTonight(t);
+      return `<tr class="dvp-row" data-t="${esc(t)}"><td><span class="dvp-team">${teamLogo(t)}${esc(t)}</span></td><td>${o ? (o.home ? 'vs ' : '@ ') + esc(o.opp.abbr) : '—'}</td>${cell(t, 'G')}${cell(t, 'F')}${cell(t, 'C')}<td class="dvp-cell"><b>${signPct(val.avg(t))}</b></td><td>${d(t).n}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+    wireSort(box, muSort, renderMatchupsView);
+    box.querySelectorAll('tr.dvp-row').forEach(tr => tr.addEventListener('click', () => {
+      const open = tr.nextElementSibling && tr.nextElementSibling.classList.contains('dvp-detail');
+      box.querySelectorAll('tr.dvp-detail').forEach(x => x.remove());
+      box.querySelectorAll('tr.dvp-row.open').forEach(x => x.classList.remove('open'));
+      if (open) return;
+      const t = tr.dataset.t, o = oppTonight(t);
+      const det = document.createElement('tr'); det.className = 'dvp-detail';
+      if (!o) { det.innerHTML = `<td colspan="7"><div class="dvp-detail-in sub" style="color:var(--text-dim);font-size:.72rem">${esc(t)} doesn't play on this date.</div></td>`; }
+      else {
+        const faces = proj.rows.filter(r => r.team.abbr === o.opp.abbr && !r.out && r.projMin >= 15).sort((a, b) => b.proj[stat] - a.proj[stat]).slice(0, 8);
+        det.innerHTML = `<td colspan="7"><div class="dvp-detail-in"><div class="nba-mu-faces">${faces.map(r => {
+          const mu = matchupFor(r, stat);
+          const cls = mu && mu.idx >= 1.05 ? 'edge-pos' : mu && mu.idx <= 0.95 ? 'edge-neg' : '';
+          return `<div class="nba-mu-face">${avatar(r)}<div><div class="nm">${esc(r.a.name)} ${starHtml(r)}</div><div class="sub">${esc(r.a.pos || '')} · proj ${f1(r.proj[stat])} ${LABEL[stat]}</div><div class="sub ${cls}">${mu ? `${signPct(mu.idx)} · ${rankWords(mu.rank, mu.N)}` : ''}</div></div></div>`;
+        }).join('') || '<div class="empty">No rotation players found.</div>'}</div></div></td>`;
+      }
+      tr.after(det); tr.classList.add('open');
+    }));
+    $('#nba-mu-tag').textContent = `premium · ${LABEL[stat]} allowed per minute vs league average · ${N} teams`;
+  }
+
+  /* ---- USAGE: minutes + usage share, last 3 vs normal ---- */
+  const usageSort = { key: 'dmin', asc: false };
+  function usageRows(tonightOnly){
+    const out = [];
+    const ids = tonightOnly ? proj.rows.map(r => r.a.id) : Object.keys(proj.cur);
+    ids.forEach(id => {
+      const C = proj.cur[id], games = proj.useMap[id]; if (!C || !games || !games.length) return;
+      const r = slateRow(id), P = proj.prior.players[id];
+      const l3 = games.slice(0, 3);
+      const l3min = l3.reduce((t, g) => t + g.min, 0) / l3.length, l3use = l3.reduce((t, g) => t + g.share, 0) / l3.length;
+      let baseMin, baseUse, baseSrc;
+      if (C.gp >= 5 || !P) { baseMin = C.min / C.gp; baseUse = games.reduce((t, g) => t + g.share, 0) / games.length; baseSrc = 'this szn'; }
+      else { baseMin = P.min / P.gp; baseUse = P.use != null ? P.use : l3use; baseSrc = 'last szn'; }
+      out.push({ id, name: (r && r.a.name) || C.name, pos: (r && r.a.pos) || C.pos, team: (r && r.team.abbr) || C.team, r, gp: C.gp,
+        baseMin, l3min, dmin: l3min - baseMin, baseUse, l3use, duse: l3use - baseUse, baseSrc,
+        spark: games.slice(0, 10).reverse().map(g => g.min) });
+    });
+    return out;
+  }
+  function renderUsage(){
+    const box = $('#nba-usage-results');
+    const pos = $('#nba-usage-pos').value, tonight = $('#nba-usage-tonight').checked, hide = $('#nba-usage-hide').checked;
+    let rows = usageRows(tonight).filter(x => pos === 'ALL' || posGroup(x.pos) === pos);
+    if (hide) rows = rows.filter(x => !isOutTonight(x.id, x.name, metaFor(x.team).name));
+    if (!rows.length) { $('#nba-usage-movers').innerHTML = ''; box.innerHTML = '<div class="empty">No players with games this season yet.</div>'; return; }
+    const byD = rows.slice().sort((a, b) => b.dmin - a.dmin);
+    const chips = arr => arr.map(x => `<b>${esc(x.name)}</b> ${sgn(x.dmin)} min`).join(' · ');
+    $('#nba-usage-movers').innerHTML =
+      `<div class="gv-insight"><span style="color:var(--win)">▲ Rising</span> — ${chips(byD.slice(0, 5))}</div>` +
+      `<div class="gv-insight"><span style="color:var(--loss)">▼ Falling</span> — ${chips(byD.slice(-5).reverse())}</div>`;
+    const val = { name: x => x.name, gp: x => x.gp, baseMin: x => x.baseMin, l3min: x => x.l3min, dmin: x => x.dmin, baseUse: x => x.baseUse, l3use: x => x.l3use, duse: x => x.duse };
+    sortRows(rows, val, usageSort);
+    const cols = [['name', 'PLAYER'], ['gp', 'GP'], ['baseMin', 'MIN · NORMAL'], ['l3min', 'MIN · LAST 3'], ['dmin', 'CHANGE'], ['baseUse', 'USAGE · NORMAL'], ['l3use', 'USAGE · LAST 3'], ['duse', 'CHANGE'], ['t', 'MINUTES TREND', true]];
+    box.innerHTML = `<div class="dvp-wrap"><table class="dvp usage"><thead><tr>${sortHead(cols, usageSort)}</tr></thead><tbody>${rows.slice(0, 120).map(x => {
+      const p = x.r || lite(x.id, x.name, x.pos, x.team);
+      const cm = x.dmin >= 3 ? 'hot' : x.dmin <= -3 ? 'cold' : '', cu = x.duse >= 0.03 ? 'hot' : x.duse <= -0.03 ? 'cold' : '';
+      return `<tr><td><div class="usage-who">${avatar(p)}<div><div class="nm">${esc(x.name)} ${starHtml(p)}</div><div class="sub">${esc(x.pos || '')} · ${esc(x.team || '')} · normal = ${x.baseSrc}</div></div></div></td>
+        <td>${x.gp}</td><td>${f1(x.baseMin)}</td><td>${f1(x.l3min)}</td><td class="dvp-cell ${cm}"><b>${x.dmin >= 0.05 ? '▲' : x.dmin <= -0.05 ? '▼' : ''} ${sgn(x.dmin)}</b></td>
+        <td>${(x.baseUse * 100).toFixed(1)}%</td><td>${(x.l3use * 100).toFixed(1)}%</td><td class="dvp-cell ${cu}"><b>${sgn(x.duse * 100)}</b></td><td>${sparkSvg(x.spark)}</td></tr>`;
+    }).join('')}</tbody></table></div>`;
+    wireSort(box, usageSort, renderUsage);
+    $('#nba-usage-tag').textContent = `premium · last 3 games vs normal · ${rows.length} players`;
+  }
+
+  /* ---- SHOOTING: expected points at his normal percentages vs points scored ---- */
+  const SHOOT = { window: 5, minGames: 2, minFga: 15, regress: { p2: 50, p3: 75, ft: 20 }, flag: 3 };
+  function shootingNorms(P){
+    const lg = proj.prior.league || { p2: 0.54, p3: 0.36, pft: 0.78 };
+    // no prior, or a prior file without shot attempts: league average
+    if (!P || !(P.fga > 0) || P.fgm > P.fga || P.fg3m > P.fg3a + 0.5) return { p2: lg.p2, p3: lg.p3, pft: lg.pft, src: 'league average' };
+    const R = SHOOT.regress, clamp = v => Math.min(0.95, Math.max(0.05, v));
+    return {
+      p2: clamp(((P.fgm - P.fg3m) + R.p2 * lg.p2) / ((P.fga - P.fg3a) + R.p2)),
+      p3: clamp((P.fg3m + R.p3 * lg.p3) / (P.fg3a + R.p3)),
+      pft: clamp((P.ftm + R.ft * lg.pft) / (P.fta + R.ft)),
+      src: 'last season'
+    };
+  }
+  function shootingFor(id){
+    const C = proj.cur[id]; if (!C || !C.logs.length) return null;
+    const logs = C.logs.slice(0, SHOOT.window);
+    if (logs.length < SHOOT.minGames) return null;
+    const sum = i => logs.reduce((t, l) => t + (l[i] || 0), 0);
+    const fga = sum(9), fg3a = sum(10), fta = sum(12), fgm = sum(8), fg3m = sum(6), pts = sum(3);
+    if (fga < SHOOT.minFga) return null;
+    const n = shootingNorms(proj.prior.players[id]);
+    const xpts = 2 * (fga - fg3a) * n.p2 + 3 * fg3a * n.p3 + fta * n.pft;
+    return { g: logs.length, fga, fg3a, fta, fgm, fg3m, pts, xpts, debt: (xpts - pts) / logs.length,
+      fgPct: fga ? fgm / fga : 0, p3: fg3a ? fg3m / fg3a : null, n,
+      normFg: (n.p2 * (fga - fg3a) + n.p3 * fg3a) / Math.max(fga, 1) };
+  }
+  function renderShooting(){
+    const box = $('#nba-shoot-results');
+    const tonight = $('#nba-shoot-tonight').checked, hide = $('#nba-shoot-hide').checked;
+    const ids = tonight ? proj.rows.map(r => r.a.id) : Object.keys(proj.cur);
+    let rows = ids.map(id => ({ id, s: shootingFor(id), r: slateRow(id), C: proj.cur[id] })).filter(x => x.s);
+    if (hide) rows = rows.filter(x => !isOutTonight(x.id, x.C.name, metaFor(x.C.team).name));
+    if (!rows.length) { box.innerHTML = `<div class="empty">Needs ${SHOOT.minGames}+ games and ${SHOOT.minFga}+ shots this season per player, so this board fills in after the first few nights.</div>`; return; }
+    rows.sort((a, b) => b.s.debt - a.s.debt);
+    box.innerHTML = '';
+    rows.slice(0, 60).forEach((x, i) => {
+      const s = x.s, p = x.r || lite(x.id, x.C.name, x.C.pos, x.C.team);
+      const flag = s.debt >= SHOOT.flag ? '<span class="flag-badge due">DUE</span>' : s.debt <= -SHOOT.flag ? '<span class="flag-badge over">RUNNING HOT</span>' : '';
+      const o = oppTonight(p.team.abbr);
+      const row = document.createElement('div'); row.className = 'edge-row card-row';
+      row.innerHTML = `
+        <div class="rank">${i + 1}</div>
+        ${avatar(p)}
+        <div class="who"><div class="name">${esc(p.a.name)} ${starHtml(p)}</div>
+          <div class="chips"><span class="chip pos">${esc(p.a.pos || '')}</span>${o ? `<span class="chip">${o.home ? 'vs' : '@'} ${esc(o.opp.abbr)}</span>` : '<span class="chip">no game</span>'}<span class="chip">last ${s.g} gm</span>
+          <span class="chip ${s.p3 != null && s.p3 < s.n.p3 - 0.05 ? 'mu-tough' : s.p3 != null && s.p3 > s.n.p3 + 0.05 ? 'mu-great' : ''}">3P ${s.p3 == null ? '—' : Math.round(s.p3 * 100) + '%'} vs ${Math.round(s.n.p3 * 100)}%</span>
+          <span class="chip">FG ${Math.round(s.fgPct * 100)}% vs ${Math.round(s.normFg * 100)}%</span></div></div>
+        <div class="badges">${flag}</div>
+        <div><span class="score${s.debt < 0 ? ' neg' : ''}">${sgn(s.debt)}<span class="unit">PTS/G</span></span><span class="nba-sub">exp ${f1(s.xpts / s.g)} · scored ${f1(s.pts / s.g)}</span></div>`;
+      if (x.r) row.addEventListener('click', () => toggleDetail(row, x.r));
+      box.appendChild(row);
+    });
+    $('#nba-shoot-tag').textContent = `premium · last ${SHOOT.window} games priced at his normal percentages · ${rows.length} players`;
+  }
+
+  /* ---- PACE: possessions per 48 + offensive / defensive rating ---- */
+  const PACE_K = 10;
+  function teamRatings(){
+    const L = proj.prior.teams || {}, C = proj.teamsCur || {};
+    const out = {};
+    [...new Set([...Object.keys(L), ...Object.keys(C)])].forEach(t => {
+      const l = L[t], c = C[t], n = c ? c.g : 0;
+      const b = k => l && c ? (n * c[k] + PACE_K * l[k]) / (n + PACE_K) : c ? c[k] : l[k];
+      out[t] = { team: t, n, pace: b('pace'), ortg: b('ortg'), drtg: b('drtg'), net: b('ortg') - b('drtg'),
+        l5: c && c.games.length ? c.games.slice(0, 5).reduce((a, g) => a + g.pace, 0) / Math.min(5, c.games.length) : null };
+    });
+    return out;
+  }
+  function gamePace(g){
+    if (!proj || !proj.prior) return null;
+    const tr = teamRatings(), a = tr[g.away.abbr], h = tr[g.home.abbr];
+    if (!a || !h) return null;
+    const games = slate.games.map(x => { const A = tr[x.away.abbr], H = tr[x.home.abbr]; return { id: x.id, pace: A && H ? (A.pace + H.pace) / 2 : null }; }).filter(x => x.pace != null).sort((x, y) => y.pace - x.pace);
+    const pace = (a.pace + h.pace) / 2;
+    return { pace, rank: games.findIndex(x => x.id === g.id) + 1, of: games.length };
+  }
+  const paceSort = { key: 'pace', asc: false };
+  function renderPace(){
+    const box = $('#nba-pace-results');
+    const tr = teamRatings();
+    let rows = Object.values(tr);
+    if (!rows.length) { box.innerHTML = '<div class="empty">No team data yet.</div>'; $('#nba-pace-insights').innerHTML = ''; return; }
+    const rank = k => { const s = rows.slice().sort((a, b) => b[k] - a[k]); return t => s.indexOf(t) + 1; };
+    const rPace = rank('pace'), rO = rank('ortg'), rNet = rank('net');
+    const sD = rows.slice().sort((a, b) => a.drtg - b.drtg), rD = t => sD.indexOf(t) + 1;
+    // tonight's fastest / slowest games
+    if (slate && slate.games.length) {
+      const gs = slate.games.map(g => ({ g, p: gamePace(g) })).filter(x => x.p).sort((a, b) => b.p.pace - a.p.pace);
+      const fmt = arr => arr.map(x => `<b>${esc(x.g.away.abbr)} @ ${esc(x.g.home.abbr)}</b> ${f1(x.p.pace)}`).join(' · ');
+      $('#nba-pace-insights').innerHTML = gs.length ? `<div class="gv-insights" style="padding:0 0 12px;border:0"><div class="gv-insight"><span style="color:var(--win)">▲ Fastest tonight</span> — ${fmt(gs.slice(0, 3))}</div><div class="gv-insight"><span style="color:var(--loss)">▼ Slowest tonight</span> — ${fmt(gs.slice(-2).reverse())}</div></div>` : '';
+    } else $('#nba-pace-insights').innerHTML = '';
+    const val = { team: x => x.team, n: x => x.n, pace: x => x.pace, l5: x => x.l5 == null ? -1 : x.l5, ortg: x => x.ortg, drtg: x => x.drtg, net: x => x.net };
+    sortRows(rows, val, paceSort);
+    const third = rows.length / 3;
+    const hl = (r, good) => r <= third ? (good ? 'hot' : 'cold') : r > 2 * third ? (good ? 'cold' : 'hot') : '';
+    const cols = [['team', 'TEAM'], ['tonight', 'TONIGHT', true], ['n', 'GP'], ['pace', 'PACE'], ['l5', 'PACE · LAST 5'], ['ortg', 'ORTG'], ['drtg', 'DRTG'], ['net', 'NET']];
+    box.innerHTML = `<div class="dvp-wrap"><table class="dvp"><thead><tr>${sortHead(cols, paceSort)}</tr></thead><tbody>${rows.map(x => {
+      const o = oppTonight(x.team);
+      return `<tr><td><span class="dvp-team">${teamLogo(x.team)}${esc(x.team)}</span></td><td>${o ? (o.home ? 'vs ' : '@ ') + esc(o.opp.abbr) : '—'}</td><td>${x.n}</td>
+        <td class="dvp-cell ${hl(rPace(x), true)}"><b>${f1(x.pace)}</b><small>${ordinal(rPace(x))}</small></td><td>${x.l5 == null ? '—' : f1(x.l5)}</td>
+        <td class="dvp-cell ${hl(rO(x), true)}"><b>${f1(x.ortg)}</b><small>${ordinal(rO(x))}</small></td>
+        <td class="dvp-cell ${hl(rD(x), true)}"><b>${f1(x.drtg)}</b><small>${ordinal(rD(x))}</small></td>
+        <td class="dvp-cell ${hl(rNet(x), true)}"><b>${sgn(x.net)}</b></td></tr>`;
+    }).join('')}</tbody></table></div>`;
+    wireSort(box, paceSort, renderPace);
+    $('#nba-pace-tag').textContent = `premium · ${rows.length} teams · this season blended with last (k = ${PACE_K})`;
+  }
+
+  /* ---- INJURIES: who is out, and who absorbs the minutes ---- */
+  async function renderInjuryImpact(force){
+    const box = $('#nba-inj-impact');
+    renderInjuries();                                     // the free ESPN report, below
+    if (!GW.getLicenseKey()) { box.innerHTML = '<div class="key-box" style="font-size:.74rem">The minutes hand-off below each injury is premium. The full ESPN report is free, below.</div>'; return; }
+    const p = await ensureProjections(force, '#nba-inj-impact'); if (!p) return;
+    if (p.noGames) { box.innerHTML = '<div class="empty">No games on this date.</div>'; return; }
+    const outs = p.rows.filter(r => r.out && r.mpg >= MODEL.outBoostMinMpg).sort((a, b) => b.mpg - a.mpg);
+    if (!outs.length) { box.innerHTML = '<div class="empty">No rotation players are out or doubtful on this slate.</div>'; return; }
+    const card = r => {
+      const team = p.rows.filter(x => x.team.abbr === r.team.abbr);
+      const teamOut = team.filter(x => x.out && x.mpg >= MODEL.outBoostMinMpg).reduce((t, x) => t + x.mpg, 0) || 1;
+      const share = r.mpg / teamOut;
+      const bens = team.filter(x => !x.out && x.boost * share >= 0.3).sort((a, b) => b.boost - a.boost).slice(0, 5);
+      const t = injTag(r.status);
+      return `<div class="inj-card"><div class="inj-head">${avatar(r)}
+        <div class="who"><div class="nm">${esc(r.a.name)} ${starHtml(r)} <span class="inj-tag ${t.cls}" title="${esc(r.status)}">${t.txt}</span></div>
+          <div class="sub">${esc(r.a.pos || '')} · ${esc(r.team.abbr)} ${r.home ? 'vs' : '@'} ${esc(r.opp.abbr)}${r.injWhat ? ' · ' + esc(r.injWhat) : ''}</div></div>
+        <div class="inj-vac"><div><b>${f1(r.mpg)}</b> minutes a game</div><div><b>${f1(r.mpg * r.m.rate.pts)}</b> points a game</div><div><b>${f1(r.mpg * (r.m.rate.pts + r.m.rate.reb + r.m.rate.ast))}</b> PRA</div></div></div>
+        <div class="inj-bens-title">WHO GETS HIS MINUTES (estimate)</div>
+        ${bens.length ? bens.map(b => `<div class="usage-who inj-ben">${avatar(b)}<div><div class="nm">${esc(b.a.name)} ${starHtml(b)}</div><div class="sub">${esc(b.a.pos || '')} · proj ${f1(b.projMin)} min · ${f1(b.proj.pts)} pts</div></div><div class="inj-gain">+${f1(b.boost * share)} min</div></div>`).join('')
+          : '<div class="sub">No clear single beneficiary — the minutes spread thin.</div>'}</div>`;
+    };
+    box.innerHTML = `<div class="inj-grid">${outs.map(card).join('')}</div>`;
+    $('#nba-inj-tag').textContent = `premium impact · ${outs.length} rotation player${outs.length === 1 ? '' : 's'} out · free ESPN report below`;
+  }
+
+  /* ---- REST: days off, back-to-backs, 3 in 4, 4 in 6 ---- */
+  async function renderRest(){
+    const box = $('#nba-rest-results');
+    if (!slate) { const ok = await refreshSlate(); if (!ok) { box.innerHTML = '<div class="error">Could not reach ESPN.</div>'; return; } }
+    if (!slate.games.length) { box.innerHTML = '<div class="empty">No NBA games on this date.</div>'; return; }
+    box.innerHTML = '<div class="loading">Checking the last week of schedules…</div>';
+    const back = [];
+    for (let k = 1; k <= 6; k++) { try { back[k] = await scoreboard(ymd(addDays(slateDate, -k))); } catch (_) { back[k] = { events: [] }; } }
+    const played = (abbr, k) => back[k] && back[k].events.some(e => (e.home.abbr === abbr || e.away.abbr === abbr) && e.seasonType !== 1);
+    const restOf = abbr => {
+      let last = null; for (let k = 1; k <= 6; k++) if (played(abbr, k)) { last = k; break; }
+      const in4 = 1 + [1, 2, 3].filter(k => played(abbr, k)).length, in6 = 1 + [1, 2, 3, 4, 5].filter(k => played(abbr, k)).length;
+      const in7 = [1, 2, 3, 4, 5, 6].filter(k => played(abbr, k)).length;
+      const rest = last == null ? null : last - 1;               // 0 = back-to-back
+      const tags = []; let lvl = 0;
+      if (rest === 0) { tags.push(['B2B', 'inj-out']); lvl = 2; }
+      if (in4 >= 3) { tags.push(['3 IN 4', 'inj-out']); lvl = 2; }
+      else if (in6 >= 4) { tags.push(['4 IN 6', 'inj-q']); lvl = Math.max(lvl, 1); }
+      if (rest == null || rest >= 2) tags.push([rest == null ? 'FIRST GAME IN 6+ DAYS' : `${rest} DAYS REST`, 'conf-cur']);
+      return { rest, in4, in6, in7, tags, lvl };
+    };
+    box.innerHTML = `<div class="wx-grid">${slate.games.map(g => {
+      const A = restOf(g.away.abbr), H = restOf(g.home.abbr), lvl = Math.max(A.lvl, H.lvl);
+      const line = (t, R) => `<div class="nba-rest-team"><span class="wx-teams">${t.logo ? `<img src="${esc(t.logo)}" alt="">` : ''}${esc(t.abbr)}</span>
+        <span class="sub">${R.rest == null ? '6+ days off' : R.rest === 0 ? 'played last night' : R.rest + ' day' + (R.rest === 1 ? '' : 's') + ' off'} · ${R.in7} game${R.in7 === 1 ? '' : 's'} in the last 7</span>
+        <div class="wx-tags">${R.tags.map(([x, c]) => `<span class="chip ${c}">${x}</span>`).join('')}</div></div>`;
+      let edge = '';
+      const ra = A.rest == null ? 6 : A.rest, rh = H.rest == null ? 6 : H.rest;
+      if ((ra === 0) !== (rh === 0) && Math.abs(ra - rh) >= 1) {
+        const fresh = ra > rh ? g.away : g.home, tired = ra > rh ? g.home : g.away;
+        edge = `<div class="wx-note"><b style="color:var(--win)">REST EDGE: ${esc(fresh.abbr)}</b>. ${esc(tired.abbr)} is on the second night of a back-to-back.</div>`;
+      }
+      const when = g.state === 'pre' ? new Date(g.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : (g.detail || '');
+      return `<div class="wx-card${lvl ? ' lvl' + lvl : ''}"><div class="wx-top"><span class="wx-teams">${esc(g.away.abbr)} <span>@</span> ${esc(g.home.abbr)}</span><span class="wx-when">${esc(when)}</span></div>${line(g.away, A)}${line(g.home, H)}${edge}</div>`;
+    }).join('')}</div>`;
+    $('#nba-rest-tag').textContent = `free data · ${slate.games.length} game${slate.games.length === 1 ? '' : 's'} · last 6 days of schedules`;
+  }
+
+  /* ---- MODEL RECORD: rescore past nights with only earlier games, then grade ---- */
+  let recData = null;
+  async function runRecord(){
+    const box = $('#nba-rec-results'), btn = $('#nba-rec-run');
+    const p = await ensureProjections(false, '#nba-rec-results'); if (!p) return;
+    const stat = $('#nba-rec-stat').value;
+    const all = p.curAll;
+    const today = ymd(noon(new Date()));
+    const dates = [...new Set(all.map(r => r.date))].filter(d => d < today).sort().slice(-14);
+    if (!dates.length) { box.innerHTML = '<div class="empty">No finished nights this season yet. Check back after the first slate is played.</div>'; return; }
+    box.innerHTML = '<div class="loading">Rescoring past nights…</div>';
+    await new Promise(r => setTimeout(r, 0));
+    const saved = proj, out = [];
+    try {
+      dates.forEach(d => {
+        const before = all.filter(r => r.date < d), dayRows = all.filter(r => r.date === d);
+        const cur = aggregate(before, 20);
+        const byGid = {}; dayRows.forEach(r => { (byGid[r.gid] = byGid[r.gid] || new Set()).add(r.team); });
+        const games = [], rosters = {};
+        Object.entries(byGid).forEach(([gid, set]) => {
+          const [a, h] = [...set]; if (!a || !h) return;
+          const T = abbr => ({ id: abbr, abbr, name: metaFor(abbr).name || abbr });
+          games.push({ id: gid, away: T(a), home: T(h) });
+        });
+        dayRows.forEach(r => { (rosters[r.team] = rosters[r.team] || []).push({ id: r.id, name: r.name, pos: r.pos, head: '', inj: '' }); });
+        const prev = ymd(addDays(new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8), 12), -1));
+        const b2b = {}; all.filter(r => r.date === prev).forEach(r => { b2b[r.team] = true; });
+        const tgN = {}, seen = {}; before.forEach(r => { const k = r.team + '|' + r.gid; if (!seen[k]) { seen[k] = 1; tgN[r.team] = (tgN[r.team] || 0) + 1; } });
+        const rows = buildSlate(games, rosters, p.prior, cur, { byName: {} }, b2b, tgN);
+        proj = { rows, dvp: blendDvp(p.prior.dvp, dvpFrom(before)), prior: p.prior };   // grades read the global; restored below
+        const grades = gradesFor(stat);
+        const actualOf = {}; dayRows.forEach(r => { actualOf[r.id] = statOf(r, stat); });
+        const graded = [];
+        rows.forEach(r => {
+          if (r.projMin < 15 || actualOf[r.a.id] == null) return;
+          const P = r.P, C = r.C;
+          const naive = C && C.gp ? statOf(C, stat) / C.gp : P && P.gp ? statOf(P, stat) / P.gp : null;
+          if (naive == null) return;
+          const gr = grades.get(r);
+          graded.push({ name: r.a.name, team: r.team.abbr, pos: r.a.pos, proj: r.proj[stat], naive, actual: actualOf[r.a.id], gr });
+        });
+        const bucket = l => graded.filter(x => x.gr && (l === 'A' ? x.gr.score >= 75 : l === 'B' ? x.gr.score >= 50 && x.gr.score < 75 : l === 'C' ? x.gr.score >= 25 && x.gr.score < 50 : x.gr.score < 25));
+        const beat = arr => ({ n: arr.length, hits: arr.filter(x => x.actual > x.proj).length });
+        out.push({ d, n: graded.length,
+          errModel: graded.reduce((t, x) => t + Math.abs(x.actual - x.proj), 0),
+          errNaive: graded.reduce((t, x) => t + Math.abs(x.actual - x.naive), 0),
+          A: beat(bucket('A')), B: beat(bucket('B')), C: beat(bucket('C')), D: beat(bucket('D')), all: beat(graded),
+          top: graded.filter(x => x.gr).sort((a, b) => b.gr.composite - a.gr.composite).slice(0, 10) });
+      });
+    } finally { proj = saved; }
+    recData = { stat, nights: out.filter(x => x.n) };
+    renderRecord();
+    if (btn) GW.gwFeedback(btn, true);
+  }
+  function renderRecord(){
+    const box = $('#nba-rec-results');
+    if (!recData) { box.innerHTML = '<div class="empty">Hit RUN to rescore every past night this season with only the information available before tip. It takes a few seconds.</div>'; return; }
+    const N = recData.nights;
+    if (!N.length) { box.innerHTML = '<div class="empty">No gradable nights yet.</div>'; return; }
+    const tot = { n: 0, em: 0, en: 0 }; ['A', 'B', 'C', 'D', 'all'].forEach(k => tot[k] = { n: 0, hits: 0 });
+    N.forEach(x => { tot.n += x.n; tot.em += x.errModel; tot.en += x.errNaive; ['A', 'B', 'C', 'D', 'all'].forEach(k => { tot[k].n += x[k].n; tot[k].hits += x[k].hits; }); });
+    const p1 = v => (v * 100).toFixed(1) + '%';
+    const rate = k => tot[k].n ? tot[k].hits / tot[k].n : null;
+    const lbl = LABEL[recData.stat];
+    const better = tot.en ? 1 - tot.em / tot.en : 0;
+    const card = (k, title) => `<div class="stat-card"><div class="lbl">${title}</div><div class="big">${rate(k) == null ? '—' : p1(rate(k))}</div><div class="lbl">${tot[k].hits} of ${tot[k].n} beat their projection</div></div>`;
+    const cells = (x, k) => { const s = x[k]; if (!s.n) return '<td>—</td>'; const r = s.hits / s.n, b = x.all.n ? x.all.hits / x.all.n : 0; return `<td class="dvp-cell ${r > b + 0.05 ? 'hot' : r < b - 0.05 ? 'cold' : ''}"><b>${s.hits}/${s.n}</b><small>${p1(r)}</small></td>`; };
+    const dlabel = d => new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    box.innerHTML =
+      `<div class="stat-cards">
+        <div class="stat-card"><div class="lbl">AVG ${lbl} ERROR · MODEL</div><div class="big">${f1(tot.n ? tot.em / tot.n : 0)}</div><div class="lbl">vs ${f1(tot.n ? tot.en / tot.n : 0)} for his plain average · ${better >= 0 ? Math.round(better * 100) + '% smaller' : Math.round(-better * 100) + '% larger'}</div></div>
+        ${card('A', 'A+ / A GRADES')}${card('B', 'B GRADES')}${card('C', 'C GRADES')}${card('D', 'D GRADES')}
+      </div>
+      <div class="nba-status">${tot.n} player-nights graded across ${N.length} night${N.length === 1 ? '' : 's'}.${N.length < 10 ? ' Early-season samples are small, so give it a few weeks before reading much into it.' : ''}</div>` +
+      `<div class="dvp-wrap"><table class="dvp"><thead><tr><th style="cursor:default">NIGHT</th><th style="cursor:default">PLAYERS</th><th style="cursor:default">MODEL ERR</th><th style="cursor:default">PLAIN AVG ERR</th><th style="cursor:default">A+/A BEAT</th><th style="cursor:default">B BEAT</th><th style="cursor:default">C BEAT</th><th style="cursor:default">D BEAT</th></tr></thead><tbody>${N.slice().reverse().map(x =>
+        `<tr class="dvp-row rec-row" data-d="${x.d}"><td><b>${dlabel(x.d)}</b></td><td>${x.n}</td><td class="dvp-cell ${x.errModel < x.errNaive ? 'hot' : 'cold'}"><b>${f1(x.errModel / x.n)}</b></td><td>${f1(x.errNaive / x.n)}</td>${cells(x, 'A')}${cells(x, 'B')}${cells(x, 'C')}${cells(x, 'D')}</tr>`).join('')}</tbody></table></div>`;
+    box.querySelectorAll('tr.rec-row').forEach(tr => tr.addEventListener('click', () => {
+      const next = tr.nextElementSibling, was = next && next.classList.contains('dvp-detail');
+      box.querySelectorAll('tr.dvp-detail').forEach(x => x.remove()); box.querySelectorAll('tr.rec-row.open').forEach(x => x.classList.remove('open'));
+      if (was) return;
+      const x = N.find(n => n.d === tr.dataset.d);
+      const list = x.top.map(t => `<div class="rec-pick ${t.actual > t.proj ? 'TD' : 'no'}"><span>${t.actual > t.proj ? '✓' : '✗'}</span> ${esc(t.name)} <em>${t.gr.l} · proj ${f1(t.proj)} · got ${t.actual}</em></div>`).join('');
+      const det = document.createElement('tr'); det.className = 'dvp-detail';
+      det.innerHTML = `<td colspan="8"><div class="dvp-detail-in"><div class="sub" style="margin-bottom:8px;color:var(--text-dim);font-size:.7rem;">${dlabel(x.d)}: the 10 best-graded spots for ${lbl}, built from earlier nights only. ✓ beat his projection, ✗ didn't.</div><div class="rec-picks">${list}</div></div></td>`;
+      tr.after(det); tr.classList.add('open');
+    }));
+    $('#nba-rec-tag').textContent = `premium · ${lbl} · ${N.length} night${N.length === 1 ? '' : 's'} rescored`;
+  }
+
+  /* ======================= TEAMS ======================= */
+  let standingsDone = false;
+  async function loadStandings(){
+    if (standingsDone) return;
+    const box = $('#nba-standings'), grid = $('#nba-stat-grid');
+    try {
+      const j = await fetchJSON('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?region=us&lang=en&contentorigin=espn&type=0&level=2');
+      const confs = j.children || [];
+      if (!confs.length) throw new Error('no standings');
+      const stat = (e, n) => { const s = (e.stats || []).find(x => x.name === n); return s ? +s.value : 0; };
+      const all = [];
+      let html = '<table><thead><tr><th>Team</th><th style="text-align:right">W</th><th style="text-align:right">L</th><th style="text-align:right">PCT</th><th style="text-align:right">GB</th><th style="text-align:right">PF/G</th><th style="text-align:right">PA/G</th><th style="text-align:right">DIFF</th></tr></thead><tbody>';
+      confs.forEach(c => {
+        html += `<tr class="division-head"><td colspan="8">${esc(c.name || '')}</td></tr>`;
+        const entries = ((c.standings || {}).entries || []).slice().sort((a, b) => stat(b, 'winPercent') - stat(a, 'winPercent') || stat(b, 'wins') - stat(a, 'wins'));
+        entries.forEach(e => {
+          const t = e.team || {}, w = stat(e, 'wins'), l = stat(e, 'losses'), pf = stat(e, 'avgPointsFor'), pa = stat(e, 'avgPointsAgainst'), diff = pf - pa;
+          all.push({ abbr: t.abbreviation, name: t.displayName, pf, pa, gp: w + l });
+          html += `<tr><td class="team-cell">${esc(t.displayName || t.abbreviation)}</td><td class="num">${w}</td><td class="num">${l}</td><td class="num">${(w + l ? w / (w + l) : 0).toFixed(3).replace(/^0/, '')}</td><td class="num">${stat(e, 'gamesBehind') || '—'}</td><td class="num">${f1(pf)}</td><td class="num">${f1(pa)}</td><td class="num ${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}">${diff > 0 ? '+' : ''}${f1(diff)}</td></tr>`;
+        });
+      });
+      box.innerHTML = html + '</tbody></table>';
+      const played = all.filter(x => x.gp > 0).sort((a, b) => b.pf - a.pf);
+      grid.innerHTML = played.length ? played.map(x => `<div class="stat-chip"><div class="team">${esc(x.abbr)}</div><div class="figure">${f1(x.pf)}</div><div class="label">PTS/G · ALLOWS ${f1(x.pa)}</div></div>`).join('') : '<div class="empty">No games played yet this season.</div>';
+      standingsDone = true;
+    } catch (e) {
+      box.innerHTML = `<div class="empty">Standings unavailable right now (${esc(e.message)}).</div>`; grid.innerHTML = '';
+    }
+  }
+
+  /* ======================= MY LIST ======================= */
+  let searchIndex = null;
+  async function loadSearchIndex(progress){
+    if (searchIndex) return searchIndex;
+    const teams = await loadTeamsMeta();
+    let done = 0;
+    const lists = await pool(teams, 6, async t => { const r = await roster(t.id).catch(() => []); done++; if (progress) progress(done, teams.length); return r.map(a => ({ ...a, teamAbbr: t.abbr, teamName: t.name, teamId: t.id })); });
+    return (searchIndex = [].concat(...lists));
+  }
+  function searchPlayers(q){
+    const toks = normName(q).split(' ').filter(Boolean);
+    if (!toks.length || !searchIndex) return [];
+    return searchIndex.filter(a => { const n = normName(a.name); return toks.every(t => n.includes(t)); }).slice(0, 12);
+  }
+  async function renderMyList(force){
+    const box = $('#nba-wl-results');
+    $('#nba-wl-tag').textContent = nbaWl.length ? `${nbaWl.length} player${nbaWl.length === 1 ? '' : 's'} · saved in this browser` : 'saved in this browser';
+    if (!nbaWl.length) { box.innerHTML = '<div class="empty">Your list is empty. Tap the ☆ next to any player in the Vault, Usage, Shooting or Injuries tabs, or search above.</div>'; return; }
+    if (force && GW.getLicenseKey()) { const p = await ensureProjections(false, '#nba-wl-results'); if (!p) return; }
+    const live = !!proj;
+    const stat = (v, l, cls) => `<div class="wl-stat"><div class="v ${cls || ''}">${v}</div><div class="l">${l}</div></div>`;
+    box.innerHTML = nbaWl.map(e => {
+      const r = live ? slateRow(e.id) : null;
+      const p = r || lite(e.id, e.name, e.pos, e.team);
+      const o = oppTonight(p.team.abbr);
+      let stats = '';
+      if (live) {
+        const gr = r && !r.out ? gradesFor('pts').get(r) : null;
+        stats += stat(r ? (r.out ? 'OUT' : f1(r.proj.pts)) : '—', 'PROJ PTS', r && r.out ? 'bad' : '');
+        stats += stat(gr ? gr.l : '—', 'GRADE (PTS)', gr ? (gr.score >= 75 ? 'good' : gr.score < 25 ? 'bad' : '') : '');
+        const u = usageRows(false).find(x => x.id === e.id);
+        stats += stat(u ? sgn(u.dmin) + ' min' : '—', 'MINUTES L3', u ? (u.dmin >= 3 ? 'good' : u.dmin <= -3 ? 'bad' : '') : '');
+        const s = shootingFor(e.id);
+        stats += stat(s ? sgn(s.debt) : '—', 'SHOOTING DEBT', s ? (s.debt >= 3 ? 'good' : s.debt <= -3 ? 'bad' : '') : '');
+        const mu = r && !r.out ? matchupFor(r, 'pts') : null;
+        stats += stat(mu ? signPct(mu.idx) : '—', 'MATCHUP (PTS)', mu ? (mu.idx >= 1.05 ? 'good' : mu.idx <= 0.95 ? 'bad' : '') : '');
+      } else stats = '<div class="wl-stat wide"><div class="l">Hit LOAD for live numbers</div></div>';
+      return `<div class="wl-row">${avatar(p)}
+        <div class="wl-who"><div class="nm">${esc(e.name)}</div><div class="chips"><span class="chip pos">${esc(e.pos || '')}</span><span class="chip">${esc(p.team.abbr || '')}</span>${o ? `<span class="chip">${o.home ? 'vs' : '@'} ${esc(o.opp.abbr)}</span>` : '<span class="chip">no game</span>'}</div></div>
+        <div class="wl-stats">${stats}</div>
+        <button type="button" class="wl-remove" data-id="${esc(e.id)}" title="Remove">✕</button></div>`;
+    }).join('');
+    box.querySelectorAll('.wl-remove').forEach(b => b.addEventListener('click', () => {
+      nbaWl = nbaWl.filter(x => x.id !== b.dataset.id); nbaWlSave();
+      document.querySelectorAll('.nba-star').forEach(s => { try { if (JSON.parse(decodeURIComponent(s.dataset.p)).id === b.dataset.id) { s.classList.remove('on'); s.textContent = '☆'; } } catch (_) {} });
+      renderMyList();
+    }));
+  }
+  let wlTimer = null;
+  function wireMyListSearch(){
+    $('#nba-wl-search').addEventListener('input', () => {
+      clearTimeout(wlTimer);
+      wlTimer = setTimeout(async () => {
+        const q = $('#nba-wl-search').value.trim(), sug = $('#nba-wl-suggest');
+        if (q.length < 2) { sug.innerHTML = ''; return; }
+        if (!searchIndex) { sug.innerHTML = '<div class="wl-sug-note">Loading every roster…</div>'; try { await loadSearchIndex(); } catch (_) { sug.innerHTML = '<div class="wl-sug-note">Could not load rosters.</div>'; return; } }
+        const hits = searchPlayers(q);
+        sug.innerHTML = hits.length ? hits.map(a => `<button type="button" class="wl-sug" data-p="${encodeURIComponent(JSON.stringify({ id: String(a.id), name: a.name, pos: a.pos || '', team: a.teamAbbr }))}">${esc(a.name)}<span>${esc(a.pos || '')} · ${esc(a.teamAbbr)}${onList(a.id) ? ' · on your list' : ''}</span></button>`).join('') : '<div class="wl-sug-note">No match.</div>';
+        sug.querySelectorAll('.wl-sug').forEach(b => b.addEventListener('click', () => {
+          const p = JSON.parse(decodeURIComponent(b.dataset.p));
+          if (!onList(p.id)) { nbaWl.push(p); nbaWlSave(); }
+          $('#nba-wl-search').value = ''; sug.innerHTML = ''; renderMyList();
+        }));
+      }, 200);
+    });
+    $('#nba-wl-load').addEventListener('click', async () => { await renderMyList(true); GW.gwFeedback($('#nba-wl-load'), !!proj); });
+  }
+
+  /* ======================= PLAYERS ======================= */
+  function playerListHtml(list){
+    return list.map(a => {
+      const p = lite(a.id, a.name, a.pos, a.teamAbbr);
+      return `<div class="player-row nba-player" data-id="${esc(a.id)}"><div class="usage-who">${avatar(p)}<div><div class="nm">${esc(a.name)} ${starHtml(p)}</div><div class="sub">${esc(a.pos || '')} · ${esc(a.teamName || a.teamAbbr)}${a.inj ? ' · ' + esc(a.inj) : ''}</div></div></div><span class="trend-badge steady">VIEW</span></div>`;
+    }).join('');
+  }
+  function playerCardHtml(a){
+    const r = slateRow(a.id);
+    if (r) return detailHtml(r);
+    const P = proj && proj.prior.players[a.id], C = proj && proj.cur[a.id];
+    const line = (X, lbl) => X ? `<tr><td>${lbl}</td><td>${X.gp}</td><td>${f1(X.min / X.gp)}</td><td>${f1(X.pts / X.gp)}</td><td>${f1(X.reb / X.gp)}</td><td>${f1(X.ast / X.gp)}</td><td>${f1(X.fg3m / X.gp)}</td></tr>` : '';
+    const logs = C ? C.logs.slice(0, 10) : [];
+    const o = oppTonight(a.teamAbbr);
+    return `<div class="edge-detail-card"><div class="edge-detail-head">${avatar(lite(a.id, a.name, a.pos, a.teamAbbr)).replace('class="avatar"', 'class="avatar lg"')}<div><h3>${esc(a.name)}</h3><div class="sub">${esc(a.pos || '')} · ${esc(a.teamName || a.teamAbbr)} · ${o ? 'plays ' + (o.home ? 'vs ' : '@ ') + esc(o.opp.abbr) + ' on this date' : 'no game on this date'}</div></div></div>
+      ${proj ? `<details class="gw-sec" open><summary>PER GAME <span class="tag">last season vs this season</span></summary><div class="gw-sec-body">
+        ${P || C ? `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>SEASON</th><th>GP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th></tr></thead><tbody>${line(P, 'LAST SZN')}${line(C, 'THIS SZN')}</tbody></table></div>` : '<div class="empty">No NBA games on record.</div>'}
+      </div></details>
+      <details class="gw-sec" ${logs.length ? 'open' : ''}><summary>GAME LOG <span class="tag">this season</span></summary><div class="gw-sec-body">
+        ${logs.length ? `<div class="dvp-wrap"><table class="dvp compact"><thead><tr><th>DATE</th><th>OPP</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>3PM</th></tr></thead><tbody>${logs.map(l => `<tr><td>${esc(l[0].slice(4, 6) + '/' + l[0].slice(6, 8))}</td><td>${esc(l[1] || '')}</td><td>${Math.round(l[2])}</td><td>${l[3]}</td><td>${l[4]}</td><td>${l[5]}</td><td>${l[6]}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No games this season yet.</div>'}
+      </div></details>` : `<div class="key-box" style="font-size:.74rem;margin-top:12px">Unlock with your license key above for his projection, season numbers and game log.</div>`}
+    </div>`;
+  }
+  function wirePlayerRows(box){
+    box.querySelectorAll('.nba-player').forEach(row => row.addEventListener('click', () => {
+      const next = row.nextElementSibling, was = next && next.classList.contains('nba-inline');
+      document.querySelectorAll('.nba-inline').forEach(d => d.remove());
+      document.querySelectorAll('#nba-main .row-open').forEach(x => x.classList.remove('row-open'));
+      if (was) return;
+      const a = searchIndex.find(x => String(x.id) === row.dataset.id); if (!a) return;
+      const d = document.createElement('div'); d.className = 'nba-inline'; d.innerHTML = playerCardHtml(a);
+      row.after(d); row.classList.add('row-open'); d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }));
+  }
+  async function doPlayerSearch(){
+    const box = $('#nba-player-results'), q = $('#nba-player-search').value.trim();
+    if (q.length < 2) { box.innerHTML = '<div class="empty">Type at least 2 letters.</div>'; return; }
+    if (!searchIndex) { box.innerHTML = '<div class="loading">Loading every roster…</div>'; try { await loadSearchIndex((d, t) => { box.innerHTML = `<div class="loading">Loading every roster… ${d}/${t}</div>`; }); } catch (e) { box.innerHTML = `<div class="error">Could not load rosters (${esc(e.message)}).</div>`; return; } }
+    if (GW.getLicenseKey() && !proj) ensureProjections(false, null).then(() => renderRisers());
+    const hits = searchPlayers(q);
+    box.innerHTML = hits.length ? playerListHtml(hits) : '<div class="empty">No player by that name.</div>';
+    wirePlayerRows(box);
+    GW.gwFeedback($('#nba-player-search-btn'), hits.length > 0);
+  }
+  async function renderPlayersView(){
+    renderRisers();
+    const tb = $('#nba-team-browser');
+    if (tb.dataset.done) return;
+    try {
+      const teams = await loadTeamsMeta();
+      tb.innerHTML = `<div class="nba-team-grid">${teams.map(t => `<button type="button" class="nba-team-btn" data-id="${esc(t.id)}">${t.logo ? `<img src="${esc(t.logo)}" alt="">` : ''}<span>${esc(t.abbr)}</span></button>`).join('')}</div><div id="nba-team-roster"></div>`;
+      tb.dataset.done = '1';
+      tb.querySelectorAll('.nba-team-btn').forEach(b => b.addEventListener('click', async () => {
+        const out = $('#nba-team-roster');
+        const t = teams.find(x => x.id === b.dataset.id);
+        tb.querySelectorAll('.nba-team-btn').forEach(x => x.classList.toggle('active', x === b));
+        out.innerHTML = '<div class="loading">Loading roster…</div>';
+        const list = (await roster(t.id).catch(() => [])).map(a => ({ ...a, teamAbbr: t.abbr, teamName: t.name, teamId: t.id }));
+        if (!searchIndex) searchIndex = [];
+        list.forEach(a => { if (!searchIndex.some(x => x.id === a.id)) searchIndex.push(a); });
+        out.innerHTML = `<div class="panel-title" style="margin-top:14px"><h2>${esc(t.name)}</h2><div class="rule"></div><span class="tag">${list.length} players</span></div>` + playerListHtml(list);
+        wirePlayerRows(out);
+      }));
+    } catch (e) { tb.innerHTML = `<div class="empty">Could not load teams (${esc(e.message)}).</div>`; }
+  }
+  function renderRisers(){
+    const up = $('#nba-risers'), down = $('#nba-fallers');
+    if (!proj) { up.innerHTML = GW.getLicenseKey() ? '<div class="empty">Loads with this season\'s games: open the Vault or hit SEARCH first.</div>' : '<div class="empty">Premium: unlock with your license key above.</div>'; down.innerHTML = ''; return; }
+    const rows = usageRows(false).filter(x => x.gp >= 2);
+    const html = arr => arr.length ? arr.map(x => { const p = x.r || lite(x.id, x.name, x.pos, x.team);
+      return `<div class="player-row"><div class="usage-who">${avatar(p)}<div><div class="nm">${esc(x.name)} ${starHtml(p)}</div><div class="sub">${esc(x.pos || '')} · ${esc(x.team || '')} · ${f1(x.l3min)} min last 3 vs ${f1(x.baseMin)} normal</div></div></div><span class="trend-badge ${x.dmin >= 0 ? 'add' : 'drop'}">${sgn(x.dmin)} MIN</span></div>`; }).join('') : '<div class="empty">Not enough games yet.</div>';
+    const s = rows.slice().sort((a, b) => b.dmin - a.dmin);
+    up.innerHTML = html(s.filter(x => x.dmin >= 3).slice(0, 10));
+    down.innerHTML = html(s.filter(x => x.dmin <= -3).reverse().slice(0, 10));
+  }
+
+  /* ======================= MARKETS ======================= */
+  function renderOdds(){
+    const box = $('#nba-odds-results');
+    if (!slate || !slate.games.length) { box.innerHTML = '<div class="empty">No NBA games on this date.</div>'; return; }
+    box.innerHTML = `<div class="nba-odds-grid">${slate.games.map(g => {
+      const when = g.state === 'pre' ? new Date(g.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : (g.detail || '');
+      const it = t => impliedTeamTotal(g, t.abbr);
+      const ml = v => v == null || v === '' || isNaN(+v) ? null : (+v > 0 ? '+' + v : String(v));
+      const lines = [];
+      lines.push(['Spread', g.spread || '—']);
+      lines.push(['Total', g.total != null ? 'O/U ' + g.total : '—']);
+      if (ml(g.mlAway) || ml(g.mlHome)) lines.push(['Moneyline', `${esc(g.away.abbr)} ${ml(g.mlAway) || '—'} · ${esc(g.home.abbr)} ${ml(g.mlHome) || '—'}`]);
+      if (it(g.away) != null) lines.push(['Implied', `${esc(g.away.abbr)} ${f1(it(g.away))} · ${esc(g.home.abbr)} ${f1(it(g.home))}`]);
+      const b2b = [g.away, g.home].filter(t => slate.b2b[t.abbr]).map(t => t.abbr);
+      if (b2b.length) lines.push(['Rest', `${b2b.join(' & ')} on a B2B`]);
+      return `<div class="odds-card"><div class="matchup">${esc(g.away.abbr)} @ ${esc(g.home.abbr)} <span style="color:var(--text-dim);font-size:.7rem">· ${esc(when)}</span></div>${lines.map(([k, v]) => `<div class="odds-line"><span>${k}</span><span>${v}</span></div>`).join('')}</div>`;
+    }).join('')}</div>`;
+  }
+  async function renderMarkets(force){
+    if (!slate || slate.day !== ymd(slateDate)) await refreshSlate();
+    renderOdds();
+    renderPropsShell(force);
+  }
+
+  /* ---------------- wiring (same shape as the NFL tabs) ---------------- */
+  const NBA_RESEARCH = ['matchups', 'usage', 'shooting', 'pace', 'injuries', 'rest', 'record'];
+  let lastNbaResearch = 'matchups';
   function showNbaView(name){
     activeView = name;
-    document.querySelectorAll('#nba-nav button').forEach(b => b.classList.toggle('active', b.dataset.nbaView === name));
+    document.querySelectorAll('#nba-nav button[data-nba-view], #nba-subnav button[data-nba-view]').forEach(b => b.classList.toggle('active', b.dataset.nbaView === name));
+    const inRes = NBA_RESEARCH.includes(name);
+    $('#nba-grp-research').classList.toggle('active', inRes);
+    $('#nba-subnav').style.display = inRes ? '' : 'none';
+    if (inRes) lastNbaResearch = name;
     document.querySelectorAll('section.nba-view').forEach(s => s.classList.toggle('active', s.id === 'nba-view-' + name));
-    if (name === 'proj') ensureProjections();
-    if (name === 'props') renderPropsShell();
+    renderView(name, false);
+  }
+
+  async function renderView(name, force){
+    switch (name) {
+      case 'teams': if (force || !slate || slate.day !== ymd(slateDate)) await refreshSlate(); loadStandings(); break;
+      case 'vault': { const p = await ensureProjections(force, '#nba-gv-results'); if (p && activeView === 'vault') renderVault(); break; }
+      case 'matchups': await loadTeamsMeta().catch(() => null); withData('#nba-mu-results', renderMatchupsView, force); break;
+      case 'usage': withData('#nba-usage-results', renderUsage, force); break;
+      case 'shooting': withData('#nba-shoot-results', renderShooting, force); break;
+      case 'pace': await loadTeamsMeta().catch(() => null); withData('#nba-pace-results', renderPace, force); break;
+      case 'injuries': if (!slate || slate.day !== ymd(slateDate)) await refreshSlate(); renderInjuryImpact(force); break;
+      case 'rest': renderRest(); break;
+      case 'record': renderRecord(); break;
+      case 'mylist': renderMyList(false); break;
+      case 'players': renderPlayersView(); break;
+      case 'markets': renderMarkets(force); break;
+      default: break;
+    }
   }
 
   async function changeDay(d){
     slateDate = noon(d);
-    proj = null; for (const k in propsCache) delete propsCache[k];
-    await refreshTonight();
-    if (activeView === 'proj') ensureProjections();
-    if (activeView === 'props') renderPropsShell();
+    proj = null; recData = null; for (const k in propsCache) delete propsCache[k];
+    await refreshSlate();
+    if (activeView !== 'teams') renderView(activeView, false);
   }
 
   function initNba(){
     if (inited) return; inited = true;
-    document.querySelectorAll('#nba-nav button').forEach(b => b.addEventListener('click', () => showNbaView(b.dataset.nbaView)));
+    document.querySelectorAll('#nba-nav button[data-nba-view], #nba-subnav button[data-nba-view]').forEach(b => b.addEventListener('click', () => showNbaView(b.dataset.nbaView)));
+    $('#nba-grp-research').addEventListener('click', () => showNbaView(lastNbaResearch));
+    document.addEventListener('click', e => {
+      if (e.target && e.target.classList && e.target.classList.contains('nba-goto-metrics')) { e.preventDefault(); showNbaView('metrics'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    });
     $('#nba-day-prev').addEventListener('click', () => changeDay(addDays(slateDate, -1)));
     $('#nba-day-next').addEventListener('click', () => changeDay(addDays(slateDate, 1)));
     $('#nba-day-today').addEventListener('click', () => changeDay(new Date()));
-    ['#nba-stat', '#nba-team', '#nba-hide-out', '#nba-sort'].forEach(s => $(s).addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); }));
-    $('#nba-proj-load').addEventListener('click', () => { for (const k in propsCache) delete propsCache[k]; ensureProjections(true); });
-    $('#nba-parlay-market').addEventListener('change', () => { if (proj && projSub === 'parlays') renderNbaParlays(); });
-    $('#nba-great-only').addEventListener('change', () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); renderProjections(); });
+
+    // VAULT controls
+    const redrawVault = () => { document.querySelectorAll('.nba-inline').forEach(d => d.remove()); if (proj) renderVault(); };
+    ['#nba-stat', '#nba-team', '#nba-hide-out', '#nba-sort', '#nba-great-only', '#nba-parlay-market'].forEach(s => $(s).addEventListener('change', redrawVault));
+    $('#nba-proj-load').addEventListener('click', async () => {
+      for (const k in propsCache) delete propsCache[k];
+      const p = await ensureProjections(!!proj, '#nba-gv-results');
+      if (p) renderVault();
+      GW.gwFeedback($('#nba-proj-load'), !!p);
+    });
     document.querySelectorAll('.nba-subtab').forEach(b => b.addEventListener('click', () => {
-      projSub = b.dataset.nbaSub;
+      vaultSub = b.dataset.nbaSub;
       document.querySelectorAll('.nba-subtab').forEach(x => x.classList.toggle('active', x === b));
-      $('#nba-proj-results').style.display = projSub === 'players' ? '' : 'none';
-      $('#nba-mu-results').style.display = projSub === 'matchups' ? '' : 'none';
-      $('#nba-rank-results').style.display = projSub === 'rankings' ? '' : 'none';
-      $('#nba-parlay-results').style.display = projSub === 'parlays' ? '' : 'none';
-      $('#nba-hide-out').parentElement.style.display = projSub === 'players' ? '' : 'none';
-      $('#nba-great-only').parentElement.style.display = projSub === 'players' ? '' : 'none';
-      $('#nba-sort').style.display = projSub === 'players' ? '' : 'none';
-      $('#nba-stat').style.display = projSub === 'parlays' ? 'none' : '';
-      $('#nba-team').style.display = projSub === 'parlays' ? 'none' : '';
-      $('#nba-parlay-market').style.display = projSub === 'parlays' ? '' : 'none';
-      if (proj) renderProjections();
+      $('#nba-gv-results').style.display = vaultSub === 'gamevault' ? '' : 'none';
+      $('#nba-rank-results').style.display = vaultSub === 'rankings' ? '' : 'none';
+      $('#nba-parlay-wrap').style.display = vaultSub === 'parlays' ? '' : 'none';
+      $('#nba-hide-out').parentElement.style.display = vaultSub === 'gamevault' ? '' : 'none';
+      $('#nba-great-only').parentElement.style.display = vaultSub === 'gamevault' ? '' : 'none';
+      $('#nba-sort').style.display = vaultSub === 'gamevault' ? '' : 'none';
+      $('#nba-stat').style.display = vaultSub === 'parlays' ? 'none' : '';
+      $('#nba-team').style.display = vaultSub === 'parlays' ? 'none' : '';
+      $('#nba-parlay-market').style.display = vaultSub === 'parlays' ? '' : 'none';
+      if (proj) renderVault();
     }));
+
+    // RESEARCH controls
+    document.querySelectorAll('.nba-refresh').forEach(b => b.addEventListener('click', async () => { await renderView(activeView, true); GW.gwFeedback(b, true); }));
+    ['#nba-mu-stat', '#nba-mu-tonight'].forEach(s => $(s).addEventListener('change', () => { if (proj) renderMatchupsView(); }));
+    ['#nba-usage-pos', '#nba-usage-tonight', '#nba-usage-hide'].forEach(s => $(s).addEventListener('change', () => { if (proj) renderUsage(); }));
+    ['#nba-shoot-tonight', '#nba-shoot-hide'].forEach(s => $(s).addEventListener('change', () => { if (proj) renderShooting(); }));
+    $('#nba-rec-run').addEventListener('click', runRecord);
+    $('#nba-rec-stat').addEventListener('change', () => { if (recData) runRecord(); });
+
+    // MY LIST + PLAYERS
+    wireMyListSearch();
+    $('#nba-player-search-btn').addEventListener('click', doPlayerSearch);
+    $('#nba-player-search').addEventListener('keydown', e => { if (e.key === 'Enter') doPlayerSearch(); });
+
+    // MARKETS
     $('#nba-prop-market').addEventListener('change', () => {
       document.querySelectorAll('#nba-props-results details.gw-sec[open]').forEach(d => d.dispatchEvent(new Event('toggle')));
     });
-    // a fresh UNLOCK should re-run whatever premium NBA view is open
-    window.addEventListener('gridwave:license', () => { if (activeView === 'proj') ensureProjections(true); if (activeView === 'props') renderPropsShell(); });
-    refreshTonight();
+
+    // a fresh UNLOCK should re-run whatever NBA view is open
+    window.addEventListener('gridwave:license', () => renderView(activeView, true));
+    refreshSlate().then(() => loadStandings());
   }
 
   /* ---------------- sport switch ---------------- */
