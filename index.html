@@ -1110,11 +1110,12 @@
       <div class="metric-card">
         <h3>Any TD probability</h3>
         <p>The "% TD" on every Any TD card is the model's chance he scores a rushing or receiving TD <b>this week</b>.</p>
-        <div class="metric-formula">expected TDs = usage × game script × matchup<br>TD% = 1 − e<sup>−expected TDs</sup></div>
+        <div class="metric-formula">expected TDs = usage × game script × matchup × 0.85<br>TD% = 1 − e<sup>−expected TDs</sup></div>
         <ul>
           <li><b>Usage</b>: expected TDs per game from where his touches happen (priced by field zone), blended 75/25 with his actual TDs per game and pulled toward the average for his role so a 2-game hot streak can't run away with it.</li>
-          <li><b>Game script</b>: his team's Vegas implied points ÷ the league average (falls back to points per game when no line is posted).</li>
-          <li><b>Matchup</b>: TDs this defense allows to his role (lead back, WR1, TE1…), pulled toward league average.</li>
+          <li><b>Game script</b>: his team's Vegas implied points ÷ the league average (falls back to points per game when no line is posted), capped between 0.6× and 1.5×.</li>
+          <li><b>Matchup</b>: TDs this defense allows to his role (lead back, WR1, TE1…), pulled toward league average (10 average games mixed in) and capped between 0.8× and 1.25×.</li>
+          <li><b>0.85</b> is a calibration factor from the backtest: without it the model ran a little hot across the board.</li>
           <li>Backtested on 2026 games before launch. The Model Record tab shows how it's doing week by week.</li>
         </ul>
       </div>
@@ -1374,7 +1375,7 @@
       <div class="metric-card">
         <h3>Research chart &amp; game log</h3>
         <ul>
-          <li>Bars are green or red against the player's <b>own season average</b>, not a sportsbook line. GRIDWAVE has no per-player prop-line source yet.</li>
+          <li>Bars are green or red against the player's <b>own season average</b>, not a sportsbook line. The NFL tabs don't use player prop lines yet (the NBA side does).</li>
           <li>The game log shows week, opponent and the stat only, with no W/L or final score yet.</li>
           <li>Section headers in a player's panel collapse and open with the chevron.</li>
         </ul>
@@ -1383,13 +1384,18 @@
         <h3>Not included (yet)</h3>
         <ul>
           <li><b>Real box counts and coverage shells</b> (light/stacked boxes, single-high vs two-high) need charted pre-snap data. It isn't in the free sources, so Box Count Diet uses rush yards allowed instead.</li>
-          <li><b>Per-player prop lines</b> — the free odds tier covers game spreads, totals and moneylines only.</li>
+          <li><b>NFL player prop lines</b>: the NFL Markets tab shows game spreads, totals and moneylines only. Player props (free DraftKings lines via ESPN) are wired into the NBA side so far.</li>
           <li>Name matching between Sleeper and nflverse is done by name and position, so a rare mismatch can drop an injury tag or a photo.</li>
         </ul>
       </div>
       <div class="metric-card">
         <h3>Parlays</h3>
         <p>Cross-game combinations built from the highest-scored players in the selected category this week. They're the model's top plays paired up, not odds or EV math. Bet responsibly.</p>
+        <ul>
+          <li>Only players scoring <b>55+</b> qualify, and the top 14 of them are used.</li>
+          <li>No two legs from the same team or the same game.</li>
+          <li>Shows the best four 2-leg combos and the best three 3-leg combos, ranked by the average score of their legs.</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -1637,14 +1643,14 @@
           <li><b>Points · k = 12.</b> Depends on shooting, which is noisy early.</li>
           <li><b>Threes made · k = 15.</b> The noisiest of the four, so last season holds on longest.</li>
         </ul>
-        <p>The chip on each player shows where he is: <span class="chip conf-prior">PRIOR</span> no games yet, <span class="chip conf-early">EARLY</span> under 5 games, <span class="chip conf-blend">BLEND</span> 5–14, <span class="chip conf-cur">CURRENT</span> 15+.</p>
+        <p>The chip on each player shows where he is: <span class="chip conf-prior">PRIOR</span> no games yet, <span class="chip conf-early">EARLY</span> under 5 games, <span class="chip conf-blend">BLEND</span> 5–14, <span class="chip conf-cur">CURRENT</span> 15+. Players with no NBA history show <span class="chip conf-prior">NO HISTORY</span> until they play.</p>
       </div>
       <div class="metric-card">
         <h3>Edge cases</h3>
         <ul>
           <li><b>New team.</b> Last season's per-minute rates travel with him, but last season's minutes don't. Until he plays, his old minutes are trimmed 10%.</li>
           <li><b>Rookies / no NBA history.</b> The prior is the league average for his position (guard, forward, center), and k is halved so his own games take over twice as fast. Minutes start at 14.</li>
-          <li><b>Small samples last season.</b> Every prior gets 250 minutes of position-average production mixed in, so 12 games last year can't act like 70.</li>
+          <li><b>Small samples last season.</b> Every prior gets 250 minutes of position-average production mixed in, so 12 games last year can't act like 70. Players with under 40 games last season also have their old minutes pulled toward 14 (10 games' worth).</li>
         </ul>
       </div>
       <div class="metric-card">
@@ -1702,6 +1708,7 @@
           <li>Legs need <b>24+ projected minutes</b> and a projection that puts the side at <b>58%+</b>, measured against how much his stat swings game to game (not as a % of the line, so tiny lines can't fake big edges).</li>
           <li>His last 10 games must lean the same way, and the situation grade must back it: <b>B or better</b> for overs, C or worse for unders.</li>
           <li>Legs where the projection is <b>30%+ off the book's line</b> are skipped. That usually means a role change the model hasn't caught.</li>
+          <li>The last-10 check needs at least 5 games on record, and unders are skipped for anyone with an injury tag.</li>
           <li>One leg per game, no player in more than 2 parlays. Lines are DraftKings via ESPN (free), never the paid feed.</li>
         </ul>
       </div>
@@ -1709,7 +1716,7 @@
         <h3>Research tabs</h3>
         <ul>
           <li><b>Usage</b>: last 3 games of minutes and usage (shots + 0.44 × free throws + turnovers, as a share of his team's while he played) vs his normal.</li>
-          <li><b>Shooting</b>: expected points at his normal 2-point, 3-point and free-throw percentages minus actual points, last 5 games. Normal percentages are last season's, pulled toward league average (50 two-point tries, 75 threes, 20 free throws of league average mixed in). <span class="flag-badge due">DUE</span> at +3 per game, <span class="flag-badge over">RUNNING HOT</span> at −3.</li>
+          <li><b>Shooting</b>: expected points at his normal 2-point, 3-point and free-throw percentages minus actual points, last 5 games. Normal percentages are last season's, pulled toward league average (50 two-point tries, 75 threes, 20 free throws of league average mixed in). <span class="flag-badge due">DUE</span> at +3 per game, <span class="flag-badge over">RUNNING HOT</span> at −3. Players with no shot data from last season are priced at league-average percentages. Needs 2+ games and 15+ shots in the window.</li>
           <li><b>Pace</b>: possessions per 48 and points per 100 possessions, this season blended with last (k = 10 games).</li>
           <li><b>Injuries</b>: the same minutes hand-off the Vault uses, shown per injured player.</li>
           <li><b>Rest</b>: days since each team's last game, back-to-backs, 3 in 4 and 4 in 6.</li>
