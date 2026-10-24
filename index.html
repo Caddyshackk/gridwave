@@ -5505,9 +5505,22 @@
     box.appendChild(d);
   }
 
+  // A saved key isn't proof of a paid key: most of the NBA model reads ESPN straight from the browser,
+  // so ask the worker (which asks Whop) before building. A pass is remembered for 10 minutes.
+  let licenseOkAt = 0;
+  async function verifyLicense(box){
+    if (Date.now() - licenseOkAt < 600000) return true;
+    try { await GW.premiumFetch('/odds?check=1'); licenseOkAt = Date.now(); return true; }
+    catch (e) {
+      if (e.message === 'NO_LICENSE' || e.shared) { proj = null; if (box) lockedOrError(box, e, 'projections'); return false; }
+      return true; // worker hiccup: don't lock out a paying member over a network blip
+    }
+  }
+
   async function ensureProjections(force, boxSel){
     const box = $(boxSel || '#nba-gv-results');
     if (!GW.getLicenseKey()) { if (box) { box.innerHTML = ''; box.appendChild(GW.paywallCard()); } return null; }
+    if (!(await verifyLicense(box))) return null;
     if (!force && proj && proj.day === ymd(slateDate)) return proj;
     const say = msg => { if (box) box.innerHTML = `<div class="loading">${msg}</div>`; };
     if (projLoading) { say('Loading…'); const p = await projLoading; if (!p && box && !box.querySelector('.paywall,.error')) say('Could not load. Hit REFRESH.'); return p; }
