@@ -149,7 +149,7 @@ const LICENSE_SHARING = {
 const LICENSE_CACHE_TTL_SECONDS = 600;   // re-check with Whop every 10 min per key
 const LINE_HISTORY_TTL_SECONDS = 60 * 60 * 24 * 10; // auto-forget a game's snapshots after 10 days
 const LINE_HISTORY_MAX_SNAPSHOTS = 200;  // plenty for a week of half-hourly polling
-const ACTIVE_STATUSES = ['active', 'trialing', 'completed']; // completed = one-time purchase paid in full (Whop's own recommendation)
+const ACTIVE_STATUSES = ['active', 'trialing', 'completed', 'canceling']; // completed = one-time purchase paid in full; canceling = cancelled but paid through the period end
 
 function corsHeaders(request){
   const origin = request.headers.get('Origin');
