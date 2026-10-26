@@ -4088,6 +4088,7 @@
     if(!rawPlayers || !pbpRows){ container.innerHTML = '<div class="empty">Hit LOAD to pull the season and play-by-play data.</div>'; return; }
     const scope = $('#tdd-scope').value;
     let list = computeCategoryScores('anytd', scope).filter(p=> p.tdDebt !== undefined && p.seasonGames >= 3 && p.xTD >= 1.0);
+    if(Object.keys(window.gwSchedule || {}).length) list = list.filter(p=> p.opponent);   // skip teams on bye
     if($('#tdd-hide').checked) list = list.filter(p=> !isOut(p));
     if(!list.length){ container.innerHTML = '<div class="empty">No qualifying players yet.</div>'; return; }
     const due = list.slice().sort((a,b)=> b.tdDebt - a.tdDebt).slice(0, 15);
@@ -4596,7 +4597,7 @@
         // what actually happened in week W
         const actual = {};
         Object.values(saved.rp).forEach(pl=>{ const w = pl.weeks.find(x=> x.week === W); if(w) actual[pl.id] = (w.rec_td + w.rush_td) > 0; });
-        const pool = list.filter(p=> p.seasonGames >= 2);
+        const pool = list.filter(p=> p.seasonGames >= 2 && p.opponent);   // that week's bye teams were never on the board
         const played = pool.filter(p=> actual[p.id] !== undefined);
         const row = { W, pool: played.length, base: played.filter(p=> actual[p.id]).length, strats:{} };
         REC_STRATS.forEach(([k,,pick])=>{
@@ -4714,6 +4715,9 @@
     const scope = $('#edge-scope').value;
     const category = $('#edge-category').value;
     edgeFlat = computeCategoryScores(category, scope);
+    // Teams on bye have no game this week, so their players come off the board. Only once the
+    // schedule has loaded: an empty schedule (failed fetch, offseason) shouldn't empty the Vault.
+    if(Object.keys(window.gwSchedule || {}).length) edgeFlat = edgeFlat.filter(p=> p.opponent);
 
     matchupsMode = weeksOfFilmAvailable() < 3;
     $('#vault-mode-tag').textContent = matchupsMode
