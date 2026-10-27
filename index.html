@@ -1557,8 +1557,13 @@
     <div class="panel-title"><h2>MODEL RECORD</h2><div class="rule"></div><span class="tag" id="nba-rec-tag">premium · how the projections and grades actually did</span></div>
     <div class="key-box" style="font-size:.74rem;">
       Each past night is rescored as if it were that morning: only games from <i>earlier</i> nights are used, never the night being graded. Then we check what actually happened.
-      <b>Projection error</b> compares the model with a naive guess (their per-game average). <b>Beat projection</b> by grade shows whether the A's really outdo the D's: if the grade works, A-graded players should beat their projection more often.
       One honest caveat: the rosters come from who actually played that night, so late scratches don't count against the model. Click a night to see its top 10.
+      <ul class="nba-why" style="margin-top:8px">
+        <li><b>MODEL ERR</b>: how far off the projection was, on average per player that night (projected vs actual, in the stat you picked). Lower is better.</li>
+        <li><b>PLAIN AVG ERR</b>: the same miss if you had just guessed each player's season per-game average. This is the bar the model has to clear.</li>
+        <li>MODEL ERR is <b style="color:var(--win)">green</b> when the model was closer than the plain average that night and <b style="color:var(--loss)">red</b> when the plain average was as close or closer. Colors use the unrounded numbers, so 4.6 vs 4.5 can be a tenth or a few hundredths apart.</li>
+        <li><b>A+/A, B, C, D BEAT</b>: how many players with that grade went over their projection (13/21 = 13 of 21). <b style="color:var(--win)">Green</b> means 5+ points better than that night's rate across all grades, <b style="color:var(--loss)">red</b> 5+ points worse. If the grades work, the A column should run greenest and the D column reddest over time.</li>
+      </ul>
     </div>
     <div class="search-row">
       <select id="nba-rec-stat" class="gw-select"><option value="pts">POINTS</option><option value="reb">REBOUNDS</option><option value="ast">ASSISTS</option><option value="pra">PTS + REB + AST</option></select>
@@ -1720,7 +1725,7 @@
           <li><b>Pace</b>: possessions per 48 and points per 100 possessions, this season blended with last (k = 10 games).</li>
           <li><b>Injuries</b>: the same minutes hand-off the Vault uses, shown per injured player.</li>
           <li><b>Rest</b>: days since each team's last game, back-to-backs, 3 in 4 and 4 in 6.</li>
-          <li><b>Model Record</b>: each past night rebuilt from earlier games only, then graded.</li>
+          <li><b>Model Record</b>: each past night rebuilt from earlier games only, then graded. MODEL ERR is the average miss per player; PLAIN AVG ERR is the miss from guessing each player's season average (green = the model was closer). The BEAT columns show how often each grade went over its projection, colored when 5+ points above (green) or below (red) that night's rate across all grades.</li>
         </ul>
       </div>
     </div>
