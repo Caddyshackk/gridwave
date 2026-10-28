@@ -1562,7 +1562,7 @@
         <li><b>MODEL ERR</b>: how far off the projection was, on average per player that night (projected vs actual, in the stat you picked). Lower is better.</li>
         <li><b>PLAIN AVG ERR</b>: the same miss if you had just guessed each player's season per-game average. This is the bar the model has to clear.</li>
         <li>MODEL ERR is <b style="color:var(--win)">green</b> when the model beat the plain average that night (its miss was smaller) and <b style="color:var(--loss)">red</b> when it didn't. Colors use the unrounded numbers, so two that look the same, like 5.2 vs 5.2, can still differ by a few hundredths.</li>
-        <li><b>A+/A, B, C, D BEAT</b>: how many players with that grade went over their projection (13/21 = 13 of 21). <b style="color:var(--win)">Green</b> means 5+ points better than that night's rate across all grades, <b style="color:var(--loss)">red</b> 5+ points worse. If the grades work, the A column should run greenest and the D column reddest over time.</li>
+        <li><b>A+/A, B, C, D BEAT</b>: how many players with that grade went over their projection (13/21 = 13 of 21), with the % next to it. These colors are separate from MODEL ERR: each % is compared with that night's beat rate for <i>all</i> players. <b style="color:var(--win)">Green</b> = 5 or more percentage points higher, <b style="color:var(--loss)">red</b> = 5 or more lower, no color = within 5. Example: if 48% of all players beat their projection that night, 53%+ is green and 43% or less is red. If the grades work, the A column should run greenest and the D column reddest over time.</li>
       </ul>
     </div>
     <div class="search-row">
@@ -1725,7 +1725,7 @@
           <li><b>Pace</b>: possessions per 48 and points per 100 possessions, this season blended with last (k = 10 games).</li>
           <li><b>Injuries</b>: the same minutes hand-off the Vault uses, shown per injured player.</li>
           <li><b>Rest</b>: days since each team's last game, back-to-backs, 3 in 4 and 4 in 6.</li>
-          <li><b>Model Record</b>: each past night rebuilt from earlier games only, then graded. MODEL ERR is the average miss per player; PLAIN AVG ERR is the miss from guessing each player's season average (green = the model beat the plain average that night, red = it didn't). The BEAT columns show how often each grade went over its projection, colored when 5+ points above (green) or below (red) that night's rate across all grades.</li>
+          <li><b>Model Record</b>: each past night rebuilt from earlier games only, then graded. MODEL ERR is the average miss per player; PLAIN AVG ERR is the miss from guessing each player's season average (green = the model beat the plain average that night, red = it didn't). The BEAT columns show how often each grade went over its projection, colored when the % is 5+ percentage points above (green) or below (red) that night's beat rate for all players.</li>
         </ul>
       </div>
     </div>
