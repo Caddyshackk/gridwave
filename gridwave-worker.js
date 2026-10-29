@@ -206,6 +206,9 @@ async function rateLimited(env, bucket, limit){
 // staleSeconds (optional): also keep a "last good copy" that long, and serve it when the upstream
 // is down (e.g. GitHub answering 522/5xx or timing out). Used for the nflverse and hoopR stat files,
 // where data a few hours old beats a broken tab. Never used for odds, where stale prices mislead.
+// For logs only: never write API keys into Cloudflare's logs.
+const safeUrl = u => String(u).replace(/([?&](apiKey|api_key|key|token)=)[^&]+/gi, '$1***');
+
 async function cachedFetch(cacheKeyUrl, upstreamUrl, ttlSeconds, upstreamInit, staleSeconds){
   const cache = caches.default;
   const cacheKey = new Request(cacheKeyUrl, { method: 'GET' });
@@ -215,7 +218,14 @@ async function cachedFetch(cacheKeyUrl, upstreamUrl, ttlSeconds, upstreamInit, s
   const staleKey = staleSeconds ? new Request(cacheKeyUrl + (cacheKeyUrl.includes('?') ? '&' : '?') + 'gw_stale=1', { method: 'GET' }) : null;
   let upstream = null;
   try { upstream = await fetch(upstreamUrl, upstreamInit); }
-  catch (e) { console.log('UPSTREAM FETCH ERROR', upstreamUrl, e.message); if (!staleKey) throw e; }
+  catch (e) { console.log('UPSTREAM FETCH ERROR', safeUrl(upstreamUrl), e.message); if (!staleKey) throw e; }
+  // Stat files only: one retry on a 5xx/522 or a dropped connection, since GitHub hiccups are usually brief.
+  if (staleKey && (!upstream || upstream.status >= 500)) {
+    console.log('UPSTREAM RETRY', safeUrl(upstreamUrl), upstream ? upstream.status : 'fetch error');
+    try { upstream = await fetch(upstreamUrl, upstreamInit); }
+    catch (e) { console.log('UPSTREAM FETCH ERROR (retry)', safeUrl(upstreamUrl), e.message); upstream = null; }
+  }
+  if (upstream && !upstream.ok) console.log('UPSTREAM NOT OK', safeUrl(upstreamUrl), upstream.status);
 
   // Never cache a failure (an Odds API 429, a GitHub 404 for a season file that isn't posted yet):
   // the next request should try again, not get served the error for the whole TTL.
@@ -223,7 +233,7 @@ async function cachedFetch(cacheKeyUrl, upstreamUrl, ttlSeconds, upstreamInit, s
     if (staleKey) {
       const stale = await cache.match(staleKey);
       if (stale) {
-        console.log('SERVING STALE COPY', upstreamUrl, upstream ? upstream.status : 'fetch error');
+        console.log('SERVING STALE COPY', safeUrl(upstreamUrl), upstream ? upstream.status : 'fetch error');
         return { response: stale, hit: true, stale: true };
       }
     }
@@ -553,7 +563,7 @@ export default {
         headers: {
           ...cors,
           'Content-Type': response.headers.get('content-type') || 'text/csv',
-          'Cache-Control': `public, max-age=${NFLVERSE_CACHE_TTL_SECONDS}`
+          'Cache-Control': response.ok ? `public, max-age=${NFLVERSE_CACHE_TTL_SECONDS}` : 'no-store'   // never let a browser hold on to an error
         }
       });
     }
@@ -623,7 +633,7 @@ export default {
         headers: {
           ...cors,
           'Content-Type': response.headers.get('content-type') || 'text/csv',
-          'Cache-Control': `public, max-age=${HOOPR_CACHE_TTL_SECONDS}`
+          'Cache-Control': response.ok ? `public, max-age=${HOOPR_CACHE_TTL_SECONDS}` : 'no-store'   // never let a browser hold on to an error
         }
       });
     }
