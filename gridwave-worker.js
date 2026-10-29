@@ -117,6 +117,7 @@
 const ALLOWED_ORIGIN = 'https://caddyshackk.github.io'; // <-- set to your real Pages origin before going live
 const ODDS_CACHE_TTL_SECONDS = 300;       // odds don't need to be fresher than 5 min for this app
 const NFLVERSE_CACHE_TTL_SECONDS = 1800;  // matches nflverse's own update cadence, no reason to refetch sooner
+const STAT_FILE_STALE_SECONDS = 60 * 60 * 24 * 7; // keep a last good copy of each stat file for a week, served only if GitHub is down
 const RATE_LIMITS = {
   perLicensePerMinute: 30,  // real sessions use single digits; this leaves generous headroom
   perIpBadKeyPerMinute: 10  // legitimate users don't submit invalid keys repeatedly
@@ -202,20 +203,42 @@ async function rateLimited(env, bucket, limit){
 // caller builds from only the params that matter (e.g. `${origin}/odds`, or /nflverse plus its url
 // param), NOT the raw request URL; otherwise /odds?x=1, /odds?x=2 ... would each miss the cache and
 // each cost real Odds API credits. This is what caps upstream cost regardless of visitor volume.
-async function cachedFetch(cacheKeyUrl, upstreamUrl, ttlSeconds, upstreamInit){
+// staleSeconds (optional): also keep a "last good copy" that long, and serve it when the upstream
+// is down (e.g. GitHub answering 522/5xx or timing out). Used for the nflverse and hoopR stat files,
+// where data a few hours old beats a broken tab. Never used for odds, where stale prices mislead.
+async function cachedFetch(cacheKeyUrl, upstreamUrl, ttlSeconds, upstreamInit, staleSeconds){
   const cache = caches.default;
   const cacheKey = new Request(cacheKeyUrl, { method: 'GET' });
   let response = await cache.match(cacheKey);
   if (response) return { response, hit: true };
 
-  const upstream = await fetch(upstreamUrl, upstreamInit);
+  const staleKey = staleSeconds ? new Request(cacheKeyUrl + (cacheKeyUrl.includes('?') ? '&' : '?') + 'gw_stale=1', { method: 'GET' }) : null;
+  let upstream = null;
+  try { upstream = await fetch(upstreamUrl, upstreamInit); }
+  catch (e) { console.log('UPSTREAM FETCH ERROR', upstreamUrl, e.message); if (!staleKey) throw e; }
+
   // Never cache a failure (an Odds API 429, a GitHub 404 for a season file that isn't posted yet):
   // the next request should try again, not get served the error for the whole TTL.
-  if (!upstream.ok) return { response: upstream, hit: false };
+  if (!upstream || !upstream.ok) {
+    if (staleKey) {
+      const stale = await cache.match(staleKey);
+      if (stale) {
+        console.log('SERVING STALE COPY', upstreamUrl, upstream ? upstream.status : 'fetch error');
+        return { response: stale, hit: true, stale: true };
+      }
+    }
+    return { response: upstream || new Response('Upstream unavailable', { status: 502 }), hit: false };
+  }
   const toCache = new Response(upstream.body, upstream);
   toCache.headers.set('Cache-Control', `public, max-age=${ttlSeconds}`);
   toCache.headers.delete('Set-Cookie'); // never cache anything with a cookie, out of caution
   await cache.put(cacheKey, toCache.clone());
+  if (staleKey) {
+    const backup = toCache.clone();
+    const keep = new Response(backup.body, backup);
+    keep.headers.set('Cache-Control', `public, max-age=${staleSeconds}`);
+    await cache.put(staleKey, keep);
+  }
   return { response: toCache, hit: false };
 }
 
@@ -524,7 +547,7 @@ export default {
       if (!target || !ALLOWED_NFLVERSE_PREFIXES.some(p => target.startsWith(p))) {
         return new Response('Not allowed', { status: 403, headers: cors });
       }
-      const { response } = await cachedFetch(`${url.origin}/nflverse?url=${encodeURIComponent(target)}`, target, NFLVERSE_CACHE_TTL_SECONDS);
+      const { response } = await cachedFetch(`${url.origin}/nflverse?url=${encodeURIComponent(target)}`, target, NFLVERSE_CACHE_TTL_SECONDS, undefined, STAT_FILE_STALE_SECONDS);
       return new Response(response.body, {
         status: response.status,
         headers: {
@@ -594,7 +617,7 @@ export default {
       if (!target || !ALLOWED_HOOPR_PREFIXES.some(p => target.startsWith(p))) {
         return new Response('Not allowed', { status: 403, headers: cors });
       }
-      const { response } = await cachedFetch(`${url.origin}/hoopr?url=${encodeURIComponent(target)}`, target, HOOPR_CACHE_TTL_SECONDS);
+      const { response } = await cachedFetch(`${url.origin}/hoopr?url=${encodeURIComponent(target)}`, target, HOOPR_CACHE_TTL_SECONDS, undefined, STAT_FILE_STALE_SECONDS);
       return new Response(response.body, {
         status: response.status,
         headers: {

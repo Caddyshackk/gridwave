@@ -6268,9 +6268,18 @@
     if (teamsMeta) return teamsMeta;
     const c = await store.get('teams:v1');
     if (c && Date.now() - c.at < 7 * 86400000) return (teamsMeta = c.data);
-    const j = await fetchJSON(`${ESPN}/teams`);
-    const list = (((j.sports || [])[0] || {}).leagues || [{}])[0].teams || [];
-    const data = list.map(x => x.team || x).map(t => ({ id: String(t.id), abbr: t.abbreviation, name: t.displayName, nick: t.name || t.shortDisplayName, logo: (t.logos && t.logos[0] && t.logos[0].href) || '' }))
+    let list;
+    try {
+      const j = await fetchJSON(`${ESPN}/teams`);
+      list = (((j.sports || [])[0] || {}).leagues || [{}])[0].teams || [];
+    } catch (e) {
+      // ESPN's /teams endpoint sometimes answers without the CORS header the browser needs. The
+      // standings feed carries the same team names and logos, so build the list from that instead.
+      const st = await fetchJSON('https://site.web.api.espn.com/apis/v2/sports/basketball/nba/standings?region=us&lang=en&contentorigin=espn&type=0&level=2');
+      list = [].concat(...(st.children || []).map(c => ((c.standings || {}).entries || []).map(en => en.team || {})));
+      if (!list.length) throw e;
+    }
+    const data = list.map(x => x.team || x).map(t => ({ id: String(t.id || t.abbreviation || ""), abbr: t.abbreviation, name: t.displayName, nick: t.name || t.shortDisplayName, logo: (t.logos && t.logos[0] && t.logos[0].href) || '' }))
       .filter(t => t.id && t.abbr).sort((a, b) => a.name.localeCompare(b.name));
     await store.set('teams:v1', { at: Date.now(), data });
     return (teamsMeta = data);
