@@ -2502,15 +2502,29 @@
     return cells;
   }
 
-  function parseCSV(text){
-    const lines = text.split(/\r?\n/).filter(l => l.length);
-    const headers = parseCSVLine(lines[0]);
+  // keep (optional): only these columns are stored. Play-by-play has 370+ columns and ~40 MB by
+  // midseason; keeping every one built ~800 MB of row objects and crashed phone browsers.
+  // Walks the text line by line instead of splitting it into one giant array first.
+  function parseCSV(text, keep){
+    let pos = 0;
+    const nextLine = ()=>{
+      while(pos < text.length){
+        let end = text.indexOf('\n', pos); if(end < 0) end = text.length;
+        let line = text.slice(pos, end); pos = end + 1;
+        if(line.endsWith('\r')) line = line.slice(0, -1);
+        if(line.length) return line;
+      }
+      return null;
+    };
+    const first = nextLine(); if(first === null) return [];
+    const headers = parseCSVLine(first);
+    const cols = keep ? headers.map((h,idx)=> keep.includes(h) ? [h, idx] : null).filter(Boolean) : headers.map((h,idx)=> [h, idx]);
     const rows = [];
-    for(let i=1;i<lines.length;i++){
-      const cells = parseCSVLine(lines[i]);
+    for(let line = nextLine(); line !== null; line = nextLine()){
+      const cells = parseCSVLine(line);
       if(cells.length < headers.length - 2) continue; // skip malformed
       const row = {};
-      headers.forEach((h,idx)=> row[h] = cells[idx]);
+      for(const [h, idx] of cols) row[h] = cells[idx];
       rows.push(row);
     }
     return rows;
@@ -2568,16 +2582,20 @@
 
   // Play-by-play — much heavier than the weekly file (every play, not a per-game rollup), so it's
   // only fetched once, in parallel with the weekly file, and cached for the session.
+  // only the columns loadPBP reads below (keep the two lists in step)
+  const PBP_COLS = ['week','game_id','play_id','posteam','defteam','yardline_100','rush_attempt','pass_attempt','rush_touchdown','pass_touchdown',
+    'rusher_player_id','receiver_player_id','sack','qb_dropback','qb_kneel','qb_spike','down','half_seconds_remaining','wp','epa','pass_oe'];
+  const FTN_COLS = ['nflverse_game_id','nflverse_play_id','n_defense_box'];
   async function loadPBP(){
     // FTN is optional — if it's missing or late this week, LIGHT BOX just goes dark; nothing else breaks.
     const [res, ftnRows] = await Promise.all([
       premiumFetch('/nflverse?url=' + encodeURIComponent(PBP_CSV)),
-      premiumFetch('/nflverse?url=' + encodeURIComponent(FTN_CSV)).then(r=> r.text()).then(parseCSV).catch(()=> [])
+      premiumFetch('/nflverse?url=' + encodeURIComponent(FTN_CSV)).then(r=> r.text()).then(t=> parseCSV(t, FTN_COLS)).catch(()=> [])
     ]);
     const boxByPlay = {};
     ftnRows.forEach(f=>{ if(f.n_defense_box !== '' && f.n_defense_box != null) boxByPlay[f.nflverse_game_id + '|' + f.nflverse_play_id] = +f.n_defense_box; });
     const text = await res.text();
-    const rows = parseCSV(text);
+    const rows = parseCSV(text, PBP_COLS);
     return rows.map(r=> ({
       week: +r.week, gameId: r.game_id, posteam: fixTeam(r.posteam), defteam: fixTeam(r.defteam),
       boxCount: boxByPlay[r.game_id + '|' + r.play_id] ?? null,
