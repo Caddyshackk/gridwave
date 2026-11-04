@@ -537,6 +537,12 @@
   .flag-badge.over{color:var(--loss);border-color:var(--loss);}
   .flag-badge.breakout{color:var(--win);border-color:var(--win);}
   .flag-badge.cheat{color:var(--cyan);border-color:var(--cyan);}
+  .flag-badge.roledown{color:#ff9b3d;border-color:#ff9b3d;border-style:dashed;}
+  .flag-badge.roleup{color:var(--win);border-color:var(--win);border-style:dashed;}
+  .snap-tiles{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;}
+  .snap-tile{min-width:44px;padding:4px 6px;border:1px solid var(--grid-line);text-align:center;font-size:.66rem;color:var(--text-mid);}
+  .snap-tile b{display:block;font-family:var(--font-display);font-size:.8rem;color:var(--text-hi);}
+  .snap-tile.recent{border-color:var(--cyan);}
   .edge-row > div:nth-child(3){display:flex;flex-direction:column;gap:3px;align-items:flex-start;}
 
   .cheat-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 10px;}
@@ -1157,6 +1163,7 @@
         <ul>
           <li><span class="flag-badge breakout">BREAKOUT</span> Their last 2 games beat their earlier average in EPA (by more than 1.0) and their opportunity is rising, but their season opportunity is still below the 75th percentile, so he isn't already a known workhorse.</li>
           <li><span class="flag-badge due">DUE</span> Their TD debt is above the bar (see TD Debt). Touches say more TDs are coming. Without play-by-play loaded: top-35% opportunity but bottom-35% TD rate.</li>
+          <li><span class="flag-badge roledown">▼ ROLE DOWN</span> / <span class="flag-badge roleup">▲ ROLE UP</span> Shown alongside the flag above. Their share of offensive snaps over the team's last 2 games moved 20+ points from their earlier average, with each of those games at least 12 points the same way and both games played. ROLE DOWN also needs 40%+ before and under 60% now; ROLE UP needs under 65% before and 50%+ now, so an every-down player going 80% to 95% isn't flagged. Volume inputs (touches, shares, red-zone and goal-line work) move three-quarters of the way to the new snap share (e.g. 80% → 40% of snaps scales them ×0.63), kept between ×0.4 and ×1.6. A ROLE DOWN player can't get CHEAT CODE. Skipped when they carry an injury designation, since the drop may be the injury. Snap counts come from Pro Football Reference via nflverse and update after each week's games, so a benching announced midweek shows up after the next game.</li>
           <li><span class="flag-badge over">OVERPERFORMING</span> Scored more than their touches support (debt below minus the bar). Expect regression. Without play-by-play: top-20% TD rate on middling opportunity.</li>
           <li><b>SURGING / COOLING / STEADY</b> (Rankings, when no flag): recent EPA more than +1.5 above, more than 1.5 below, or near their earlier average.</li>
         </ul>
@@ -2450,6 +2457,8 @@
   const PBP_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv';
   // FTN charting — per-play "defenders in the box", joined onto play-by-play for the LIGHT BOX tag.
   const FTN_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_2026.csv';
+  // Pro Football Reference snap counts (via nflverse): share of offensive snaps per player per game, ~1 MB.
+  const SNAP_CSV = 'https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv';
 
 
   // Home stadium per team — used for weather. dome:true means climate-controlled, weather doesn't matter.
@@ -2477,6 +2486,7 @@
   let rawPlayers = null;   // id -> player with per-week raw stat rows (unfiltered, season-long)
   let allWeekRows = null;  // flat list of every skill-position week-row, used to build defense splits
   let pbpRows = null;      // play-by-play rows — powers zone-based expected-TD ("Cheat Code") math
+  let snapIndex = null;    // snap shares by player name, plus the weeks each team played (role changes)
   let edgeFlat = null;     // current category+scope, sorted by score desc
   let matchupsMode = false; // true = early season, not enough film yet for a full cross-league Vault
 
@@ -2542,6 +2552,8 @@
 
   // Parse the CSV once into per-player, per-week raw rows, plus a flat row list for defense aggregation.
   async function loadRawPlayers(){
+    // snap counts are optional (role-change detection): load alongside, never block on a failure
+    const snapP = snapIndex ? null : loadSnaps().then(x=> { snapIndex = x; }).catch(()=> null);
     const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(NFLVERSE_CSV));
     const text = await res.text();
     const rows = parseCSV(text);
@@ -2577,7 +2589,64 @@
 
     Object.values(byPlayer).forEach(p=> p.weeks.sort((a,b)=>a.week-b.week));
     allWeekRows = flat;
+    if(snapP) await snapP;
     return byPlayer;
+  }
+
+  /* ---- ROLE CHANGES (snap share) ----
+     The weekly stats only show touches, so a benched starter keeps riding their early-season volume
+     for weeks. Snap share shows the demotion right away. ROLE DOWN / ROLE UP fires when the team's
+     last 2 games differ from the player's earlier average by ROLE.shift or more (and each of those
+     games moved the same way, so one game left early with a tweak doesn't trip it). When it fires,
+     volume-based inputs are rescaled to the new snap share. */
+  // Tuned on 2026 weeks 1–8: these settings flagged 28 players league-wide (e.g. Ferguson down /
+  // Spann-Ford up in DAL) instead of 60+ with looser ones, most of them one-game injury exits.
+  const ROLE = { shift: 0.20, perGame: 0.12, downMinPrior: 0.40, downMaxRecent: 0.60, upMaxPrior: 0.65, upMinRecent: 0.50, minPriorGames: 3, weight: 0.75, lo: 0.4, hi: 1.6,
+    applyToScore: true };   // false = show the ROLE chips and SNAP SHARE panel only, scores untouched
+  const normName = n => String(n||'').toLowerCase().replace(/[.'’]/g,'').replace(/-/g,' ').replace(/\b(jr|sr|ii|iii|iv|v)\b/g,'').replace(/\s+/g,'');
+  async function loadSnaps(){
+    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(SNAP_CSV));
+    const rows = parseCSV(await res.text(), ['week','player','pfr_player_id','position','team','offense_pct']);
+    const byPid = {}, teamWeeks = {};
+    rows.forEach(r=>{
+      const w = +r.week, team = fixTeam(r.team), pct = parseFloat(r.offense_pct);
+      if(!w || !team || isNaN(pct)) return;
+      (teamWeeks[team] = teamWeeks[team] || new Set()).add(w);
+      const pl = (byPid[r.pfr_player_id] = byPid[r.pfr_player_id] || { key: normName(r.player), pos: r.position === 'FB' ? 'RB' : r.position, team, weeks: {} });
+      pl.weeks[w] = pct; pl.team = team;   // rows come in week order, so team ends as the latest
+    });
+    const byName = {};
+    Object.values(byPid).forEach(pl=> (byName[pl.key] = byName[pl.key] || []).push(pl));
+    const tw = {}; Object.keys(teamWeeks).forEach(t=> tw[t] = [...teamWeeks[t]].sort((a,b)=> a-b));
+    return { byName, teamWeeks: tw };
+  }
+  function snapsFor(raw){
+    if(!snapIndex) return null;
+    const c = snapIndex.byName[normName(raw.name)];
+    if(!c || !c.length) return null;
+    return (c.find(x=> x.pos === raw.pos && x.team === raw.team) || c.find(x=> x.team === raw.team) || (c.length === 1 ? c[0] : null) || {}).weeks || null;
+  }
+  // { prior, recent, shift, dir: 'down'|'up'|null, weeks:[{w,pct}] } using only weeks the board could see
+  function roleShiftFor(raw){
+    const s = snapsFor(raw); if(!s) return null;
+    const maxW = weeksOfFilmAvailable();
+    const tw = ((snapIndex.teamWeeks || {})[raw.team] || []).filter(w=> w <= maxW);
+    if(tw.length < ROLE.minPriorGames + 2) return null;
+    const recentW = tw.slice(-2);
+    const rec = recentW.map(w=> s[w]).filter(v=> v != null);
+    if(!rec.length) return null;   // missed both games: that's the injury report's job
+    const priorVals = Object.keys(s).map(Number).filter(w=> w < recentW[0]).map(w=> s[w]);
+    if(priorVals.length < ROLE.minPriorGames) return null;
+    const avg = a => a.reduce((t,v)=> t+v, 0) / a.length;
+    const prior = avg(priorVals), recent = avg(rec), shift = recent - prior;
+    // A flag needs both of the last 2 games played: a missed game plus a partial one is usually an injury.
+    let dir = null;
+    if(rec.length === 2){
+      if(shift <= -ROLE.shift && prior >= ROLE.downMinPrior && recent < ROLE.downMaxRecent && rec.every(v=> v <= prior - ROLE.perGame)) dir = 'down';
+      else if(shift >= ROLE.shift && prior < ROLE.upMaxPrior && recent >= ROLE.upMinRecent && rec.every(v=> v >= prior + ROLE.perGame)) dir = 'up';
+    }
+    const weeks = Object.keys(s).map(Number).filter(w=> w <= maxW).sort((a,b)=> a-b).map(w=> ({ w, pct: s[w] }));
+    return { prior, recent, shift, dir, recentWeeks: recentW, weeks, snaps: s };
   }
 
   // Play-by-play — much heavier than the weekly file (every play, not a per-game rollup), so it's
@@ -3033,6 +3102,10 @@
     }
   };
 
+  // Component bars that measure how much work a player gets (rescaled on a ROLE DOWN / UP).
+  // Efficiency, matchup and script bars are left alone.
+  const ROLE_VOLUME_KEYS = ['volume','redzone','goalline','carryshare','ground','targetdesign','airvol'];
+
   // Builds the flat, sorted, scored list for one category + scope.
   // Cheat Code volume floor: goal-line + red-zone touches needed in the selected scope.
   const CHEAT_MIN_RZ = { season: 6, last3: 3 };
@@ -3116,6 +3189,21 @@
       p.injStatus = injSp ? injSp.inj : null;
       p.injPart = injSp ? (injSp.part || null) : null;
 
+      // Role change: rescale volume to the current snap share (recent ÷ their average over the games
+      // being scored). Skipped when they carry an injury designation: a snap drop there is likely the
+      // injury, which the injury badge already flags.
+      p.roleShift = roleShiftFor(raw);
+      p.roleFactor = 1; p.roleDown = false; p.roleUp = false;
+      if(p.roleShift && p.roleShift.dir && !(p.roleShift.dir === 'down' && p.injStatus)){
+        const inScope = weeksInScope.map(w=> p.roleShift.snaps[w.week]).filter(v=> v != null);
+        const base = inScope.length ? inScope.reduce((t,v)=> t+v, 0) / inScope.length : p.roleShift.prior;
+        if(base > 0){
+          // three-quarters of the way to the new snap share: 2 games is a real signal, not a certainty
+          if(ROLE.applyToScore) p.roleFactor = clamp(1 + ROLE.weight * (p.roleShift.recent / base - 1), ROLE.lo, ROLE.hi);
+          p.roleDown = p.roleShift.dir === 'down'; p.roleUp = p.roleShift.dir === 'up';
+        }
+      }
+
       // Trend compares the last 2 games (not just 1) against everything before them — a single
       // fluke game used to be able to flip BREAKOUT on its own, which is exactly the kind of
       // noise this is meant to filter, not produce. Off full season history, independent of scope.
@@ -3151,6 +3239,7 @@
 
       // after the zone block, so Any TD's bars can use red-zone share / goal-line usage
       p.components = def.components(p, scope);
+      if(p.roleFactor !== 1) p.components.forEach(c=>{ if(ROLE_VOLUME_KEYS.includes(c.key)) c.value *= p.roleFactor; });
 
       list.push(p);
     });
@@ -3187,7 +3276,7 @@
         rzTouches, rzPct: pRedZoneShare
       };
       p.cheatCodeCount = (p.cheatSignals.debt ? 1 : 0) + (p.cheatSignals.rz ? 1 : 0);
-      p.cheatCode = p.cheatCodeCount === 2;
+      p.cheatCode = p.cheatCodeCount === 2 && !(p.roleDown && ROLE.applyToScore);   // a demoted player's red-zone role is gone
 
       // Flags need real sample size to mean anything — TD scoring especially is high-variance
       // game to game, so under 4 games played, a flag is more likely noise than signal. The
@@ -3258,7 +3347,7 @@
         : 0.75 * ((p.carries + p.targets) / games) * (pb.tds / Math.max(1, pb.opps)) + 0.25 * actualPG;
       const prior = role ? splits.leagueTdPG[role] : pb.tds / Math.max(1, pb.games);
       const K = ANYTD_PARAMS.usageK; // phantom games of "average for their role"
-      const usage = (usagePG * p.games + prior * K) / (p.games + K);
+      const usage = (usagePG * p.games + prior * K) / (p.games + K) * (p.roleFactor || 1);
 
       // 2) game environment
       let env = 1;
@@ -3328,6 +3417,8 @@
       if(env >= 1.12) why.push('Shootout Script');
       if(d && d.rank <= 8) why.push('Soft Matchup');
       if(due && p.tdDebt !== undefined) why.push(`Due For TD (Debt +${p.tdDebt.toFixed(1)})`);
+      if(p.roleDown) why.unshift('Role Down');
+      else if(p.roleUp) why.unshift('Role Up');
       p.reason = why.length ? why.slice(0,3).join(' + ') : 'Low Scoring Role';
     });
   }
@@ -3368,7 +3459,7 @@
       <div class="rank">#${rank}</div>
       ${avatarHtml(p)}
       <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}${sosChipHtml(p.name, p.pos, p.team)}</div><div class="reason-line">${p.reason}</div></div>
-      <div class="badges">${injBadge(p.injStatus)}${flagPart}${cheatCodeBadge(p)}</div>
+      <div class="badges">${injBadge(p.injStatus)}${roleBadge(p)}${flagPart}${cheatCodeBadge(p)}</div>
       <div><div class="score">${scoreText}</div><div class="form-stat">${p.formStat}</div></div>
     `;
   }
@@ -3385,6 +3476,11 @@
     if(flag==='over') return '<span class="flag-badge over">OVERPERFORMING</span>';
     if(flag==='breakout') return '<span class="flag-badge breakout">BREAKOUT</span>';
     return '';
+  }
+  function roleBadge(p){
+    if(!p.roleShift || !(p.roleDown || p.roleUp)) return '';
+    const t = `Snaps: ${Math.round(p.roleShift.prior*100)}% before, ${Math.round(p.roleShift.recent*100)}% last 2 games`;
+    return p.roleDown ? `<span class="flag-badge roledown" title="${t}">▼ ROLE DOWN</span>` : `<span class="flag-badge roleup" title="${t}">▲ ROLE UP</span>`;
   }
   function cheatCodeBadge(p){
     return p.cheatCode ? '<span class="flag-badge cheat">⚡ CHEAT CODE</span>' : '';
@@ -3578,6 +3674,20 @@
   }
 
   /* ---- PLAYER VAULT DETAIL ---- */
+  // Detail-panel section: offensive snap share by week, and what a role change did to the score.
+  function snapSectionHtml(p){
+    const r = p.roleShift;
+    if(!r) return '';
+    const tiles = r.weeks.map(x=> `<div class="snap-tile ${r.recentWeeks.includes(x.w) ? 'recent' : ''}">WK ${x.w}<b>${Math.round(x.pct*100)}%</b></div>`).join('');
+    const pts = Math.round(r.shift * 100);
+    let note = `Last 2 team games: <b>${Math.round(r.recent*100)}%</b> of offensive snaps vs <b>${Math.round(r.prior*100)}%</b> before (${pts >= 0 ? '+' : ''}${pts} pts).`;
+    if((p.roleDown || p.roleUp) && p.roleFactor !== 1) note += ` Volume inputs scaled ×${p.roleFactor.toFixed(2)} to match the new role.`;
+    else if(p.roleDown || p.roleUp) note += ' Shown for information; scores are not adjusted (ROLE.applyToScore is off).';
+    else if(r.dir === 'down' && p.injStatus) note += ` Not flagged as a role change because they carry an injury designation (${p.injStatus}); the drop may be the injury.`;
+    else note += ` No role change (needs a ${Math.round(ROLE.shift*100)}+ point move across both of the last 2 games; see METRICS).`;
+    return gwSection('SNAP SHARE', `<div class="snap-tiles">${tiles}</div><div class="sub" style="color:var(--text-dim);font-size:.7rem">${note}</div>`, { tag: p.roleDown ? 'ROLE DOWN' : p.roleUp ? 'ROLE UP' : '' });
+  }
+
   function renderEdgeDetail(p, container){
     currentDetailPlayer = p;
     container = container || $('#edge-detail');
@@ -3735,7 +3845,7 @@
       <div class="edge-detail-card">
         <div>
           <div class="edge-detail-head">${avatarHtml(p, true)}<div>
-          <h3>${p.name} ${injBadge(p.injStatus)} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
+          <h3>${p.name} ${injBadge(p.injStatus)} ${roleBadge(p)} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
           <div class="sub" style="margin-bottom:0">${p.team} · ${p.pos} · VAULT score ${fmtScore(p.score)}/100 · ${p.formStat}${p.injStatus ? ' · ' + p.injStatus + (p.injPart ? ' (' + p.injPart + ')' : '') : ''}</div>
           </div></div>
           <div class="reason-line" style="margin-top:8px">${p.reason}</div>
@@ -3743,6 +3853,8 @@
           ${anytdHtml ? gwSection('TD PROBABILITY', anytdHtml) : ''}
 
           ${gwSection('COMPONENT SCORES', `<div class="split-bars">${componentBars}</div>`)}
+
+          ${snapSectionHtml(p)}
 
           ${advancedSec}
           ${researchHtml}
