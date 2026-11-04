@@ -2492,23 +2492,35 @@
 
   // RFC4180-aware line parser — the play-by-play file has quoted fields with commas inside
   // (play descriptions, weather strings), so a naive split(',') misaligns every column after one.
+  // Splits one CSV line into cells. Lines with no quotes take a plain split; otherwise it jumps
+  // between quotes and commas with indexOf instead of copying one character at a time, which
+  // made play-by-play (~40 MB) parse about 2.5x slower, a few seconds on a phone.
   function parseCSVLine(line){
-    const cells = [];
-    let cur = '', inQuotes = false;
-    for(let i=0;i<line.length;i++){
-      const ch = line[i];
-      if(inQuotes){
-        if(ch === '"'){
-          if(line[i+1] === '"'){ cur += '"'; i++; }
-          else { inQuotes = false; }
-        } else { cur += ch; }
+    if(line.indexOf('"') < 0) return line.split(',');
+    const cells = [], n = line.length;
+    let i = 0;
+    while(i <= n){
+      if(line.charCodeAt(i) === 34){            // quoted cell: "" inside means a literal quote
+        let cur = '', j = i + 1;
+        for(;;){
+          const q = line.indexOf('"', j);
+          if(q < 0){ cur += line.slice(j); i = n + 1; break; }
+          cur += line.slice(j, q);
+          if(line.charCodeAt(q + 1) === 34){ cur += '"'; j = q + 2; continue; }
+          i = q + 1; break;
+        }
+        if(i > n){ cells.push(cur); break; }
+        const c = line.indexOf(',', i);
+        if(c < 0){ cells.push(cur + line.slice(i)); break; }
+        cells.push(cur + line.slice(i, c)); i = c + 1;
+        if(i === n){ cells.push(''); break; }
       } else {
-        if(ch === '"'){ inQuotes = true; }
-        else if(ch === ','){ cells.push(cur); cur=''; }
-        else { cur += ch; }
+        const c = line.indexOf(',', i);
+        if(c < 0){ cells.push(line.slice(i)); break; }
+        cells.push(line.slice(i, c)); i = c + 1;
+        if(i === n){ cells.push(''); break; }
       }
     }
-    cells.push(cur);
     return cells;
   }
 
@@ -2542,12 +2554,20 @@
 
   function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
 
+  // Share of the other values strictly below v. Callers rank every player against the same array,
+  // so it's sorted once (cached per array) and searched, instead of re-sorted for every player.
+  const pctSortCache = new WeakMap();
   function percentileRank(values, v){
     if(values.length <= 1) return 50;
-    const sorted = values.slice().sort((a,b)=>a-b);
+    let sorted = pctSortCache.get(values);
+    if(sorted === undefined){
+      sorted = values.some(x=> typeof x !== 'number' || isNaN(x)) ? null : values.slice().sort((a,b)=>a-b);
+      pctSortCache.set(values, sorted);
+    }
     let below = 0;
-    sorted.forEach(x=>{ if(x < v) below++; });
-    return Math.round((below / (sorted.length - 1)) * 100);
+    if(sorted){ let lo = 0, hi = sorted.length; while(lo < hi){ const mid = (lo + hi) >> 1; if(sorted[mid] < v) lo = mid + 1; else hi = mid; } below = lo; }
+    else values.forEach(x=>{ if(x < v) below++; });
+    return Math.round((below / (values.length - 1)) * 100);
   }
 
   // Parse the CSV once into per-player, per-week raw rows, plus a flat row list for defense aggregation.
@@ -2709,12 +2729,24 @@
 
   // One player's touches broken out by zone, priced against the league rates — this is the
   // "expected touchdowns" / "TD Debt" math (xTD minus actual TDs scored).
+  // Plays indexed by rusher/receiver once per play-by-play array (the Model Record swaps in a
+  // filtered copy per week, which gets its own index), instead of scanning every play per player.
+  const pbpByPlayerCache = new WeakMap();
+  function pbpPlaysOf(playerId){
+    let idx = pbpByPlayerCache.get(pbpRows);
+    if(!idx){
+      idx = {};
+      pbpRows.forEach(r=>{
+        if(r.rusherId) (idx[r.rusherId] = idx[r.rusherId] || []).push(r);
+        if(r.receiverId && r.receiverId !== r.rusherId) (idx[r.receiverId] = idx[r.receiverId] || []).push(r);
+      });
+      pbpByPlayerCache.set(pbpRows, idx);
+    }
+    return idx[playerId] || [];
+  }
   function computeZoneBreakdown(playerId, scope, leagueRates){
     const maxWeek = weeksOfFilmAvailable();
-    const rows = pbpRows.filter(r=>{
-      if(scope === 'last3' && r.week <= maxWeek-3) return false;
-      return r.rusherId === playerId || r.receiverId === playerId;
-    });
+    const rows = pbpPlaysOf(playerId).filter(r=> !(scope === 'last3' && r.week <= maxWeek-3));
 
     const zones = {};
     ZONE_ORDER.forEach(z=> zones[z] = { carries:0, targets:0, tds:0 });
@@ -2879,9 +2911,11 @@
 
   // What "weeks of film" every team roughly has — a simple proxy for the real product's
   // "Vault lines arrive once every team has three weeks" behavior.
+  let filmWeeksFor = null, filmWeeksVal = 0;   // remembered per allWeekRows array (called per player)
   function weeksOfFilmAvailable(){
     if(!allWeekRows || !allWeekRows.length) return 0;
-    return Math.max(...allWeekRows.map(w=>w.week));
+    if(filmWeeksFor !== allWeekRows){ filmWeeksVal = allWeekRows.reduce((m,w)=> w.week > m ? w.week : m, 0); filmWeeksFor = allWeekRows; }
+    return filmWeeksVal;
   }
 
   // Aggregates what each team has ALLOWED (as the opponent), for the matchup-quality components.

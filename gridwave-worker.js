@@ -562,7 +562,9 @@ export default {
         status: response.status,
         headers: {
           ...cors,
-          'Content-Type': response.headers.get('content-type') || 'text/csv',
+          // text/plain on purpose: GitHub labels these files application/octet-stream and Cloudflare doesn't
+          // compress that (or text/csv). As text/plain they're gzip/brotli'd on the way out, ~5x smaller.
+          'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': response.ok ? `public, max-age=${NFLVERSE_CACHE_TTL_SECONDS}` : 'no-store'   // never let a browser hold on to an error
         }
       });
@@ -632,7 +634,9 @@ export default {
         status: response.status,
         headers: {
           ...cors,
-          'Content-Type': response.headers.get('content-type') || 'text/csv',
+          // text/plain on purpose: GitHub labels these files application/octet-stream and Cloudflare doesn't
+          // compress that (or text/csv). As text/plain they're gzip/brotli'd on the way out, ~5x smaller.
+          'Content-Type': 'text/plain; charset=utf-8',
           'Cache-Control': response.ok ? `public, max-age=${HOOPR_CACHE_TTL_SECONDS}` : 'no-store'   // never let a browser hold on to an error
         }
       });
