@@ -1718,7 +1718,8 @@
         <h3>Parlays</h3>
         <ul>
           <li>Legs need <b>24+ projected minutes</b> and a projection that puts the side at <b>58%+</b>, measured against how much their stat swings game to game (not as a % of the line, so tiny lines can't fake big edges).</li>
-          <li>Their last 10 games must lean the same way, and the situation grade must back it: <b>B or better</b> for overs, C or worse for unders.</li>
+          <li>Their last 10 games must back the side at least <b>6 times</b> (60%+ if they've played fewer than 10), and the situation grade must back it: <b>B or better</b> for overs, C or worse for unders.</li>
+          <li>Leg ranking: <b>35% edge, 35% last-10 hit rate, 30% situation grade</b>, so an 8-for-10 leg outranks a 6-for-10 one with the same edge.</li>
           <li>Legs where the projection is <b>30%+ off the book's line</b> are skipped. That usually means a role change the model hasn't caught.</li>
           <li>The last-10 check needs at least 5 games on record, and unders are skipped for anyone with an injury tag.</li>
           <li>One leg per game, no player in more than 2 parlays. Lines are DraftKings via ESPN (free), never the paid feed.</li>
@@ -6034,7 +6035,7 @@
   /* ---------------- PARLAYS: cross-game prop legs where edge, grade and history agree ----------------
      Legs come from the FREE ESPN/DraftKings feed only (never the paid Odds API), loaded for every
      game on the slate. A leg qualifies when the projection beats the line by 8%+, he's a rotation
-     player (20+ min), and their last-10 history leans the same way. Leg score blends the edge, the
+     player (24+ min), and their last 10 games back the side at least 6 times. Leg score blends the edge, the
      situation grade (flipped for unders) and that hit rate; combos are 2- and 3-leg, one leg per
      game, the same shape as the NFL builder. */
   // Edge is measured against how much their own stat swings game to game (a z-score turned into a
@@ -6043,11 +6044,11 @@
   const PARLAY = {
     minProb: 0.58,        // projection must put the bet side at 58%+ given their game-to-game swing
     minMin: 24,           // real rotation minutes only
-    minHit: 0.5,          // last 10 games lean the same way
+    minHit: 0.6,          // last 10 games back the side: 6 of 10 or better (60%+ when fewer than 10 played)
     overMinGrade: 50,     // overs need a B or better situation grade (unders: C or worse)
     maxGap: 0.30,         // projection 30%+ off the book's line = probably a role change we haven't caught: skip
     maxPerPlayer: 2,      // any one player shows up in at most 2 parlays
-    w: { edge: 0.40, grade: 0.35, hit: 0.25 }
+    w: { edge: 0.35, grade: 0.30, hit: 0.35 }   // L10 weighs as much as the edge, so 8/10 legs outrank 6/10 ones
   };
   const normCdf = z => { const t = 1 / (1 + 0.2316419 * Math.abs(z)); const d = 0.3989423 * Math.exp(-z * z / 2);
     const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - p : p; };
