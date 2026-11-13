@@ -500,6 +500,38 @@
   /* ---------- VAULT (sub-tabs, flags, splits) ---------- */
   .vault-subtab{opacity:.55;transition:opacity .18s var(--ease-snappy), background-color .18s var(--ease-snappy);}
   .vault-subtab.active{opacity:1;background:rgba(0,240,255,.1);}
+  /* GAME CHEAT CODE */
+  .gcc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:12px;}
+  .gcc-card{border:1px solid var(--grid-line);background:var(--bg-panel);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0;}
+  .gcc-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+  .gcc-teams{display:flex;align-items:center;gap:6px;font-family:var(--font-display);font-size:1rem;color:var(--text-hi);}
+  .gcc-teams img{width:24px;height:24px;object-fit:contain;}
+  .gcc-teams span{color:var(--text-dim);font-size:.8rem;}
+  .gcc-kick{font-family:var(--font-display);font-size:.62rem;letter-spacing:.08em;color:var(--text-dim);}
+  .gcc-final{font-family:var(--font-display);font-size:.7rem;color:var(--amber);letter-spacing:.06em;}
+  .gcc-lines{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 14px;align-items:baseline;font-family:var(--font-display);font-size:1.05rem;color:var(--text-hi);}
+  .gcc-lines .h{font-size:.58rem;letter-spacing:.1em;color:var(--text-dim);}
+  .gcc-lines .k{font-size:.72rem;letter-spacing:.06em;color:var(--text-mid);}
+  .gcc-lines .gw{color:var(--cyan);}
+  .gcc-badges{display:flex;flex-wrap:wrap;gap:6px;}
+  .gcc-badge{font-family:var(--font-display);font-size:.6rem;letter-spacing:.08em;color:var(--win);border:1px solid var(--win);padding:.2em .7em;}
+  .gcc-move{border:1px solid var(--grid-line);padding:6px 10px;font-size:.72rem;color:var(--text-mid);}
+  .gcc-move summary{cursor:pointer;font-family:var(--font-display);font-size:.62rem;letter-spacing:.08em;}
+  .gcc-move-body{padding-top:6px;line-height:1.6;}
+  .gcc-units{display:flex;flex-direction:column;gap:8px;}
+  .gcc-unit-labels{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-dim);margin-bottom:3px;}
+  .gcc-unit-labels .win{color:var(--text-hi);font-weight:600;}
+  .gcc-unit-track{display:flex;gap:4px;}
+  .gcc-half{flex:1;height:6px;background:var(--bg-panel-2);display:flex;}
+  .gcc-half.left{justify-content:flex-end;}
+  .gcc-half i{display:block;height:100%;background:rgba(0,240,255,.35);}
+  .gcc-half i.win{background:var(--cyan);box-shadow:0 0 6px rgba(0,240,255,.5);}
+  .gcc-unit-note{font-size:.56rem;letter-spacing:.08em;color:var(--text-dim);}
+  .gcc-props{align-self:center;color:var(--cyan);font-family:var(--font-display);font-size:.85rem;text-decoration:none;border-top:1px solid var(--grid-line);padding-top:10px;width:100%;text-align:center;}
+  .gcc-record{font-size:.74rem;line-height:1.6;}
+  .gcc-filter{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.78rem;color:var(--text-mid);margin-bottom:10px;}
+  .gcc-filter .action{padding:.35em .8em;font-size:.65rem;}
+  @media (max-width:480px){ .gcc-grid{grid-template-columns:1fr;} }
 
   .game-vault-group{margin-bottom:26px;}
 
@@ -893,6 +925,7 @@
       <button class="action vault-subtab active" data-subtab="gamevault">GAME VAULT</button>
       <button class="action vault-subtab" data-subtab="rankings">RANKINGS</button>
       <button class="action vault-subtab" data-subtab="parlays">PARLAYS</button>
+      <button class="action vault-subtab" data-subtab="gamecheat">GAME CHEAT CODE</button>
     </div>
     <div class="search-row">
       <select id="edge-category" style="background:var(--bg-panel);border:1px solid var(--grid-line);color:var(--text-hi);font-family:var(--font-body);padding:.7em .9em;">
@@ -923,6 +956,9 @@
     <div id="vault-parlays" class="vault-panel" style="display:none;">
       <div class="key-box" style="font-size:.74rem;">Model picks paired up — not odds or EV math. Bet responsibly. Details in METRICS.</div>
       <div id="parlay-results"><div class="empty">Load the Vault first.</div></div>
+    </div>
+    <div id="vault-gamecheat" class="vault-panel" style="display:none;">
+      <div id="gamecheat-results"><div class="empty">Load the Vault first.</div></div>
     </div>
 
     <div id="edge-detail"></div>
@@ -1179,6 +1215,19 @@
           <li>The bar for DUE / OVERPERFORMING is <b>2.5 − 0.15 × games played</b>, never below 1.0, so it gets easier to trigger as the sample grows.</li>
           <li>The <b>CHEAT CODE</b> badge needs <b>both</b> signals: (1) TD debt above 1.0, and (2) a real red-zone role: goal-line + red-zone share of their touches in the top 20% of their group <b>and</b> at least 6 of those touches on the season (3 in the last-3-games view). Click it to jump to the zone table, which shows which signals he has.</li>
           <li>Needs the play-by-play file, a bigger download that finishes loading a moment after the rest.</li>
+        </ul>
+      </div>
+
+      <div class="metric-card">
+        <h3>Game Cheat Code</h3>
+        <p>One card per game this week in the VAULT's GAME CHEAT CODE tab: the market line next to a GRIDWAVE line.</p>
+        <ul>
+          <li><b>Market</b>: the median of the books from your odds feed, or ESPN's line when that's unavailable, or nflverse's line as a last resort.</li>
+          <li><b>GRIDWAVE line</b>: each team's last 5 games, two ways, averaged. Points: their points scored + the opponent's points allowed − league average, shrunk 3 games toward league average. EPA: league average + 60 × (their offense EPA per play + the opponent's defense EPA per play allowed). The home side gets +1.5.</li>
+          <li><b>GRIDWAVE EDGE</b> badges need the GRIDWAVE line 3+ points away from the market on the spread or total.</li>
+          <li>The record at the top of the tab replays every finished week from week 4 using only earlier games and grades the badges against nflverse's closing lines (pushes left out). Break-even at −110 is about 52.4%. In testing the market was usually closer than the GRIDWAVE line, so read an edge as a reason to look closer, not a bet.</li>
+          <li><b>Unit strength</b>: league percentile of EPA per play over the last 5 games: pass and run offense vs the opponent's pass and run defense (less EPA allowed = stronger). The stronger side of each matchup is lit.</li>
+          <li><b>Line movement</b> comes from the odds snapshots your worker records on a schedule. <b>Prop Rankings →</b> opens RANKINGS filtered to that game's two teams.</li>
         </ul>
       </div>
 
@@ -3529,6 +3578,7 @@
       document.querySelectorAll('.vault-panel').forEach(p=> p.style.display='none');
       $('#vault-' + btn.dataset.subtab).style.display = '';
       clearDetails();
+      if(btn.dataset.subtab === 'gamecheat') renderGameCheat();
     });
   });
 
@@ -3544,9 +3594,17 @@
   function renderEdgeRankings(){
     const container = $('#edge-results');
     if(!edgeFlat){ return; }
-    const list = visibleList();
+    let list = visibleList();
     container.innerHTML = '';
-    if(!list.length){ container.appendChild(el('div','empty','No qualifying players yet this season.')); return; }
+    // opened from a GAME CHEAT CODE card: just the two teams in that game
+    if(edgeGameFilter){
+      const [a, h] = edgeGameFilter;
+      list = list.filter(p=> p.team === a || p.team === h);
+      const bar = el('div', 'gcc-filter', `Showing <b>${a} @ ${h}</b> only <button type="button" class="action">✕ ALL GAMES</button>`);
+      bar.querySelector('button').addEventListener('click', ()=>{ edgeGameFilter = null; renderEdgeRankings(); });
+      container.appendChild(bar);
+    }
+    if(!list.length){ container.appendChild(el('div','empty', edgeGameFilter ? 'No qualifying players from this game.' : 'No qualifying players yet this season.')); return; }
     list.slice(0,25).forEach((p,i)=>{
       const row = el('div','edge-row card-row');
       row.dataset.pid = p.id;
@@ -4812,6 +4870,228 @@
   document.querySelector('nav.tabs button[data-view="record"]').addEventListener('click', renderRecord);
 
   /* ---- PARLAY ENGINE ---- */
+  /* ---------------- GAME CHEAT CODE ----------------
+     One card per game this week: the market spread/total next to a GRIDWAVE line, unit-vs-unit
+     strength bars, line movement and a jump to that game's prop rankings.
+     GRIDWAVE line: each team's last 5 games, two ways, averaged —
+       points: their points scored + the opponent's points allowed − league average (shrunk 3 games
+               toward league average)
+       EPA:    league average + 60 × (their offense EPA/play + the opponent's defense EPA/play allowed)
+     then +1.5 to the home side's margin. An EDGE badge needs a 3+ point disagreement with the market,
+     and the card header shows how those badges have done this season against the closing lines. */
+  const GCC = { lastN: 5, K: 3, hfa: 1.5, epaPts: 60, edge: 3, firstWeek: 4 };
+  let gccGames = null;        // this season's regular-season games (scores + closing lines) from nflverse
+  let gccEpaFor = null, gccEpa = null;   // team -> game_id -> { pe, pn, re, rn, dpe, dpn, dre, drn }
+  let edgeGameFilter = null;  // [away, home] when RANKINGS was opened from a game card
+
+  async function loadSeasonGames(){
+    if(gccGames) return gccGames;
+    const res = await premiumFetch('/nflverse?url=' + encodeURIComponent(SOS_GAMES_CSV));
+    const rows = parseCSV(await res.text(), ['game_id','season','game_type','week','gameday','gametime','home_team','away_team','home_score','away_score','spread_line','total_line']);
+    const now = new Date(), season = now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
+    gccGames = rows.filter(g=> +g.season === season && g.game_type === 'REG').map(g=>({
+      id: g.game_id, week: +g.week, day: g.gameday, time: g.gametime,
+      home: fixTeam(g.home_team), away: fixTeam(g.away_team),
+      hs: g.home_score === '' || g.home_score === 'NA' ? null : +g.home_score,
+      as: g.away_score === '' || g.away_score === 'NA' ? null : +g.away_score,
+      // nflverse spread_line = expected home margin (positive = home favored)
+      line: g.spread_line === '' || g.spread_line === 'NA' ? null : +g.spread_line,
+      total: g.total_line === '' || g.total_line === 'NA' ? null : +g.total_line
+    }));
+    return gccGames;
+  }
+
+  function teamGameEpa(){
+    if(gccEpa && gccEpaFor === pbpRows) return gccEpa;
+    const out = {};
+    const slot = (t, gid)=> ((out[t] = out[t] || {})[gid] = out[t][gid] || { pe:0, pn:0, re:0, rn:0, dpe:0, dpn:0, dre:0, drn:0 });
+    (pbpRows || []).forEach(r=>{
+      if(r.epa == null || r.kneel || r.spike || !r.posteam || !r.defteam) return;
+      const pass = r.passAttempt || r.sack, run = !pass && r.rushAttempt;
+      if(!pass && !run) return;
+      const o = slot(r.posteam, r.gameId), d = slot(r.defteam, r.gameId);
+      if(pass){ o.pe += r.epa; o.pn++; d.dpe += r.epa; d.dpn++; }
+      else    { o.re += r.epa; o.rn++; d.dre += r.epa; d.drn++; }
+    });
+    gccEpaFor = pbpRows; gccEpa = out;
+    return out;
+  }
+
+  // Ratings from each team's last GCC.lastN finished games before `week`.
+  function gccRatings(week){
+    const G = gccGames, E = teamGameEpa();
+    const teams = [...new Set(G.flatMap(g=> [g.home, g.away]))];
+    const done = G.filter(g=> g.week < week && g.hs != null && g.as != null);
+    const R = {}; let allPts = [];
+    teams.forEach(t=>{
+      const tg = done.filter(g=> g.home === t || g.away === t).sort((a,b)=> b.week - a.week).slice(0, GCC.lastN)
+        .map(g=> g.home === t ? { id: g.id, pf: g.hs, pa: g.as } : { id: g.id, pf: g.as, pa: g.hs });
+      R[t] = { tg }; allPts = allPts.concat(tg.map(x=> x.pf));
+    });
+    const lg = allPts.length ? allPts.reduce((s,v)=> s+v, 0) / allPts.length : 22;
+    const K = GCC.K, shrinkPlays = K * 60;
+    teams.forEach(t=>{
+      const r = R[t], n = r.tg.length;
+      const pf = r.tg.reduce((s,x)=> s + x.pf, 0), pa = r.tg.reduce((s,x)=> s + x.pa, 0);
+      const ep = r.tg.map(x=> (E[t] || {})[x.id]).filter(Boolean);
+      const sum = k=> ep.reduce((s,x)=> s + x[k], 0);
+      const on = sum('pn') + sum('rn'), dn = sum('dpn') + sum('drn');
+      Object.assign(r, {
+        n, ppg: n ? (pf + K*lg) / (n + K) : lg, papg: n ? (pa + K*lg) / (n + K) : lg,
+        oE: on ? (sum('pe') + sum('re')) / (on + shrinkPlays) : 0,
+        dE: dn ? (sum('dpe') + sum('dre')) / (dn + shrinkPlays) : 0,
+        // unit strength (raw per-play EPA, last 5): pass/run offense, pass/run defense allowed
+        passO: sum('pn') ? sum('pe') / sum('pn') : null, runO: sum('rn') ? sum('re') / sum('rn') : null,
+        passD: sum('dpn') ? sum('dpe') / sum('dpn') : null, runD: sum('drn') ? sum('dre') / sum('drn') : null
+      });
+    });
+    const lgE = teams.reduce((s,t)=> s + R[t].oE, 0) / (teams.length || 1);
+    // league percentiles for the strength bars (defense: less EPA allowed = stronger)
+    const pctOf = (key, invert)=>{
+      const vals = teams.map(t=> R[t][key]).filter(v=> v != null);
+      teams.forEach(t=>{ const v = R[t][key]; if(v == null) return;
+        const below = vals.filter(x=> invert ? x > v : x < v).length;
+        R[t][key + 'Pct'] = vals.length > 1 ? Math.round(below / (vals.length - 1) * 100) : 50; });
+    };
+    pctOf('passO'); pctOf('runO'); pctOf('passD', true); pctOf('runD', true);
+    return { R, lg, lgE };
+  }
+
+  // GRIDWAVE line for one game: { margin (home − away), total }
+  function gccPredict(home, away, rt){
+    const H = rt.R[home], A = rt.R[away];
+    if(!H || !A || !H.n || !A.n) return null;
+    const hPts = H.ppg + A.papg - rt.lg, aPts = A.ppg + H.papg - rt.lg;
+    const hEpa = rt.lg + GCC.epaPts * ((H.oE - rt.lgE) + (A.dE - rt.lgE));
+    const aEpa = rt.lg + GCC.epaPts * ((A.oE - rt.lgE) + (H.dE - rt.lgE));
+    const h = (hPts + hEpa) / 2, a = (aPts + aEpa) / 2;
+    return { margin: h - a + GCC.hfa, total: h + a };
+  }
+
+  // How the EDGE badges have done this season: replay each finished week with only earlier games,
+  // graded against nflverse's closing lines. Pushes are left out.
+  function gccSeasonRecord(curWeek){
+    const rec = { ats: [0,0], ou: [0,0] };
+    for(let w = GCC.firstWeek; w < curWeek; w++){
+      const games = gccGames.filter(g=> g.week === w && g.hs != null && g.line != null && g.total != null);
+      if(!games.length) continue;
+      const rt = gccRatings(w);
+      games.forEach(g=>{
+        const p = gccPredict(g.home, g.away, rt); if(!p) return;
+        const margin = g.hs - g.as, total = g.hs + g.as;
+        const dS = p.margin - g.line, dT = p.total - g.total;
+        if(Math.abs(dS) >= GCC.edge && margin !== g.line){ rec.ats[(margin - g.line) * dS > 0 ? 0 : 1]++; }
+        if(Math.abs(dT) >= GCC.edge && total !== g.total){ rec.ou[(total - g.total) * dT > 0 ? 0 : 1]++; }
+      });
+    }
+    return rec;
+  }
+
+  const half = v=> Math.round(v * 2) / 2;
+  // "NYG -4.5" from a home margin (positive = home favored)
+  function spreadTxt(home, away, margin){
+    const m = half(margin);
+    if(m === 0) return 'PICK';
+    return m > 0 ? `${home} -${m}` : `${away} -${-m}`;
+  }
+  function kickoffTxt(g){
+    if(!g.day) return '';
+    const d = new Date(g.day + 'T12:00:00');
+    const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const md = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    return `${wd}, ${md}${g.time ? ' · ' + g.time + ' ET' : ''}`;
+  }
+  function gccBar(offLabel, offPct, defLabel, defPct){
+    const offWins = (offPct ?? 0) >= (defPct ?? 0);
+    return `<div class="gcc-unit">
+      <div class="gcc-unit-labels"><span class="${offWins ? 'win' : ''}">${offLabel}</span><span class="${offWins ? '' : 'win'}">${defLabel}</span></div>
+      <div class="gcc-unit-track"><div class="gcc-half left"><i class="${offWins ? 'win' : ''}" style="width:${offPct ?? 0}%"></i></div><div class="gcc-half right"><i class="${offWins ? '' : 'win'}" style="width:${defPct ?? 0}%"></i></div></div>
+    </div>`;
+  }
+
+  async function renderGameCheat(){
+    const box = $('#gamecheat-results');
+    if(!box) return;
+    if(!pbpRows){ box.innerHTML = '<div class="empty">Load the Vault first (LOAD above). The game lines are built from play-by-play.</div>'; return; }
+    box.innerHTML = '<div class="loading">Building game lines…</div>';
+    try{ await loadSeasonGames(); }
+    catch(e){
+      box.innerHTML = '';
+      if(e.message === 'NO_LICENSE'){ box.appendChild(paywallCard()); return; }
+      box.appendChild(el('div','empty', e.shared ? 'This license is in use on too many networks right now.' : 'Could not load the season schedule. Try again in a minute.')); return;
+    }
+    const open = gccGames.filter(g=> g.hs == null);
+    const week = open.length ? Math.min(...open.map(g=> g.week)) : Math.max(...gccGames.map(g=> g.week));
+    const games = gccGames.filter(g=> g.week === week).sort((a,b)=> (a.day + a.time).localeCompare(b.day + b.time));
+    const rt = gccRatings(week);
+    const rec = gccSeasonRecord(week);
+    const live = window.gwLines || {};
+    const recTxt = (r)=> r[0] + r[1] ? `${r[0]}–${r[1]} (${Math.round(r[0] / (r[0] + r[1]) * 100)}%)` : '—';
+
+    box.innerHTML = `<div class="key-box gcc-record">
+        <b>EDGE badges this season</b> (GRIDWAVE line 3+ pts off the closing line, weeks ${GCC.firstWeek}–${week - 1}):
+        spread <b>${recTxt(rec.ats)}</b> · total <b>${recTxt(rec.ou)}</b>. Break-even at standard −110 is about 52.4%.
+        The market is usually the sharper number; treat an edge as a reason to look closer, not a bet on its own.
+      </div><div class="gcc-grid"></div>`;
+    const grid = box.querySelector('.gcc-grid');
+
+    games.forEach(g=>{
+      const p = gccPredict(g.home, g.away, rt);
+      // market: live odds (median of books / ESPN) when we have them, else nflverse's line
+      const L = live[g.home];
+      const mktMargin = L && typeof L.spread === 'number' ? -L.spread : g.line;
+      const mktTotal = L && typeof L.total === 'number' ? L.total : g.total;
+      const H = rt.R[g.home] || {}, A = rt.R[g.away] || {};
+      const badges = [];
+      if(p && mktMargin != null){ const d = p.margin - mktMargin; if(Math.abs(d) >= GCC.edge) badges.push(`GRIDWAVE EDGE ${d > 0 ? g.home : g.away}`); }
+      if(p && mktTotal != null){ const d = p.total - mktTotal; if(Math.abs(d) >= GCC.edge) badges.push(`GRIDWAVE EDGE ${d > 0 ? 'OVER' : 'UNDER'}`); }
+      const final = g.hs != null ? `<div class="gcc-final">FINAL · ${g.away} ${g.as} – ${g.home} ${g.hs}</div>` : '';
+      const card = el('div', 'gcc-card');
+      card.innerHTML = `
+        <div class="gcc-head">
+          <div class="gcc-teams">${logoImg(g.away)}<b>${g.away}</b><span>@</span>${logoImg(g.home)}<b>${g.home}</b></div>
+          <div class="gcc-kick">${kickoffTxt(g)}</div>
+        </div>
+        ${final}
+        <div class="gcc-lines">
+          <div></div><div class="h">SPREAD</div><div class="h">TOTAL</div>
+          <div class="k">MARKET</div><div>${mktMargin != null ? spreadTxt(g.home, g.away, mktMargin) : '—'}</div><div>${mktTotal != null ? mktTotal : '—'}</div>
+          <div class="k gw">GRIDWAVE</div><div class="gw">${p ? spreadTxt(g.home, g.away, p.margin) : '—'}</div><div class="gw">${p ? half(p.total) : '—'}</div>
+        </div>
+        ${badges.length ? `<div class="gcc-badges">${badges.map(b=> `<span class="gcc-badge">${b}</span>`).join('')}</div>` : ''}
+        <details class="gcc-move"><summary>LINE MOVEMENT</summary><div class="gcc-move-body">Loading…</div></details>
+        <div class="gcc-units">
+          ${gccBar(`${g.home} passing attack`, H.passOPct, `${g.away} pass defense`, A.passDPct)}
+          ${gccBar(`${g.home} run game`, H.runOPct, `${g.away} run defense`, A.runDPct)}
+          ${gccBar(`${g.away} passing attack`, A.passOPct, `${g.home} pass defense`, H.passDPct)}
+          ${gccBar(`${g.away} run game`, A.runOPct, `${g.home} run defense`, H.runDPct)}
+          <div class="gcc-unit-note">UNIT STRENGTH · LEAGUE PERCENTILE (EPA PER PLAY), LAST ${GCC.lastN} GAMES</div>
+        </div>
+        <a href="#" class="gcc-props">Prop Rankings →</a>`;
+      card.querySelector('.gcc-move').addEventListener('toggle', async e=>{
+        const d = e.currentTarget, body = d.querySelector('.gcc-move-body');
+        if(!d.open || d.dataset.loaded) return;
+        d.dataset.loaded = '1';
+        try{
+          const snaps = await (await premiumFetch(`/line-history?away=${encodeURIComponent(g.away)}&home=${encodeURIComponent(g.home)}`)).json();
+          if(!snaps || !snaps.length){ body.textContent = 'No snapshots yet. The worker records odds on a schedule, so this fills in through the week.'; return; }
+          const f = snaps[0], l = snaps[snaps.length - 1];
+          const sp = s=> typeof s === 'number' ? spreadTxt(g.home, g.away, -s) : '—';
+          const days = Math.max(1, Math.round((l.t - f.t) / 86400000));
+          body.innerHTML = `Spread <b>${sp(f.spread)}</b> → <b>${sp(l.spread)}</b> · Total <b>${f.total ?? '—'}</b> → <b>${l.total ?? '—'}</b><br><small>${snaps.length} snapshots over ${days} day${days === 1 ? '' : 's'}${l.book ? ' · ' + l.book : ''}</small>`;
+        }catch(err){ body.textContent = 'Line history unavailable right now.'; }
+      });
+      card.querySelector('.gcc-props').addEventListener('click', e=>{
+        e.preventDefault();
+        edgeGameFilter = [g.away, g.home];
+        document.querySelector('.vault-subtab[data-subtab="rankings"]').click();
+        renderEdgeRankings();
+        $('#vault-rankings').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      grid.appendChild(card);
+    });
+  }
+
   function renderParlays(){
     const container = $('#parlay-results');
     container.innerHTML = '';
@@ -4877,6 +5157,7 @@
     if(active==='gamevault') renderGameVault();
     else if(active==='rankings') renderEdgeRankings();
     else if(active==='parlays') renderParlays();
+    else if(active==='gamecheat') renderGameCheat();
   }
 
   function rebuildScores(){
