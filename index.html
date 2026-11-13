@@ -1140,7 +1140,7 @@
 
       <div class="metric-card">
         <h3>Strength of schedule</h3>
-        <p>The <b>SOS</b> chip on RB / WR / TE rows, graded on their next 4 games.</p>
+        <p>The <b>SOS</b> chip on RB / WR / TE rows in the <b>PLAYERS</b> tab, graded on their next 4 games. It's a rest-of-season view for season-long decisions, so it isn't shown in the VAULT, which is built around this week's matchup and line.</p>
         <ul>
           <li>Each upcoming defense is graded on what it allows to <b>their role</b> (lead back, WR1, TE1…): yards × 0.1 + TDs × 6 per game, pulled toward league average early in the season.</li>
           <li>Teams are ranked 1–32 on their next 4 games. <span style="color:var(--win)">EASY</span> = top third, <span style="color:var(--loss)">HARD</span> = bottom third, AVG in between.</li>
@@ -3493,7 +3493,7 @@
     return `
       <div class="rank">#${rank}</div>
       ${avatarHtml(p)}
-      <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}${sosChipHtml(p.name, p.pos, p.team)}</div><div class="reason-line">${p.reason}</div></div>
+      <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}</div><div class="reason-line">${p.reason}</div></div>
       <div class="badges">${injBadge(p.injStatus)}${roleBadge(p)}${flagPart}${cheatCodeBadge(p)}</div>
       <div><div class="score">${scoreText}</div><div class="form-stat">${p.formStat}</div></div>
     `;
@@ -3894,8 +3894,6 @@
           ${advancedSec}
           ${researchHtml}
           ${gameLogHtml}
-
-          ${sosSectionHtml(p.name, p.pos, p.team)}
 
           ${cheatCodeHtml}
 
@@ -4909,14 +4907,12 @@
       // Any TD scores need play-by-play (red-zone share, goal-line work, TD debt, tags). Scoring
       // without it and re-scoring a few seconds later made every number jump on first load, so the
       // board waits for it and is drawn once, with final numbers.
-      const sosP = loadSosSchedule().catch(()=> null); // strength-of-schedule chips; optional
       if(!pbpRows){
         ['#gamevault-results', '#edge-results'].forEach(id=>{
           const c = $(id); if(c){ c.innerHTML = ''; c.appendChild(el('div','loading','Loading play-by-play (red-zone + goal-line data)…')); }
         });
         try{ pbpRows = await loadPBP(); }catch(e){ /* falls back to box-score scoring; Cheat Code won't show */ }
       }
-      await sosP;
       rebuildScores();
       refreshCurrentSubtab();
       gwFeedback(btn, true);
