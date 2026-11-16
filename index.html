@@ -1145,7 +1145,7 @@
           <li>Each category has its own 4 components (listed below). Outside Any TD they're weighted equally at 25%.</li>
           <li>A component bar is a percentile: 90 means better than 90% of comparable players. The number beside it is the raw stat, e.g. "53.2% · 92nd pctl".</li>
           <li><b>Season</b> uses every game played. <b>Last 3</b> uses only the most recent three.</li>
-          <li>Before every team has 3 weeks of film, boards switch to a per-game <b>Matchups</b> view and each game's top score is re-scaled to 100 (except Any TD, which is already on a probability scale).</li>
+          <li><b>GAME VAULT shows a game score</b>: each game is scored on its own, so the best player in that game is 100 and everyone else is shown relative to them (their VAULT score ÷ the game's best). A 90 means the same thing in every game. The <b>LEAGUE</b> chip on each row has their league-wide score and rank, and RANKINGS still orders the whole league.</li>
         </ul>
       </div>
 
@@ -3707,6 +3707,8 @@
     if(!list || !list.length){ container.appendChild(el('div','empty','No scored players yet.')); return; }
     const events = window.gwWeekEvents || [];
     if(!events.length){ container.appendChild(el('div','empty','No games on the board this week.')); return; }
+    // league rank on the full board, shown beside the per-game score
+    const leagueRank = new Map(list.map((p,i)=> [p, i+1]));
 
     events.forEach(ev=>{
       const comp = ev.competitions?.[0];
@@ -3715,10 +3717,13 @@
       const inGame = list.filter(p=> p.team===homeAbbr || p.team===awayAbbr);
       if(!inGame.length) return;
 
-      // In Matchups mode (early season) the real product re-normalizes each game's top score to 100.
-      const maxInGame = matchupsMode ? Math.max(...inGame.map(p=>p.score), 1) : null;
-      // Any TD is already on a probability scale, so it's never re-normalized
-      const displayScore = p => (matchupsMode && p.category !== 'anytd') ? (p.score/maxInGame*100).toFixed(1) : fmtScore(p.score);
+      // GAME SCORE: each game is scored on its own, so the best player in this game is 100 and
+      // everyone else is shown relative to them (their VAULT score ÷ the game's best). That makes a
+      // 90 in one game mean the same as a 90 in another. The league-wide score and rank sit beside
+      // it in the LEAGUE chip, and RANKINGS still orders the whole league.
+      const maxInGame = Math.max(...inGame.map(p=> p.score), 0.1);
+      const displayScore = p => Math.max(0, p.score / maxInGame * 100).toFixed(1);
+      const leagueChip = p => `LEAGUE #${leagueRank.get(p)} · ${fmtScore(p.score)}`;
 
       const group = el('div','game-vault-group');
       const statusText = comp.status?.type?.shortDetail || '';
@@ -3730,7 +3735,7 @@
         const row = el('div','edge-row card-row');
         row.dataset.pid = p.id;
         const badge = p.flag ? flagBadge(p.flag) : '';
-        row.innerHTML = cardRowHtml(p, i+1, displayScore(p), badge, '');
+        row.innerHTML = cardRowHtml(p, i+1, displayScore(p), badge, leagueChip(p));
         row.addEventListener('click', (e)=>{
         const box = toggleInline(row, b=> renderEdgeDetail(p, b));
         // Clicking the CHEAT CODE badge opens the panel and jumps straight to that section
