@@ -569,6 +569,7 @@
   .flag-badge.over{color:var(--loss);border-color:var(--loss);}
   .flag-badge.breakout{color:var(--win);border-color:var(--win);}
   .flag-badge.cheat{color:var(--cyan);border-color:var(--cyan);}
+  .flag-badge.inactive{color:var(--text-dim);border-color:var(--text-dim);}
   .flag-badge.roledown{color:#ff9b3d;border-color:#ff9b3d;border-style:dashed;}
   .flag-badge.roleup{color:var(--win);border-color:var(--win);border-style:dashed;}
   .snap-tiles{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px;}
@@ -1199,6 +1200,7 @@
         <ul>
           <li><span class="flag-badge breakout">BREAKOUT</span> Their last 2 games beat their earlier average in EPA (by more than 1.0) and their opportunity is rising, but their season opportunity is still below the 75th percentile, so he isn't already a known workhorse.</li>
           <li><span class="flag-badge due">DUE</span> Their TD debt is above the bar (see TD Debt). Touches say more TDs are coming. Without play-by-play loaded: top-35% opportunity but bottom-35% TD rate.</li>
+          <li><span class="flag-badge inactive">OUT 3 GMS</span> The team's last 2+ games went by without them in the box score (injured, inactive or a healthy scratch). They're left off the VAULT, PARLAYS and TD Debt until they play again, even if they're not on the injury report; My List and Players still show them with this tag. Their RESEARCH chart and game log mark those weeks as DNP (byes are skipped).</li>
           <li><span class="flag-badge roledown">▼ ROLE DOWN</span> / <span class="flag-badge roleup">▲ ROLE UP</span> Shown alongside the flag above. Their share of offensive snaps over the team's last 2 games moved 20+ points from their earlier average, with each of those games at least 12 points the same way and both games played. ROLE DOWN also needs 40%+ before and under 60% now; ROLE UP needs under 65% before and 50%+ now, so an every-down player going 80% to 95% isn't flagged. Volume inputs (touches, shares, red-zone and goal-line work) move three-quarters of the way to the new snap share (e.g. 80% → 40% of snaps scales them ×0.63), kept between ×0.4 and ×1.6. A ROLE DOWN player can't get CHEAT CODE. Skipped when they carry an injury designation, since the drop may be the injury. Snap counts come from Pro Football Reference via nflverse and update after each week's games, so a benching announced midweek shows up after the next game.</li>
           <li><span class="flag-badge over">OVERPERFORMING</span> Scored more than their touches support (debt below minus the bar). Expect regression. Without play-by-play: top-20% TD rate on middling opportunity.</li>
           <li><b>SURGING / COOLING / STEADY</b> (Rankings, when no flag): recent EPA more than +1.5 above, more than 1.5 below, or near their earlier average.</li>
@@ -2663,6 +2665,38 @@
     return byPlayer;
   }
 
+  /* ---- MISSED GAMES ----
+     The weekly stats file only has rows for games a player appeared in, so an injured or inactive
+     player's season numbers keep scoring him unless we notice the gap. A team "played" a week if
+     any of its players has a row that week (byes never count). */
+  const INACTIVE = { minMissed: 2 };   // off the Vault after missing the team's last 2+ games in a row
+  let teamWeeksFor = null, teamWeeksMap = {};
+  function teamPlayedWeeks(team){
+    if(teamWeeksFor !== allWeekRows){
+      const m = {};
+      (allWeekRows || []).forEach(w=> (m[w.team] = m[w.team] || new Set()).add(w.week));
+      teamWeeksMap = {}; Object.keys(m).forEach(t=> teamWeeksMap[t] = [...m[t]].sort((a,b)=> a-b));
+      teamWeeksFor = allWeekRows;
+    }
+    return teamWeeksMap[team] || [];
+  }
+  // Team games the player sat out since his first game for his current team (a trade doesn't count
+  // the new team's earlier games as missed), and how many of the latest ones in a row.
+  function missedGames(raw){
+    const played = new Set(raw.weeks.map(w=> w.week));
+    const firstHere = (raw.weeks.find(w=> w.team === raw.team) || raw.weeks[0] || {}).week || 0;
+    const tw = teamPlayedWeeks(raw.team).filter(w=> w >= firstHere);
+    const dnp = tw.filter(w=> !played.has(w));
+    let streak = 0;
+    for(let i = tw.length - 1; i >= 0 && !played.has(tw[i]); i--) streak++;
+    const last = raw.weeks.length ? raw.weeks[raw.weeks.length - 1].week : null;
+    return { dnp, streak, last };
+  }
+  function inactiveBadge(p){
+    if(!p.missedStreak || p.missedStreak < INACTIVE.minMissed) return '';
+    return `<span class="flag-badge inactive" title="Last played week ${p.lastPlayed}; not in the box score for the team's last ${p.missedStreak} games">OUT ${p.missedStreak} GMS</span>`;
+  }
+
   /* ---- ROLE CHANGES (snap share) ----
      The weekly stats only show touches, so a benched starter keeps riding their early-season volume
      for weeks. Snap share shows the demotion right away. ROLE DOWN / ROLE UP fires when the team's
@@ -3272,6 +3306,9 @@
       const injSp = injuryFor(p.name, p.pos, p.team);
       p.injStatus = injSp ? injSp.inj : null;
       p.injPart = injSp ? (injSp.part || null) : null;
+      const mg = missedGames(raw);
+      p.missedStreak = mg.streak; p.lastPlayed = mg.last;
+      p.inactive = mg.streak >= INACTIVE.minMissed;
 
       // Role change: rescale volume to the current snap share (recent ÷ their average over the games
       // being scored). Skipped when they carry an injury designation: a snap drop there is likely the
@@ -3543,7 +3580,7 @@
       <div class="rank">#${rank}</div>
       ${avatarHtml(p)}
       <div class="who"><div class="name">${p.name} ${starHtml(p)}</div><div class="chips"><span class="chip pos">${p.pos}</span><span class="chip">${p.team}</span>${extraMeta?`<span class="chip">${extraMeta}</span>`:''}</div><div class="reason-line">${p.reason}</div></div>
-      <div class="badges">${injBadge(p.injStatus)}${roleBadge(p)}${flagPart}${cheatCodeBadge(p)}</div>
+      <div class="badges">${injBadge(p.injStatus)}${inactiveBadge(p)}${roleBadge(p)}${flagPart}${cheatCodeBadge(p)}</div>
       <div><div class="score">${scoreText}</div><div class="form-stat">${p.formStat}</div></div>
     `;
   }
@@ -3836,12 +3873,22 @@
     if(raw && catDef && catDef.primaryStat){
       const weeks = raw.weeks;
       const values = weeks.map(w=> catDef.primaryStat(w));
+      // games the team played without him show as gray DNP bars, so a gap (injury, inactive) is visible
+      const dnpWeeks = missedGames(raw).dnp;
+      const timeline = weeks.map((w,i)=> ({ w, v: values[i] })).concat(dnpWeeks.map(wk=> ({ dnp: wk })))
+        .sort((a,b)=> (a.w ? a.w.week : a.dnp) - (b.w ? b.w.week : b.dnp));
       const avg = values.length ? values.reduce((s,v)=>s+v,0)/values.length : 0;
       const maxVal = Math.max(...values, 1);
       const hitCount = values.filter(v=> v>=avg).length;
 
-      const bars = weeks.map((w,i)=>{
-        const v = values[i];
+      const bars = timeline.map(t=>{
+        if(t.dnp) return `
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:26px;">
+            <div style="font-size:.6rem;color:var(--text-dim);">DNP</div>
+            <div style="width:100%;height:70px;display:flex;align-items:flex-end;"><div style="width:100%;height:4%;background:var(--text-dim);opacity:.35;border-radius:2px 2px 0 0;"></div></div>
+            <div style="font-size:.58rem;color:var(--text-dim);white-space:nowrap;">WK${t.dnp}</div>
+          </div>`;
+        const w = t.w, v = t.v;
         const hit = v >= avg;
         const heightPct = Math.max(4, (v/maxVal)*100);
         return `
@@ -3857,10 +3904,11 @@
 
       researchHtml = gwSection('RESEARCH', `
         <div style="display:flex;gap:6px;align-items:flex-end;padding:8px 4px 0;overflow-x:auto;">${bars}</div>
-      `, { tag: `${catDef.primaryStatLabel} · ${hitCount}/${values.length} at/above own avg ${avg.toFixed(1)}` });
+      `, { tag: `${catDef.primaryStatLabel} · ${hitCount}/${values.length} at/above own avg ${avg.toFixed(1)}${dnpWeeks.length ? ` · ${dnpWeeks.length} DNP` : ''}` });
 
-      const logRows = weeks.slice().reverse().map(w=>{
-        const v = catDef.primaryStat(w);
+      const logRows = timeline.slice().reverse().map(t=>{
+        if(t.dnp) return `<tr style="opacity:.55"><td>WK ${t.dnp}</td><td>DNP</td><td class="num">—</td></tr>`;
+        const w = t.w, v = t.v;
         return `<tr><td>WK ${w.week}</td><td>${w.opponent_team ? '@' + w.opponent_team : '—'}</td><td class="num">${v.toFixed(Number.isInteger(v)?0:1)}</td></tr>`;
       }).join('');
       gameLogHtml = gwSection('GAME LOG', `
@@ -3943,7 +3991,7 @@
       <div class="edge-detail-card">
         <div>
           <div class="edge-detail-head">${avatarHtml(p, true)}<div>
-          <h3>${p.name} ${injBadge(p.injStatus)} ${roleBadge(p)} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
+          <h3>${p.name} ${injBadge(p.injStatus)} ${inactiveBadge(p)} ${roleBadge(p)} ${p.flag ? flagBadge(p.flag) : ''} ${cheatCodeBadge(p)}</h3>
           <div class="sub" style="margin-bottom:0">${p.team} · ${p.pos} · VAULT score ${fmtScore(p.score)}/100 · ${p.formStat}${p.injStatus ? ' · ' + p.injStatus + (p.injPart ? ' (' + p.injPart + ')' : '') : ''}</div>
           </div></div>
           <div class="reason-line" style="margin-top:8px">${p.reason}</div>
@@ -4320,6 +4368,7 @@
     const scope = $('#tdd-scope').value;
     let list = computeCategoryScores('anytd', scope).filter(p=> p.tdDebt !== undefined && p.seasonGames >= 3 && p.xTD >= 1.0);
     if(Object.keys(window.gwSchedule || {}).length) list = list.filter(p=> p.opponent);   // skip teams on bye
+    list = list.filter(p=> !p.inactive);   // and players who've missed their team's last 2+ games
     if($('#tdd-hide').checked) list = list.filter(p=> !isOut(p));
     if(!list.length){ container.innerHTML = '<div class="empty">No qualifying players yet.</div>'; return; }
     const due = list.slice().sort((a,b)=> b.tdDebt - a.tdDebt).slice(0, 15);
@@ -4828,7 +4877,7 @@
         // what actually happened in week W
         const actual = {};
         Object.values(saved.rp).forEach(pl=>{ const w = pl.weeks.find(x=> x.week === W); if(w) actual[pl.id] = (w.rec_td + w.rush_td) > 0; });
-        const pool = list.filter(p=> p.seasonGames >= 2 && p.opponent);   // that week's bye teams were never on the board
+        const pool = list.filter(p=> p.seasonGames >= 2 && p.opponent && !p.inactive);   // same board rules as live: no byes, no 2+ missed games
         const played = pool.filter(p=> actual[p.id] !== undefined);
         const row = { W, pool: played.length, base: played.filter(p=> actual[p.id]).length, strats:{} };
         REC_STRATS.forEach(([k,,pick])=>{
@@ -5172,6 +5221,7 @@
     // Teams on bye have no game this week, so their players come off the board. Only once the
     // schedule has loaded: an empty schedule (failed fetch, offseason) shouldn't empty the Vault.
     if(Object.keys(window.gwSchedule || {}).length) edgeFlat = edgeFlat.filter(p=> p.opponent);
+    edgeFlat = edgeFlat.filter(p=> !p.inactive);   // missed the team's last 2+ games: not a play this week
 
     matchupsMode = weeksOfFilmAvailable() < 3;
     $('#vault-mode-tag').textContent = matchupsMode
